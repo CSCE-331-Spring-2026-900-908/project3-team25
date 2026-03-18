@@ -1,0 +1,5 @@
+cashierid,firstname,lastname,hiredate,hoursworked,is_active,pin
+1,Ty,Macaulay,2022-08-15,1840.50,true,1234
+2,Nick,Leon,2023-01-10,1200.00,true,1234
+3,Ali,Hussein,2023-05-22,980.75,true,1234
+4,Sonny,Hernandez,2024-02-01,540.00,true,1234

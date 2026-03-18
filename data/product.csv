@@ -1,0 +1,17 @@
+productid,name,category,baseprice,is_active
+1,Classic Milk Tea,milk_tea,5.49,true
+2,Brown Sugar Milk Tea,milk_tea,5.99,true
+3,Taro Milk Tea,milk_tea,5.99,true
+4,Matcha Milk Tea,milk_tea,6.49,true
+5,Thai Tea,milk_tea,5.99,true
+6,Honey Green Tea,tea,5.29,true
+7,Jasmine Green Tea,tea,4.99,true
+8,Black Tea Lemonade,tea,5.29,true
+9,Strawberry Green Tea,fruit_tea,5.79,true
+10,Mango Green Tea,fruit_tea,5.79,true
+11,Peach Green Tea,fruit_tea,5.79,true
+12,Lychee Green Tea,fruit_tea,5.79,true
+13,Coffee Milk Tea,coffee,6.49,true
+14,Wintermelon Milk Tea,milk_tea,5.99,true
+15,Oolong Milk Tea,milk_tea,5.79,true
+16,Extra Boba Add-on,topping,0.75,true

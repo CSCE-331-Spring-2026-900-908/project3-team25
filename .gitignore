@@ -1,0 +1,27 @@
+# Maven build output
+GUI/target/
+
+# Java compiled files (extra safety)
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+#database information
+db.properties
+
+
+
+target/
+*.class
+# Maven build output
+GUI/target/
+**/target/
+*.class
+*.jar

@@ -1,0 +1,185 @@
+entity_type,cashier_firstName,cashier_lastName,cashier_hireDate,cashier_hoursWorked,cashier_is_active,manager_firstName,manager_lastName,manager_hireDate,manager_is_active,inventory_itemName,inventory_unit,inventory_quantityOnHand,inventory_reorderThreshold,inventory_unitCost,inventory_vendor,product_name,product_category,product_basePrice,product_is_active,pi_product_name,pi_inventory_itemName,pi_amountUsed
+Cashier,Ty,Macaulay,2022-08-15,1840.50,TRUE,,,,,,,,,,,,,,,,,
+Cashier,Nick,Leon,2023-01-10,1200.00,TRUE,,,,,,,,,,,,,,,,,
+Cashier,Ali,Hussein,2023-05-22,980.75,TRUE,,,,,,,,,,,,,,,,,
+Cashier,Sonny,Hernandez,2024-02-01,540.00,TRUE,,,,,,,,,,,,,,,,,
+Manager,,,,,,Joe,Joe,2020-03-01,TRUE,,,,,,,,,,,,,
+Manager,,,,,,Daniel,Smith,2021-07-15,TRUE,,,,,,,,,,,,,
+Inventory,,,,,,,,,,Black Tea Base,ml,50000,10000,0.0030,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Green Tea Base,ml,50000,10000,0.0028,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Oolong Tea Base,ml,30000,8000,0.0035,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Jasmine Tea Base,ml,30000,8000,0.0032,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Thai Tea Base,ml,20000,5000,0.0040,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Matcha Powder,g,10000,2000,0.0500,Matcha Masters LLC,,,,,,,
+Inventory,,,,,,,,,,Taro Powder,g,10000,2000,0.0350,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Brown Sugar Syrup,ml,20000,4000,0.0060,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Wintermelon Syrup,ml,15000,3000,0.0055,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Honey,ml,15000,3000,0.0080,Local Honey Farm,,,,,,,
+Inventory,,,,,,,,,,Strawberry Syrup,ml,15000,3000,0.0065,FreshFlavor Inc.,,,,,,,
+Inventory,,,,,,,,,,Mango Syrup,ml,15000,3000,0.0065,FreshFlavor Inc.,,,,,,,
+Inventory,,,,,,,,,,Peach Syrup,ml,15000,3000,0.0065,FreshFlavor Inc.,,,,,,,
+Inventory,,,,,,,,,,Lychee Syrup,ml,15000,3000,0.0065,FreshFlavor Inc.,,,,,,,
+Inventory,,,,,,,,,,Lemon Juice,ml,10000,2000,0.0045,FreshFlavor Inc.,,,,,,,
+Inventory,,,,,,,,,,Whole Milk,ml,40000,8000,0.0015,Dairy Direct,,,,,,,
+Inventory,,,,,,,,,,Coffee Concentrate,ml,10000,2000,0.0100,Brew Supply Co.,,,,,,,
+Inventory,,,,,,,,,,Tapioca Pearls (dry),g,20000,5000,0.0120,Sharetea Supplier Co.,,,,,,,
+Inventory,,,,,,,,,,Large Cup (700ml),quantity,5000,1000,0.0800,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Medium Cup (500ml),quantity,5000,1000,0.0700,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Dome Lid,quantity,10000,2000,0.0300,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Flat Lid,quantity,5000,1000,0.0250,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Boba Straw,quantity,10000,2000,0.0200,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Regular Straw,quantity,5000,1000,0.0150,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Napkin,quantity,20000,5000,0.0050,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Carry Bag,quantity,5000,1000,0.1200,PackagingPro,,,,,,,
+Inventory,,,,,,,,,,Sugar (white),g,10000,2000,0.0010,Grocery Wholesale,,,,,,,
+Inventory,,,,,,,,,,Ice,g,100000,20000,0.0002,Ice Supply Co.,,,,,,,
+Product,,,,,,,,,,,,,,,,Classic Milk Tea,milk_tea,5.49,TRUE,,,
+Product,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,milk_tea,5.99,TRUE,,,
+Product,,,,,,,,,,,,,,,,Taro Milk Tea,milk_tea,5.99,TRUE,,,
+Product,,,,,,,,,,,,,,,,Matcha Milk Tea,milk_tea,6.49,TRUE,,,
+Product,,,,,,,,,,,,,,,,Thai Tea,milk_tea,5.99,TRUE,,,
+Product,,,,,,,,,,,,,,,,Honey Green Tea,tea,5.29,TRUE,,,
+Product,,,,,,,,,,,,,,,,Jasmine Green Tea,tea,4.99,TRUE,,,
+Product,,,,,,,,,,,,,,,,Black Tea Lemonade,tea,5.29,TRUE,,,
+Product,,,,,,,,,,,,,,,,Strawberry Green Tea,fruit_tea,5.79,TRUE,,,
+Product,,,,,,,,,,,,,,,,Mango Green Tea,fruit_tea,5.79,TRUE,,,
+Product,,,,,,,,,,,,,,,,Peach Green Tea,fruit_tea,5.79,TRUE,,,
+Product,,,,,,,,,,,,,,,,Lychee Green Tea,fruit_tea,5.79,TRUE,,,
+Product,,,,,,,,,,,,,,,,Coffee Milk Tea,coffee,6.49,TRUE,,,
+Product,,,,,,,,,,,,,,,,Wintermelon Milk Tea,milk_tea,5.99,TRUE,,,
+Product,,,,,,,,,,,,,,,,Oolong Milk Tea,milk_tea,5.79,TRUE,,,
+Product,,,,,,,,,,,,,,,,Extra Boba Add-on,topping,0.75,TRUE,,,
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Black Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Whole Milk,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Classic Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Black Tea Base,250
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Whole Milk,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Brown Sugar Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Brown Sugar Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Black Tea Base,200
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Whole Milk,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Taro Powder,40
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Taro Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Green Tea Base,200
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Whole Milk,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Matcha Powder,35
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Matcha Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Thai Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Whole Milk,120
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Thai Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Green Tea Base,350
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Honey,40
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Honey Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Jasmine Tea Base,400
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Jasmine Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Black Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Lemon Juice,100
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Black Tea Lemonade,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Green Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Strawberry Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Strawberry Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Green Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Mango Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Mango Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Green Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Peach Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Peach Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Green Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Lychee Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Flat Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Regular Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Lychee Green Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Black Tea Base,200
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Coffee Concentrate,100
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Whole Milk,100
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Coffee Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Black Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Whole Milk,100
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Wintermelon Syrup,60
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Wintermelon Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Oolong Tea Base,300
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Whole Milk,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Tapioca Pearls (dry),50
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Large Cup (700ml),1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Dome Lid,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Boba Straw,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Napkin,1
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Ice,150
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Oolong Milk Tea,Sugar (white),20
+ProductIngredient,,,,,,,,,,,,,,,,,,,,Extra Boba Add-on,Tapioca Pearls (dry),50

@@ -1,0 +1,29 @@
+inventoryid,itemname,unit,quantityonhand,reorderthreshold,unitcost,vendor
+1,Black Tea Base,ml,50000.00,10000.00,0.0030,Sharetea Supplier Co.
+2,Green Tea Base,ml,50000.00,10000.00,0.0028,Sharetea Supplier Co.
+3,Oolong Tea Base,ml,30000.00,8000.00,0.0035,Sharetea Supplier Co.
+4,Jasmine Tea Base,ml,30000.00,8000.00,0.0032,Sharetea Supplier Co.
+5,Thai Tea Base,ml,20000.00,5000.00,0.0040,Sharetea Supplier Co.
+6,Matcha Powder,g,10000.00,2000.00,0.0500,Matcha Masters LLC
+7,Taro Powder,g,10000.00,2000.00,0.0350,Sharetea Supplier Co.
+8,Brown Sugar Syrup,ml,20000.00,4000.00,0.0060,Sharetea Supplier Co.
+9,Wintermelon Syrup,ml,15000.00,3000.00,0.0055,Sharetea Supplier Co.
+10,Honey,ml,15000.00,3000.00,0.0080,Local Honey Farm
+11,Strawberry Syrup,ml,15000.00,3000.00,0.0065,FreshFlavor Inc.
+12,Mango Syrup,ml,15000.00,3000.00,0.0065,FreshFlavor Inc.
+13,Peach Syrup,ml,15000.00,3000.00,0.0065,FreshFlavor Inc.
+14,Lychee Syrup,ml,15000.00,3000.00,0.0065,FreshFlavor Inc.
+15,Lemon Juice,ml,10000.00,2000.00,0.0045,FreshFlavor Inc.
+16,Whole Milk,ml,40000.00,8000.00,0.0015,Dairy Direct
+17,Coffee Concentrate,ml,10000.00,2000.00,0.0100,Brew Supply Co.
+18,Tapioca Pearls (dry),g,20000.00,5000.00,0.0120,Sharetea Supplier Co.
+19,Large Cup (700ml),quantity,5000.00,1000.00,0.0800,PackagingPro
+20,Medium Cup (500ml),quantity,5000.00,1000.00,0.0700,PackagingPro
+21,Dome Lid,quantity,10000.00,2000.00,0.0300,PackagingPro
+22,Flat Lid,quantity,5000.00,1000.00,0.0250,PackagingPro
+23,Boba Straw,quantity,10000.00,2000.00,0.0200,PackagingPro
+24,Regular Straw,quantity,5000.00,1000.00,0.0150,PackagingPro
+25,Napkin,quantity,20000.00,5000.00,0.0050,PackagingPro
+26,Carry Bag,quantity,5000.00,1000.00,0.1200,PackagingPro
+27,Sugar (white),g,10000.00,2000.00,0.0010,Grocery Wholesale
+28,Ice,g,100000.00,20000.00,0.0002,Ice Supply Co.

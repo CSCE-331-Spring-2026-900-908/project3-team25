@@ -1,0 +1,3 @@
+managerid,firstname,lastname,hiredate,is_active,pin
+1,Joe,Joe,2020-03-01,true,1234
+2,Daniel,Smith,2021-07-15,true,1234
