@@ -1,3 +1,5 @@
+# Maven build output
+GUI/target/
 
 # Java compiled files (extra safety)
 *.class
@@ -15,3 +17,11 @@ Thumbs.db
 db.properties
 
 
+
+target/
+*.class
+# Maven build output
+GUI/target/
+**/target/
+*.class
+*.jar
