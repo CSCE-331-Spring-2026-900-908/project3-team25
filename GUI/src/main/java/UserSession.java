@@ -3,6 +3,11 @@ import java.io.Serializable;
 /**
  * Represents an authenticated employee session.
  * Stores basic identity and role information for the active user.
+ *
+ * @param role employee role, such as Cashier or Manager
+ * @param id employee identifier from the corresponding database table
+ * @param firstName employee first name
+ * @param lastName employee last name
  */
 public record UserSession(
         String role,     // "Cashier" or "Manager"

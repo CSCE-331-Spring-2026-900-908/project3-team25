@@ -16,6 +16,19 @@ import java.util.Properties;
  */
 public class LauncherApp {
 
+    /**
+     * Creates a new launcher application instance.
+     */
+    public LauncherApp() {
+    }
+
+    /**
+     * Stores database connection credentials used by the application.
+     *
+     * @param url JDBC connection URL
+     * @param user database username
+     * @param pass database password
+     */
     public record DbCreds(String url, String user, String pass) {}
 
     private static final String ENV_DB_URL  = "TEAM25_DB_URL";

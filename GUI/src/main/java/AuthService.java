@@ -10,6 +10,12 @@ import java.sql.ResultSet;
 public class AuthService {
 
     /**
+     * Creates a new authentication service instance.
+     */
+    public AuthService() {
+    }
+
+    /**
      * Authenticates an employee without requiring a PIN.
      *
      * @param conn active database connection
