@@ -3,57 +3,128 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cashier POS</title>
+  <title>Cashier POS | Reveille Bubble Tea</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <main class="kiosk-shell">
-    <header class="kiosk-header panel">
-      <div>
-        <span class="pill">Cashier Interface</span>
-        <h1>Counter POS</h1>
-        <p class="muted">Touch-friendly, fast actions, and clearly separated from the customer kiosk.</p>
+  <main class="restaurant-shell">
+    <header class="pos-topbar">
+      <div class="brand-mark">
+        <div class="brand-badge">RB</div>
+        <div>
+          <h1>Reveille Bubble Tea</h1>
+          <p>Cashier point-of-sale terminal</p>
+        </div>
       </div>
-      <button class="btn" id="cashier-login-btn">Demo Login</button>
+      <div class="tag-row">
+        <span class="tag">Staff interface</span>
+        <span class="tag">Fast add workflow</span>
+        <span class="tag">Counter-facing POS</span>
+      </div>
     </header>
 
-    <section class="order-grid">
-      <section class="panel">
-        <h2>Menu</h2>
-        <div id="cashier-menu" class="menu-list"></div>
+    <section class="hero compact">
+      <span class="pill">Cashier interface</span>
+      <h1>Fast order entry for experienced staff.</h1>
+      <p>This layout is visually different from the customer kiosk and focuses on quicker order entry, clearer tickets, and staff support tools on one screen.</p>
+    </section>
+
+    <section class="cashier-layout">
+      <section class="cashier-left">
+        <div class="mini-top">
+          <div>
+            <h2 style="margin:0;">Order menu</h2>
+            <p class="muted" style="margin:6px 0 0;">Tap category filters and add drinks fast.</p>
+          </div>
+          <div class="tab-row" id="cashier-tabs"></div>
+        </div>
+
+        <div id="cashier-menu" class="menu-grid compact-grid"></div>
       </section>
 
-      <aside class="panel">
-        <h2>Current Order</h2>
-        <ul id="cart-list" class="cart-list"></ul>
-        <p><strong>Total:</strong> <span id="cart-total">$0.00</span></p>
-        <button class="btn full" id="checkout-btn">Complete Order</button>
+      <aside class="cashier-right">
+        <section class="ticket-panel">
+          <div class="mini-top">
+            <div>
+              <h2 style="margin:0;">Current ticket</h2>
+              <p class="muted" style="margin:6px 0 0;">Counter order summary</p>
+            </div>
+            <span class="badge" id="cashier-item-count">0 items</span>
+          </div>
+
+          <div class="option-grid" style="margin-top:16px;">
+            <div>
+              <label for="cashier-sweetness">Sweetness</label>
+              <select id="cashier-sweetness">
+                <option>0%</option><option>25%</option><option selected>50%</option><option>75%</option><option>100%</option>
+              </select>
+            </div>
+            <div>
+              <label for="cashier-ice">Ice level</label>
+              <select id="cashier-ice">
+                <option>None</option><option>Light</option><option selected>Regular</option><option>Extra</option>
+              </select>
+            </div>
+            <div>
+              <label for="cashier-size">Size</label>
+              <select id="cashier-size">
+                <option>Regular</option><option>Large</option>
+              </select>
+            </div>
+            <div>
+              <label for="cashier-topping">Topping</label>
+              <select id="cashier-topping">
+                <option>None</option><option>Extra Boba</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="order-lines" id="cashier-order-lines">
+            <p class="cart-note">No drinks added yet.</p>
+          </div>
+
+          <div class="summary-box">
+            <div class="summary-row"><span>Subtotal</span><strong id="cashier-subtotal">$0.00</strong></div>
+            <div class="summary-row"><span>Tax estimate</span><strong id="cashier-tax">$0.00</strong></div>
+            <div class="summary-row total"><span>Total</span><strong id="cashier-total">$0.00</strong></div>
+          </div>
+
+          <div class="kiosk-actions">
+            <button class="btn full" id="cashier-pay-btn">Take Payment</button>
+            <button class="btn ghost full" id="cashier-clear-btn">Clear Ticket</button>
+          </div>
+        </section>
+
+        <section class="helper-grid two-col">
+          <article class="helper-card">
+            <h3>Translate for customer</h3>
+            <div class="button-row">
+              <input id="cashier-translate-text" value="Would you like extra boba?" aria-label="Translate text" />
+              <select id="cashier-translate-target" aria-label="Translate target">
+                <option value="es">Spanish</option>
+                <option value="ar">Arabic</option>
+                <option value="zh">Chinese</option>
+              </select>
+            </div>
+            <div class="button-row" style="margin-top:10px;">
+              <button class="btn" id="cashier-translate-btn">Translate</button>
+            </div>
+            <p id="cashier-translate-result" class="muted">Translation result appears here.</p>
+          </article>
+
+          <article class="helper-card">
+            <h3>Assistant shortcut</h3>
+            <div class="button-row">
+              <input id="cashier-assistant-input" placeholder="What is popular?" aria-label="Ask assistant" />
+              <button class="btn" id="cashier-assistant-btn">Ask</button>
+            </div>
+            <p id="cashier-assistant-result" class="muted">Assistant reply appears here.</p>
+          </article>
+        </section>
       </aside>
     </section>
-
-    <section class="card-grid" style="margin-top: 20px;">
-      <section class="assistant-card">
-        <h2>Translation Widget</h2>
-        <div class="form-row">
-          <input id="translate-text" value="Brown Sugar Milk Tea" aria-label="Text to translate" />
-          <select id="translate-target" aria-label="Target language">
-            <option value="es">Spanish</option>
-            <option value="ar">Arabic</option>
-            <option value="zh-CN">Chinese</option>
-          </select>
-          <button class="btn" id="translate-btn">Translate</button>
-        </div>
-        <p id="translate-result" class="muted">Translation result will appear here.</p>
-      </section>
-
-      <section class="assistant-card">
-        <h2>Personal Assistant</h2>
-        <textarea id="assistant-input" aria-label="Ask the assistant">What is a popular milk tea?</textarea>
-        <div class="button-row" style="margin-top: 12px;"><button class="btn" id="assistant-btn">Ask Assistant</button></div>
-        <p id="assistant-result" class="muted">Assistant reply will appear here.</p>
-      </section>
-    </section>
   </main>
+
   <script src="/js/cashier.js"></script>
 </body>
 </html>

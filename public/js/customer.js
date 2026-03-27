@@ -1,39 +1,186 @@
-async function loadMenu() {
-  const res = await fetch('/api/menu');
-  const data = await res.json();
-  document.getElementById('customer-menu').innerHTML = data.items.map(item => `
-    <article class="menu-item">
-      ${item.popular ? '<span class="badge">Popular</span>' : `<span class="badge">${item.category.replace('_', ' ')}</span>`}
-      <h3>${item.name}</h3>
-      <p>${item.description}</p>
-      <div class="price">$${item.price.toFixed(2)}</div>
+let customerMenu = [];
+let customerCategories = [];
+let customerActiveCategory = '';
+let customerOrder = [];
+
+function customerSelections() {
+  return {
+    sweetness: document.getElementById('sweetness').value,
+    ice: document.getElementById('ice-level').value,
+    size: document.getElementById('size').value,
+    topping: document.getElementById('topping').value
+  };
+}
+
+function customerExtraPrice(selections) {
+  let extra = 0;
+  if (selections.size === 'Large') extra += 1.0;
+  if (selections.topping === 'Extra Boba') extra += 0.75;
+  return extra;
+}
+
+function customerRenderTabs() {
+  const wrap = document.getElementById('customer-tabs');
+  wrap.innerHTML = customerCategories.map(category => `
+    <button class="tab-btn ${customerActiveCategory === category ? 'active' : ''}" data-category="${category}">
+      ${category.replace('_', ' ')}
+    </button>
+  `).join('');
+
+  wrap.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      customerActiveCategory = btn.dataset.category;
+      customerRenderTabs();
+      customerRenderMenu();
+    });
+  });
+}
+
+function customerRenderMenu() {
+  const wrap = document.getElementById('customer-menu');
+  const filtered = customerMenu.filter(item => item.category === customerActiveCategory);
+  wrap.innerHTML = filtered.map(item => `
+    <article class="menu-card">
+      <div class="topline">
+        <div>
+          <h3>${item.name}</h3>
+          <p>${item.description}</p>
+        </div>
+        ${item.popular ? '<span class="tag">Popular</span>' : ''}
+      </div>
+      <div class="price-line">
+        <span class="price">$${item.price.toFixed(2)}</span>
+        <button class="btn add-btn" data-id="${item.id}">Add</button>
+      </div>
     </article>
   `).join('');
+
+  wrap.querySelectorAll('.add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = customerMenu.find(x => x.id === Number(btn.dataset.id));
+      if (!item) return;
+      const selections = customerSelections();
+      customerOrder.push({
+        ...item,
+        selections,
+        linePrice: item.price + customerExtraPrice(selections)
+      });
+      customerRenderOrder();
+    });
+  });
 }
 
-async function loadWeather() {
-  const city = document.getElementById('city-input').value;
-  const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+function customerRenderOrder() {
+  const lines = document.getElementById('customer-order-lines');
+  const count = document.getElementById('customer-item-count');
+  const subtotalEl = document.getElementById('customer-subtotal');
+  const taxEl = document.getElementById('customer-tax');
+  const totalEl = document.getElementById('customer-total');
+
+  count.textContent = `${customerOrder.length} item${customerOrder.length === 1 ? '' : 's'}`;
+
+  if (!customerOrder.length) {
+    lines.innerHTML = '<p class="cart-note">No drinks added yet. Pick a drink from the menu to start.</p>';
+    subtotalEl.textContent = '$0.00';
+    taxEl.textContent = '$0.00';
+    totalEl.textContent = '$0.00';
+    return;
+  }
+
+  lines.innerHTML = customerOrder.map((item, index) => `
+    <article class="order-item">
+      <div class="line-top">
+        <strong>${item.name}</strong>
+        <strong>$${item.linePrice.toFixed(2)}</strong>
+      </div>
+      <small>${item.selections.size} • ${item.selections.sweetness} sugar • ${item.selections.ice} ice • ${item.selections.topping}</small>
+      <button class="btn ghost remove-btn" data-index="${index}">Remove</button>
+    </article>
+  `).join('');
+
+  lines.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      customerOrder.splice(Number(btn.dataset.index), 1);
+      customerRenderOrder();
+    });
+  });
+
+  const subtotal = customerOrder.reduce((sum, item) => sum + item.linePrice, 0);
+  const tax = subtotal * 0.0825;
+  const total = subtotal + tax;
+
+  subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+  taxEl.textContent = `$${tax.toFixed(2)}`;
+  totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+async function loadCustomerMenu() {
+  const res = await fetch('/api/menu');
   const data = await res.json();
-  document.getElementById('weather-result').textContent = data.error ? data.error : `${data.city}: ${data.temperature}° with suggestion — ${data.recommendation}`;
+  customerMenu = data.items;
+  customerCategories = Object.keys(data.categories);
+  customerActiveCategory = customerCategories[0];
+  customerRenderTabs();
+  customerRenderMenu();
 }
+loadCustomerMenu();
 
-async function askAssistant() {
-  const message = document.getElementById('kiosk-assistant-input').value;
-  const res = await fetch('/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
-  const data = await res.json();
-  document.getElementById('kiosk-assistant-result').textContent = data.reply;
-}
+document.getElementById('customer-clear-btn').addEventListener('click', () => {
+  customerOrder = [];
+  customerRenderOrder();
+});
 
-async function translateText() {
-  const text = document.getElementById('customer-translate-text').value;
-  const target = document.getElementById('customer-translate-target').value;
-  const res = await fetch(`/api/translate?text=${encodeURIComponent(text)}&target=${encodeURIComponent(target)}`);
-  const data = await res.json();
-  document.getElementById('customer-translate-result').textContent = data.translatedText || data.error || 'Translation unavailable.';
-}
+document.getElementById('customer-checkout-btn').addEventListener('click', () => {
+  if (!customerOrder.length) {
+    alert('Add at least one drink before checkout.');
+    return;
+  }
+  const total = document.getElementById('customer-total').textContent;
+  alert(`Demo checkout complete.\nOrder total: ${total}`);
+});
 
-document.getElementById('weather-btn').addEventListener('click', loadWeather);
-document.getElementById('kiosk-assistant-btn').addEventListener('click', askAssistant);
-document.getElementById('customer-translate-btn').addEventListener('click', translateText);
-loadMenu();
+document.getElementById('weather-btn').addEventListener('click', async () => {
+  const city = document.getElementById('city-input').value.trim() || 'College Station';
+  const out = document.getElementById('weather-result');
+  out.textContent = 'Loading weather...';
+  try {
+    const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Weather lookup failed.');
+    out.textContent = `${data.city}: ${data.temperature}° — ${data.recommendation}`;
+  } catch (error) {
+    out.textContent = error.message;
+  }
+});
+
+document.getElementById('translate-btn').addEventListener('click', async () => {
+  const text = document.getElementById('translate-text').value.trim();
+  const target = document.getElementById('translate-target').value;
+  const out = document.getElementById('translate-result');
+  out.textContent = 'Translating...';
+  try {
+    const res = await fetch(`/api/translate?text=${encodeURIComponent(text)}&target=${encodeURIComponent(target)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Translation failed.');
+    out.textContent = data.translatedText;
+  } catch (error) {
+    out.textContent = error.message;
+  }
+});
+
+document.getElementById('assistant-btn').addEventListener('click', async () => {
+  const message = document.getElementById('assistant-input').value.trim();
+  const out = document.getElementById('assistant-result');
+  out.textContent = 'Thinking...';
+  try {
+    const res = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    out.textContent = data.reply || 'No response.';
+  } catch (error) {
+    out.textContent = error.message;
+  }
+});

@@ -1,60 +1,172 @@
-const cart = [];
+let cashierMenu = [];
+let cashierCategories = [];
+let cashierActiveCategory = '';
+let cashierOrder = [];
 
-function renderCart() {
-  const list = document.getElementById('cart-list');
-  if (!cart.length) {
-    list.innerHTML = '<li>No items added yet.</li>';
-    document.getElementById('cart-total').textContent = '$0.00';
-    return;
-  }
-  list.innerHTML = cart.map((item, index) => `<li>${item.name} - $${item.price.toFixed(2)} <button class="btn ghost" style="min-height:34px;padding:6px 10px;float:right;" onclick="removeItem(${index})">Remove</button></li>`).join('');
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
+function cashierSelections() {
+  return {
+    sweetness: document.getElementById('cashier-sweetness').value,
+    ice: document.getElementById('cashier-ice').value,
+    size: document.getElementById('cashier-size').value,
+    topping: document.getElementById('cashier-topping').value
+  };
 }
-function removeItem(index) { cart.splice(index, 1); renderCart(); }
 
-async function loadMenu() {
-  const res = await fetch('/api/menu');
-  const data = await res.json();
-  document.getElementById('cashier-menu').innerHTML = data.items.map(item => `
-    <article class="menu-item">
-      <span class="badge">${item.category.replace('_', ' ')}</span>
-      <h3>${item.name}</h3>
-      <p>${item.description}</p>
-      <div class="price">$${item.price.toFixed(2)}</div>
-      <button class="btn full" onclick='addItem(${JSON.stringify({ name: item.name, price: item.price })})'>Add to order</button>
+function cashierExtraPrice(selections) {
+  let extra = 0;
+  if (selections.size === 'Large') extra += 1.0;
+  if (selections.topping === 'Extra Boba') extra += 0.75;
+  return extra;
+}
+
+function cashierRenderTabs() {
+  const wrap = document.getElementById('cashier-tabs');
+  wrap.innerHTML = cashierCategories.map(category => `
+    <button class="tab-btn ${cashierActiveCategory === category ? 'active' : ''}" data-category="${category}">
+      ${category.replace('_', ' ')}
+    </button>
+  `).join('');
+
+  wrap.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cashierActiveCategory = btn.dataset.category;
+      cashierRenderTabs();
+      cashierRenderMenu();
+    });
+  });
+}
+
+function cashierRenderMenu() {
+  const wrap = document.getElementById('cashier-menu');
+  const filtered = cashierMenu.filter(item => item.category === cashierActiveCategory);
+  wrap.innerHTML = filtered.map(item => `
+    <article class="menu-card">
+      <div class="topline">
+        <div>
+          <h3>${item.name}</h3>
+          <p>${item.description}</p>
+        </div>
+        ${item.popular ? '<span class="tag">Popular</span>' : ''}
+      </div>
+      <div class="price-line">
+        <span class="price">$${item.price.toFixed(2)}</span>
+        <button class="btn cashier-add-btn" data-id="${item.id}">Add</button>
+      </div>
     </article>
   `).join('');
-}
-function addItem(item) { cart.push(item); renderCart(); }
 
-async function translateText() {
-  const text = document.getElementById('translate-text').value;
-  const target = document.getElementById('translate-target').value;
-  const res = await fetch(`/api/translate?text=${encodeURIComponent(text)}&target=${encodeURIComponent(target)}`);
+  wrap.querySelectorAll('.cashier-add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = cashierMenu.find(x => x.id === Number(btn.dataset.id));
+      if (!item) return;
+      const selections = cashierSelections();
+      cashierOrder.push({
+        ...item,
+        selections,
+        linePrice: item.price + cashierExtraPrice(selections)
+      });
+      cashierRenderOrder();
+    });
+  });
+}
+
+function cashierRenderOrder() {
+  const lines = document.getElementById('cashier-order-lines');
+  const count = document.getElementById('cashier-item-count');
+  const subtotalEl = document.getElementById('cashier-subtotal');
+  const taxEl = document.getElementById('cashier-tax');
+  const totalEl = document.getElementById('cashier-total');
+
+  count.textContent = `${cashierOrder.length} item${cashierOrder.length === 1 ? '' : 's'}`;
+
+  if (!cashierOrder.length) {
+    lines.innerHTML = '<p class="cart-note">No drinks added yet.</p>';
+    subtotalEl.textContent = '$0.00';
+    taxEl.textContent = '$0.00';
+    totalEl.textContent = '$0.00';
+    return;
+  }
+
+  lines.innerHTML = cashierOrder.map((item, index) => `
+    <article class="order-item">
+      <div class="line-top">
+        <strong>${item.name}</strong>
+        <strong>$${item.linePrice.toFixed(2)}</strong>
+      </div>
+      <small>${item.selections.size} • ${item.selections.sweetness} sugar • ${item.selections.ice} ice • ${item.selections.topping}</small>
+      <button class="btn ghost cashier-remove-btn" data-index="${index}">Remove</button>
+    </article>
+  `).join('');
+
+  lines.querySelectorAll('.cashier-remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cashierOrder.splice(Number(btn.dataset.index), 1);
+      cashierRenderOrder();
+    });
+  });
+
+  const subtotal = cashierOrder.reduce((sum, item) => sum + item.linePrice, 0);
+  const tax = subtotal * 0.0825;
+  const total = subtotal + tax;
+
+  subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+  taxEl.textContent = `$${tax.toFixed(2)}`;
+  totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+async function loadCashierMenu() {
+  const res = await fetch('/api/menu');
   const data = await res.json();
-  document.getElementById('translate-result').textContent = data.translatedText || data.error || 'Translation unavailable.';
+  cashierMenu = data.items;
+  cashierCategories = Object.keys(data.categories);
+  cashierActiveCategory = cashierCategories[0];
+  cashierRenderTabs();
+  cashierRenderMenu();
 }
+loadCashierMenu();
 
-async function askAssistant() {
-  const message = document.getElementById('assistant-input').value;
-  const res = await fetch('/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
-  const data = await res.json();
-  document.getElementById('assistant-result').textContent = data.reply;
-}
+document.getElementById('cashier-clear-btn').addEventListener('click', () => {
+  cashierOrder = [];
+  cashierRenderOrder();
+});
 
-async function loginDemo() {
-  const res = await fetch('/api/auth/mock-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'reveille.bubbletea@gmail.com', role: 'cashier' }) });
-  const data = await res.json();
-  alert(data.note || 'Logged in.');
-}
+document.getElementById('cashier-pay-btn').addEventListener('click', () => {
+  if (!cashierOrder.length) {
+    alert('Add at least one drink before taking payment.');
+    return;
+  }
+  const total = document.getElementById('cashier-total').textContent;
+  alert(`Payment captured in demo mode.\nTicket total: ${total}`);
+});
 
-document.getElementById('translate-btn').addEventListener('click', translateText);
-document.getElementById('assistant-btn').addEventListener('click', askAssistant);
-document.getElementById('cashier-login-btn').addEventListener('click', loginDemo);
-document.getElementById('checkout-btn').addEventListener('click', () => { alert(cart.length ? 'Order completed in starter demo.' : 'Add at least one item first.'); cart.length = 0; renderCart(); });
+document.getElementById('cashier-translate-btn').addEventListener('click', async () => {
+  const text = document.getElementById('cashier-translate-text').value.trim();
+  const target = document.getElementById('cashier-translate-target').value;
+  const out = document.getElementById('cashier-translate-result');
+  out.textContent = 'Translating...';
+  try {
+    const res = await fetch(`/api/translate?text=${encodeURIComponent(text)}&target=${encodeURIComponent(target)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Translation failed.');
+    out.textContent = data.translatedText;
+  } catch (error) {
+    out.textContent = error.message;
+  }
+});
 
-loadMenu();
-renderCart();
-window.addItem = addItem;
-window.removeItem = removeItem;
+document.getElementById('cashier-assistant-btn').addEventListener('click', async () => {
+  const message = document.getElementById('cashier-assistant-input').value.trim();
+  const out = document.getElementById('cashier-assistant-result');
+  out.textContent = 'Thinking...';
+  try {
+    const res = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    out.textContent = data.reply || 'No response.';
+  } catch (error) {
+    out.textContent = error.message;
+  }
+});

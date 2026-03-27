@@ -3,18 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Menu Board</title>
+  <title>Menu Board | Reveille Bubble Tea</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
-<body>
-  <main class="kiosk-shell">
-    <section class="hero">
-      <span class="pill">Menu Board Interface</span>
-      <h1>Today’s Favorites</h1>
-      <p>Large-display, non-interactive board for customers waiting in the lobby.</p>
+<body class="menu-board-body">
+  <main class="menu-board-shell">
+    <section class="menu-board-hero">
+      <div>
+        <p class="board-kicker">Reveille Bubble Tea</p>
+        <h1>Fresh drinks. Fast service. Real boba shop energy.</h1>
+        <p class="board-copy">Featured drinks, seasonal favorites, and customer picks — displayed in a lobby-style menu board format.</p>
+      </div>
+      <div class="board-feature">
+        <span class="tag">Most Popular</span>
+        <h2>Brown Sugar Milk Tea</h2>
+        <p>Signature sweet milk tea with chewy boba pearls.</p>
+        <div class="board-price">$5.75</div>
+      </div>
     </section>
-    <section class="menu-board" id="board-menu" style="margin-top: 20px;"></section>
+
+    <section class="board-columns" id="menu-board-columns">
+      <article class="board-panel">
+        <h3>Loading menu board...</h3>
+      </article>
+    </section>
   </main>
+
   <script src="/js/menu-board.js"></script>
 </body>
 </html>
