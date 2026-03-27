@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager Dashboard</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <main id="main" class="page-shell">
+    <section class="hero">
+      <span class="pill">Manager Interface</span>
+      <h1>Manager Dashboard</h1>
+      <p>Desktop-focused internal view for inventory monitoring, menu planning, and project requirement reminders.</p>
+    </section>
+
+    <section class="metric-grid" style="margin-top: 20px;">
+      <article class="metric"><h2>Active Menu</h2><div class="value" id="metric-menu">--</div><small>available drinks</small></article>
+      <article class="metric"><h2>Inventory Items</h2><div class="value" id="metric-inventory">--</div><small>tracked items</small></article>
+      <article class="metric"><h2>Low Stock</h2><div class="value" id="metric-low">--</div><small>attention needed</small></article>
+      <article class="metric"><h2>Average Price</h2><div class="value" id="metric-price">--</div><small>menu average</small></article>
+    </section>
+
+    <div class="card-grid" style="margin-top: 20px;">
+      <section class="table-card">
+        <h2>Low Stock Watchlist</h2>
+        <table class="table" aria-label="Low stock items">
+          <thead><tr><th>Item</th><th>Qty</th><th>Threshold</th><th>Status</th></tr></thead>
+          <tbody id="low-stock-body"></tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Interface Planning Notes</h2>
+        <ul class="notice-list" id="announcements"></ul>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top: 20px;">
+      <h2>Category Breakdown</h2>
+      <div class="metric-grid" id="category-grid"></div>
+    </section>
+  </main>
+  <script src="/js/manager.js"></script>
+</body>
+</html>

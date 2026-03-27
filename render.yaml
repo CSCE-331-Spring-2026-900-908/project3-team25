@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: project3-team25
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start

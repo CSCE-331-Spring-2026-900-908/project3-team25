@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Kiosk</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <main class="kiosk-shell">
+    <header class="kiosk-header panel">
+      <div>
+        <span class="pill">Customer Kiosk</span>
+        <h1>Build Your Drink</h1>
+        <p class="muted">Large, public-facing self-service experience with accessible spacing and simplified wording.</p>
+      </div>
+      <div class="badge">Touchscreen Ready</div>
+    </header>
+
+    <section class="card-grid">
+      <section class="panel">
+        <h2>Choose a Drink</h2>
+        <div id="customer-menu" class="menu-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Customize</h2>
+        <label for="sweetness">Sweetness</label>
+        <select id="sweetness"><option>0%</option><option>25%</option><option selected>50%</option><option>75%</option><option>100%</option></select>
+        <label for="ice-level" style="margin-top: 12px; display:block;">Ice Level</label>
+        <select id="ice-level"><option>None</option><option>Light</option><option selected>Regular</option><option>Extra</option></select>
+        <label for="city-input" style="margin-top: 12px; display:block;">Weather City</label>
+        <div class="button-row"><input id="city-input" value="College Station" /><button class="btn" id="weather-btn">Get Weather</button></div>
+        <p id="weather-result" class="muted">Weather recommendation will appear here.</p>
+      </section>
+    </section>
+
+    <section class="card-grid" style="margin-top: 20px;">
+      <section class="assistant-card">
+        <h2>Need Help Choosing?</h2>
+        <textarea id="kiosk-assistant-input">I want something fruity and refreshing.</textarea>
+        <div class="button-row" style="margin-top: 12px;"><button class="btn" id="kiosk-assistant-btn">Ask Assistant</button></div>
+        <p id="kiosk-assistant-result" class="muted">Assistant reply will appear here.</p>
+      </section>
+
+      <section class="assistant-card">
+        <h2>Quick Translation</h2>
+        <div class="button-row">
+          <input id="customer-translate-text" value="Would you like extra boba?" />
+          <select id="customer-translate-target"><option value="es">Spanish</option><option value="ar">Arabic</option><option value="zh-CN">Chinese</option></select>
+          <button class="btn" id="customer-translate-btn">Translate</button>
+        </div>
+        <p id="customer-translate-result" class="muted">Translation result will appear here.</p>
+      </section>
+    </section>
+  </main>
+  <script src="/js/customer.js"></script>
+</body>
+</html>

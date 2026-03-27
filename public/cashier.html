@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cashier POS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <main class="kiosk-shell">
+    <header class="kiosk-header panel">
+      <div>
+        <span class="pill">Cashier Interface</span>
+        <h1>Counter POS</h1>
+        <p class="muted">Touch-friendly, fast actions, and clearly separated from the customer kiosk.</p>
+      </div>
+      <button class="btn" id="cashier-login-btn">Demo Login</button>
+    </header>
+
+    <section class="order-grid">
+      <section class="panel">
+        <h2>Menu</h2>
+        <div id="cashier-menu" class="menu-list"></div>
+      </section>
+
+      <aside class="panel">
+        <h2>Current Order</h2>
+        <ul id="cart-list" class="cart-list"></ul>
+        <p><strong>Total:</strong> <span id="cart-total">$0.00</span></p>
+        <button class="btn full" id="checkout-btn">Complete Order</button>
+      </aside>
+    </section>
+
+    <section class="card-grid" style="margin-top: 20px;">
+      <section class="assistant-card">
+        <h2>Translation Widget</h2>
+        <div class="form-row">
+          <input id="translate-text" value="Brown Sugar Milk Tea" aria-label="Text to translate" />
+          <select id="translate-target" aria-label="Target language">
+            <option value="es">Spanish</option>
+            <option value="ar">Arabic</option>
+            <option value="zh-CN">Chinese</option>
+          </select>
+          <button class="btn" id="translate-btn">Translate</button>
+        </div>
+        <p id="translate-result" class="muted">Translation result will appear here.</p>
+      </section>
+
+      <section class="assistant-card">
+        <h2>Personal Assistant</h2>
+        <textarea id="assistant-input" aria-label="Ask the assistant">What is a popular milk tea?</textarea>
+        <div class="button-row" style="margin-top: 12px;"><button class="btn" id="assistant-btn">Ask Assistant</button></div>
+        <p id="assistant-result" class="muted">Assistant reply will appear here.</p>
+      </section>
+    </section>
+  </main>
+  <script src="/js/cashier.js"></script>
+</body>
+</html>

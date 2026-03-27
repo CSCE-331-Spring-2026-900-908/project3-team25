@@ -1,43 +1,59 @@
-## System Architecture
+# Project 3 Team 25 Starter Build
 
-The Entity Relationship Diagram (ERD) below shows the database schema and the relationships between transactions, products, inventory, and restock operations.
+This is a runnable Project 3 starter package built from your existing Project 2 repository.
 
-<p align="center">
-  <img src="Project 2 Database Design.jpeg" width="900" alt="Project 2 Database ERD">
-</p>
+## What was added
 
-# Boba Shop Point-of-Sale (POS) & Inventory Management System
+- Centralized **portal page** that links one-way to all required interfaces
+- **Manager interface** for back-office analytics and inventory alerts
+- **Cashier interface** with touch-friendly ordering flow
+- **Customer kiosk** with simplified public-facing layout
+- **Menu board** for large non-interactive display
+- Starter backend routes for:
+  - mock authentication
+  - weather forecast
+  - machine translation
+  - personal assistant chatbot
 
-A full-stack database system designed for a small-to-medium bubble tea restaurant.  
-The system manages customer transactions, menu items, inventory tracking, and restock operations through a PostgreSQL backend.
+## Tech stack in this starter
 
-## Project Overview
+- Node.js
+- Express
+- HTML/CSS/JavaScript
+- Existing CSV data reused from Project 2
 
-The goal of this project is to replace manual tracking methods (such as spreadsheets or handwritten notes) with a reliable relational database that supports day-to-day restaurant operations.
+## Run locally
 
-The system provides functionality for:
+```bash
+npm install
+npm start
+```
 
-- Customer order processing
-- Sales history and reporting
-- Inventory monitoring
-- Restock management
-- Manager analytics queries
+Then open:
 
-The database is designed to simulate realistic workload requirements, including large transaction histories and peak-day scenarios, allowing for meaningful performance testing and analysis.
+```text
+http://localhost:3000
+```
 
-## Technologies Used
+## Deployment note
 
-- PostgreSQL
-- SQL
-- Java (GUI applications)
-- Maven
+This app is ready to deploy to Render as a Node web service.
 
-## Educational Purpose
+Suggested Render settings:
 
-This project demonstrates practical concepts in:
+- Build command: `npm install`
+- Start command: `npm start`
 
-- Relational database design
-- Entity-relationship modeling
-- SQL query development
-- Data integrity and constraints
-- Full-stack system integration
+## Important remaining work
+
+This starter is a strong beginning, but a few things still need to be completed by your team before final submission:
+
+1. Replace mock login with real Google OAuth.
+2. Connect order flow to the PostgreSQL backend.
+3. Add your chosen beyond-feature(s).
+4. Refine the UI with your team’s final theme and branding.
+5. Reconnect any manager and cashier actions to live database writes.
+
+## Existing project files retained
+
+Your original GUI, SQL, data, and scripts folders were kept in the repository so you can continue using them as references.
