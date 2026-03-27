@@ -1,7 +1,7 @@
 {
   "name": "project3-team25",
   "version": "1.0.0",
-  "description": "CSCE 331 Project 3 starter web app for Team 25",
+  "description": "CSCE 331 Project 3 web app for Team 25",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,6 +11,8 @@
     "node": "20.x"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.3"
   }
 }

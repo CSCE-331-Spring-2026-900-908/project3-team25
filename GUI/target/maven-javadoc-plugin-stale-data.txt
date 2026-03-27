@@ -1,0 +1,72 @@
+-J-Duser.language=
+-J-Duser.country=
+@options
+@argfile
+-classpath
+'/home/ruyxv/.m2/repository/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar:/home/ruyxv/.m2/repository/com/formdev/flatlaf/3.5.2/flatlaf-3.5.2.jar:/home/ruyxv/.m2/repository/com/formdev/flatlaf-extras/3.5.2/flatlaf-extras-3.5.2.jar:/home/ruyxv/.m2/repository/org/jfree/jfreechart/1.5.4/jfreechart-1.5.4.jar'
+-encoding
+'UTF-8'
+-protected
+-source
+'17'
+-sourcepath
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java'
+-author
+-bottom
+'Copyright &#169; 2026. All rights reserved.'
+-charset
+'UTF-8'
+-d
+'/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs'
+-docencoding
+'UTF-8'
+-doctitle
+'team25-gui 1.0 API'
+-use
+-version
+-windowtitle
+'team25-gui 1.0 API'
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/CashierApp.java'
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/UserSession.java'
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/AuthService.java'
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/LauncherApp.java'
+'/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/ManagerApp.java'
+/home/ruyxv/.m2/repository/org/postgresql/postgresql/42.7.3/postgresql-42.7.3.jar = 1773851741675
+/home/ruyxv/.m2/repository/com/formdev/flatlaf/3.5.2/flatlaf-3.5.2.jar = 1773851741667
+/home/ruyxv/.m2/repository/com/formdev/flatlaf-extras/3.5.2/flatlaf-extras-3.5.2.jar = 1773851741690
+/home/ruyxv/.m2/repository/org/jfree/jfreechart/1.5.4/jfreechart-1.5.4.jar = 1773851741791
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/CashierApp.java = 1773869970000
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/UserSession.java = 1774242032000
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/AuthService.java = 1774242032000
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/LauncherApp.java = 1774242032000
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java/ManagerApp.java = 1773869970000
+/home/ruyxv/CSCE 331/project3-team25/GUI/src/main/java = 1774224437385
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/module-search-index.js = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/allpackages-index.html = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/index-all.html = 1774224514063
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/index.html = 1774224514063
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/package-tree.html = 1774224513973
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/serialized-form.html = 1774224514022
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/UserSession.html = 1774224513965
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/stylesheet.css = 1774224514067
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/member-search-index.js = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/help-doc.html = 1774224514067
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/script.js = 1774224514067
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/element-list = 1774224513965
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/AuthService.html = 1774224513815
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/ManagerApp.html = 1774224513941
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/CashierApp.html = 1774224513888
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/package-use.html = 1774224514043
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/type-search-index.js = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/search-page.js = 1774224514071
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/package-summary.html = 1774224513969
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/allclasses-index.html = 1774224514051
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/link.svg = 1774224514071
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/package-search-index.js = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/LauncherApp.DbCreds.html = 1774224513916
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/search.js = 1774224514071
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/LauncherApp.html = 1774224513900
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/copy.svg = 1774224514071
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/overview-tree.html = 1774224514043
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/tag-search-index.js = 1774224514055
+/home/ruyxv/CSCE 331/project3-team25/GUI/target/reports/apidocs/search.html = 1774224514063

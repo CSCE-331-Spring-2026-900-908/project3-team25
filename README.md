@@ -1,59 +1,44 @@
-# Project 3 Team 25 Starter Build
+# Project 3 Team 25
 
-This is a runnable Project 3 starter package built from your existing Project 2 repository.
+This is the Team 25 Project 3 web app for CSCE 331.
 
-## What was added
+## What this version includes
+- Centralized portal page
+- Customer kiosk, cashier POS, manager dashboard, and menu board
+- CSV fallback mode for menu and inventory
+- PostgreSQL-ready backend using `pg`
+- Real checkout route that inserts into `transactions` and `transactionitem` when DB environment variables are configured
+- Weather, translation, and assistant starter routes
 
-- Centralized **portal page** that links one-way to all required interfaces
-- **Manager interface** for back-office analytics and inventory alerts
-- **Cashier interface** with touch-friendly ordering flow
-- **Customer kiosk** with simplified public-facing layout
-- **Menu board** for large non-interactive display
-- Starter backend routes for:
-  - mock authentication
-  - weather forecast
-  - machine translation
-  - personal assistant chatbot
+## Local setup
+1. Create `.env` in the project root using `.env.example`.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the app:
+   ```bash
+   npm start
+   ```
 
-## Tech stack in this starter
+## Environment variables
+Set these locally in `.env` and in Render environment variables:
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
 
-- Node.js
-- Express
-- HTML/CSS/JavaScript
-- Existing CSV data reused from Project 2
+Optional:
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `GOOGLE_CLIENT_ID`
 
-## Run locally
-
-```bash
-npm install
-npm start
-```
-
-Then open:
-
-```text
-http://localhost:3000
-```
-
-## Deployment note
-
-This app is ready to deploy to Render as a Node web service.
-
-Suggested Render settings:
-
+## Render
+Use a **Web Service** with:
 - Build command: `npm install`
 - Start command: `npm start`
 
-## Important remaining work
-
-This starter is a strong beginning, but a few things still need to be completed by your team before final submission:
-
-1. Replace mock login with real Google OAuth.
-2. Connect order flow to the PostgreSQL backend.
-3. Add your chosen beyond-feature(s).
-4. Refine the UI with your team’s final theme and branding.
-5. Reconnect any manager and cashier actions to live database writes.
-
-## Existing project files retained
-
-Your original GUI, SQL, data, and scripts folders were kept in the repository so you can continue using them as references.
+## Notes
+- If DB credentials are missing, the app stays usable in CSV fallback mode.
+- For final submission, replace mock login with real OAuth and decide whether to deduct inventory after checkout.

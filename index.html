@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3 Team 25</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-2: #1f2937;
+            --border: #334155;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --primary: #60a5fa;
+            --accent: #fbbf24;
+            --success: #22c55e;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, #0b1120 0%, #111827 100%);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 28px;
+        }
+
+        .hero,
+        .card {
+            background: rgba(31, 41, 55, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+        }
+
+        .hero {
+            padding: 34px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin: 0 0 12px;
+            font-size: 2.2rem;
+        }
+
+        h2 {
+            color: #bfdbfe;
+            margin: 0 0 12px;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #dbeafe;
+        }
+
+        p, li {
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .button,
+        button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 12px 18px;
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            border: none;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .button:hover,
+        button:hover {
+            background: #1d4ed8;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            padding: 22px;
+        }
+
+        .team-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            padding-left: 18px;
+        }
+
+        .links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .api-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .api-controls,
+        .quick-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 1rem;
+        }
+
+        pre {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 14px;
+            overflow-x: auto;
+            min-height: 170px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #bfdbfe;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(34, 197, 94, 0.13);
+            color: #86efac;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <span class="pill">API Integration Progress Added</span>
+            <h1>CSCE 331 - Project 3 - Team 25</h1>
+            <p>Welcome to our project deployment page for the Bubble Tea POS and Inventory Management System.</p>
+            <p class="muted">
+                This updated landing page now includes live API integration examples using Agify, Nationalize, and Genderize.
+                It demonstrates our progress toward incorporating external web APIs into Project 3.
+            </p>
+
+            <div class="links">
+                <a class="button" href="https://github.com/CSCE-331-Spring-2026-900-908/project3-team25" target="_blank">Open GitHub Repository</a>
+                <a class="button" href="GUI/target/reports/apidocs/index.html" target="_blank">Open Javadocs</a>
+            </div>
+        </section>
+
+        <div class="grid">
+            <section class="card">
+                <h2>Project Overview</h2>
+                <p>
+                    Our system supports cashier ordering, transaction tracking, product management, inventory monitoring,
+                    and manager analytics for a bubble tea restaurant. This page serves as a central hub for documentation,
+                    team information, and API-based feature demonstrations.
+                </p>
+
+                <h2>Team Members</h2>
+                <ul class="team-list">
+                    <li>Nick Leon</li>
+                    <li>Ali Hussein</li>
+                    <li>Ty Macaulay</li>
+                    <li>Sonny Hernandez</li>
+                </ul>
+            </section>
+
+            <section class="card">
+                <h2>API Demo</h2>
+                <p class="muted">Type a first name or use one of the quick team buttons below, then choose an API and send the request.</p>
+
+                <div class="api-box">
+                    <input id="nameInput" type="text" placeholder="Enter a first name" value="Ali">
+
+                    <div class="quick-buttons">
+                        <button onclick="setName('Sonny')">Sonny</button>
+                        <button onclick="setName('Nick')">Nick</button>
+                        <button onclick="setName('Ty')">Ty</button>
+                        <button onclick="setName('Ali')">Ali</button>
+                    </div>
+
+                    <select id="apiSelect">
+                        <option value="agify">Agify - Estimate Age</option>
+                        <option value="nationalize">Nationalize - Estimate Nationality</option>
+                        <option value="genderize">Genderize - Estimate Gender</option>
+                    </select>
+
+                    <div class="api-controls">
+                        <button onclick="runSelectedApi()">Send Request</button>
+                        <button onclick="runAgifyExample()">Run Agify Example</button>
+                        <button onclick="runNationalizeExample()">Run Nationalize Example</button>
+                        <button onclick="runGenderizeExample()">Run Genderize Example</button>
+                    </div>
+
+                    <pre id="apiOutput">API response will appear here...</pre>
+                </div>
+
+                <p class="footer-note">
+                    This section was added to demonstrate external API integration progress for the Project 3 lab activity.
+                </p>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        function setName(name) {
+            document.getElementById('nameInput').value = name;
+        }
+
+        function getApiUrl(apiName, name) {
+            const encodedName = encodeURIComponent(name.trim());
+            if (apiName === 'agify') return `https://api.agify.io/?name=${encodedName}`;
+            if (apiName === 'nationalize') return `https://api.nationalize.io/?name=${encodedName}`;
+            return `https://api.genderize.io/?name=${encodedName}`;
+        }
+
+        async function fetchApi(apiName, name) {
+            const output = document.getElementById('apiOutput');
+            const trimmedName = name.trim();
+
+            if (!trimmedName) {
+                output.textContent = 'Please enter a name first.';
+                return;
+            }
+
+            const url = getApiUrl(apiName, trimmedName);
+            output.textContent = `Loading...\n\nGET ${url}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+                const data = await response.json();
+                output.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                output.textContent = `Unable to load API response.\n\n${error.message}`;
+            }
+        }
+
+        function runSelectedApi() {
+            const name = document.getElementById('nameInput').value;
+            const api = document.getElementById('apiSelect').value;
+            fetchApi(api, name);
+        }
+
+        function runAgifyExample() {
+            setName('Michael');
+            fetchApi('agify', 'Michael');
+        }
+
+        function runNationalizeExample() {
+            setName('Ali');
+            fetchApi('nationalize', 'Ali');
+        }
+
+        function runGenderizeExample() {
+            setName('Ali');
+            fetchApi('genderize', 'Ali');
+        }
+    </script>
+</body>
+</html>

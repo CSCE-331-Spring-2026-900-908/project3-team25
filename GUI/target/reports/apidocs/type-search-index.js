@@ -1,0 +1,1 @@
+typeSearchIndex = [{"l":"All Classes and Interfaces","u":"allclasses-index.html"},{"p":"<Unnamed>","l":"AuthService"},{"p":"<Unnamed>","l":"CashierApp"},{"p":"<Unnamed>","l":"LauncherApp.DbCreds"},{"p":"<Unnamed>","l":"LauncherApp"},{"p":"<Unnamed>","l":"ManagerApp"},{"p":"<Unnamed>","l":"UserSession"}];updateSearchResults();

@@ -20,7 +20,7 @@
       <div class="tag-row">
         <span class="tag">Portal page</span>
         <span class="tag">4 required interfaces</span>
-        <span class="tag">Restaurant-style redesign</span>
+        <span class="tag">Database-ready</span>
       </div>
     </header>
 
@@ -30,8 +30,8 @@
         <span class="pill">Customer + cashier separation</span>
         <span class="pill">Accessibility-aware layout</span>
       </div>
-      <h1 id="hero-title">A real restaurant-style starting point, not just a class demo screen.</h1>
-      <p>This version is redesigned to feel closer to an actual modern kiosk and counter POS. The customer view emphasizes menu browsing and checkout flow, the cashier view uses a staff-side order ticket layout, and the menu board now looks like a lobby display instead of a plain page of cards.</p>
+      <h1 id="hero-title">A restaurant-style Project 3 foundation with real checkout support.</h1>
+      <p>This build keeps the Project 2 database/data concepts while replacing the old desktop GUI with web interfaces for manager, cashier, customer kiosk, and menu board. If database environment variables are configured, checkout inserts into PostgreSQL. Otherwise the app stays usable in CSV fallback mode.</p>
       <div class="button-row" style="margin-top: 18px;">
         <a class="btn secondary" href="/customer.html">Open Customer Kiosk</a>
         <a class="btn secondary" href="/cashier.html">Open Cashier POS</a>
@@ -55,74 +55,42 @@
         <section class="card-grid">
           <article class="interface-card">
             <h3>Customer Kiosk</h3>
-            <p>Designed like a self-order station with category chips, large menu cards, customization controls, and a sticky order summary.</p>
-            <ul>
-              <li>Big touch targets</li>
-              <li>Drink customization area</li>
-              <li>Clear total and checkout</li>
-            </ul>
+            <p>Self-order station with category chips, large menu cards, customization controls, and a sticky order summary.</p>
           </article>
           <article class="interface-card">
             <h3>Cashier POS</h3>
-            <p>Built more like a real counter terminal with category filtering, fast add buttons, live ticket summary, and customer-support widgets.</p>
-            <ul>
-              <li>Separate staff layout</li>
-              <li>Order ticket view</li>
-              <li>Translation and assistant tools</li>
-            </ul>
+            <p>Counter terminal with quick add buttons, ticket summary, and staff support widgets.</p>
           </article>
           <article class="interface-card">
             <h3>Menu Board</h3>
-            <p>Now looks more like an overhead digital board with large pricing, featured products, combo messages, and grouped menu sections.</p>
-            <ul>
-              <li>High contrast display</li>
-              <li>Featured drinks panel</li>
-              <li>Non-interactive lobby view</li>
-            </ul>
+            <p>Large lobby-style display with grouped categories and featured items.</p>
           </article>
           <article class="interface-card">
             <h3>Manager View</h3>
-            <p>Kept as the internal desktop view for metrics, inventory alerts, and category breakdowns, separated from customer-facing ordering screens.</p>
-            <ul>
-              <li>Back-office dashboard</li>
-              <li>Low-stock watchlist</li>
-              <li>Planning reminders</li>
-            </ul>
+            <p>Back-office dashboard for menu counts, low-stock items, and recent orders.</p>
           </article>
         </section>
       </section>
 
       <aside class="summary-stack">
         <article class="promo-card">
-          <h3 style="margin-top:0;">What changed from the first version</h3>
+          <h3 style="margin-top:0;">Project 2 carryover</h3>
           <ul class="notice-list">
-            <li>More restaurant-like color system and layout hierarchy</li>
-            <li>Customer ordering flow now has a real order summary area</li>
-            <li>Cashier view is now visually different from the kiosk</li>
-            <li>Menu board looks like a large display, not a basic page</li>
+            <li>Uses the same product, inventory, transaction, and transaction item concepts.</li>
+            <li>Supports PostgreSQL access through environment variables and a Node backend.</li>
+            <li>Keeps your data, queries, and schema files in the repo.</li>
           </ul>
         </article>
         <article class="promo-card">
           <h3 style="margin-top:0;">Still left for the team</h3>
           <ul class="notice-list">
-            <li>Hook real checkout and transaction inserts into PostgreSQL</li>
-            <li>Add Google OAuth for the required login integration</li>
-            <li>Expand toppings, modifiers, and product images</li>
-            <li>Polish according to your professor and TA feedback</li>
+            <li>Replace mock auth with Google OAuth.</li>
+            <li>Decide whether to deduct inventory on checkout.</li>
+            <li>Add images, branding, and final presentation polish.</li>
           </ul>
         </article>
       </aside>
     </section>
-
-    <h2 class="section-title">Quick progress check</h2>
-    <section class="metric-grid">
-      <article class="metric"><div class="value">4</div><small>Required interfaces linked from portal</small></article>
-      <article class="metric"><div class="value">3</div><small>Customer-facing screens redesigned</small></article>
-      <article class="metric"><div class="value">API</div><small>Weather, translation, auth, assistant routes</small></article>
-      <article class="metric"><div class="value">WCAG</div><small>Semantic headings, focus states, contrast</small></article>
-    </section>
-
-    <p class="footer-note">Portal stays one-way linked, while the individual interfaces remain isolated from each other as required.</p>
   </main>
 </body>
 </html>

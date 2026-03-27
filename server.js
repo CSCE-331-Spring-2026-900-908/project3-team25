@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { getPool, hasDbConfig } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,18 +16,18 @@ function parseCsv(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8').trim();
   if (!raw) return [];
   const [headerLine, ...lines] = raw.split(/\r?\n/);
-  const headers = headerLine.split(',');
+  const headers = headerLine.split(',').map((h) => h.trim());
   return lines.map((line) => {
     const values = line.split(',');
     const obj = {};
     headers.forEach((header, index) => {
-      obj[header.trim()] = (values[index] || '').trim();
+      obj[header] = (values[index] || '').trim();
     });
     return obj;
   });
 }
 
-const menuItems = parseCsv(path.join(dataDir, 'product.csv'))
+const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
   .filter((item) => item.is_active === 'true' && item.category !== 'topping')
   .map((item) => ({
     id: Number(item.productid),
@@ -41,7 +43,7 @@ const menuItems = parseCsv(path.join(dataDir, 'product.csv'))
     }[item.category] || 'Bubble tea menu item.'
   }));
 
-const inventory = parseCsv(path.join(dataDir, 'inventory.csv')).map((item) => ({
+const csvInventory = parseCsv(path.join(dataDir, 'inventory.csv')).map((item) => ({
   id: Number(item.inventoryid),
   itemName: item.itemname,
   unit: item.unit,
@@ -52,15 +54,22 @@ const inventory = parseCsv(path.join(dataDir, 'inventory.csv')).map((item) => ({
   status: Number(item.quantityonhand) <= Number(item.reorderthreshold) ? 'low' : 'ok'
 }));
 
-const lowStock = [...inventory]
-  .sort((a, b) => (a.quantityOnHand / a.reorderThreshold) - (b.quantityOnHand / b.reorderThreshold))
-  .slice(0, 6)
-  .map((item) => ({ ...item, status: item.quantityOnHand <= item.reorderThreshold ? 'low' : 'ok' }));
+let fallbackTransactions = [];
+let fallbackTransactionItems = [];
+let nextFallbackTransactionId = 100001;
+let nextFallbackTransactionItemId = 500001;
 
-function categoryBreakdown() {
+function categoryBreakdown(items) {
   const counts = {};
-  for (const item of menuItems) counts[item.category] = (counts[item.category] || 0) + 1;
+  for (const item of items) counts[item.category] = (counts[item.category] || 0) + 1;
   return counts;
+}
+
+function lowStock(items) {
+  return [...items]
+    .sort((a, b) => (a.quantityOnHand / (a.reorderThreshold || 1)) - (b.quantityOnHand / (b.reorderThreshold || 1)))
+    .slice(0, 6)
+    .map((item) => ({ ...item, status: item.quantityOnHand <= item.reorderThreshold ? 'low' : 'ok' }));
 }
 
 function ruleBasedAssistant(message) {
@@ -68,36 +77,246 @@ function ruleBasedAssistant(message) {
   if (!text.trim()) return 'Ask me about drinks, toppings, sweetness, allergens, or how to use this kiosk.';
   if (text.includes('popular') || text.includes('best')) return 'Our most popular items right now are Brown Sugar Milk Tea, Matcha Milk Tea, Strawberry Green Tea, and Mango Green Tea.';
   if (text.includes('sweet') || text.includes('sugar')) return 'Customers can choose 0%, 25%, 50%, 75%, or 100% sweetness. Fruit teas usually work well at 50% or 75% sweetness.';
-  if (text.includes('topping') || text.includes('boba')) return 'The main add-on supported in this starter build is extra boba. You can extend the menu data later for pudding, jelly, or foam toppings.';
+  if (text.includes('topping') || text.includes('boba')) return 'The starter build supports extra boba. You can expand later to pudding, jelly, foam, or seasonal toppings.';
   if (text.includes('milk') || text.includes('dairy')) return 'Most milk teas contain dairy in the base recipe. Tea and fruit tea options are the easiest starting point for customers avoiding dairy.';
-  if (text.includes('translate') || text.includes('language')) return 'Use the translation widget on the page to translate short menu phrases for kiosk support.';
-  if (text.includes('weather')) return 'The weather widget can be used for seasonal drink suggestions, such as recommending fruit teas on warmer days.';
-  if (text.includes('manager')) return 'The manager dashboard includes inventory status, menu mix, and quick daily insight cards in this starter version.';
-  return 'I can help with menu suggestions, sweetness levels, popular drinks, toppings, dietary hints, and basic kiosk guidance.';
+  if (text.includes('manager')) return 'The manager dashboard shows menu counts, sales metrics, and inventory alerts using either the database or CSV fallback.';
+  return 'I can help with menu suggestions, sweetness levels, popular drinks, toppings, dietary hints, and kiosk guidance.';
 }
 
-app.get('/api/menu', (_req, res) => res.json({ items: menuItems, categories: categoryBreakdown() }));
-app.get('/api/inventory', (_req, res) => res.json({ items: inventory, lowStock }));
-app.get('/api/dashboard', (_req, res) => {
+async function queryDb(text, params = []) {
+  const pool = getPool();
+  if (!pool) throw new Error('Database configuration is missing.');
+  return pool.query(text, params);
+}
+
+async function getMenuItems() {
+  if (hasDbConfig()) {
+    const result = await queryDb(`
+      SELECT productid AS id, name, category, baseprice AS price, is_active
+      FROM product
+      WHERE is_active = true
+      ORDER BY category, name
+    `);
+    return result.rows.map((item) => ({
+      id: Number(item.id),
+      name: item.name,
+      category: item.category,
+      price: Number(item.price),
+      popular: [2, 4, 9, 10, 14].includes(Number(item.id)),
+      description: {
+        milk_tea: 'Creamy tea-based drink with optional toppings and sweetness customization.',
+        tea: 'Refreshing brewed tea with a lighter flavor profile.',
+        fruit_tea: 'Fruity green tea served cold with vibrant flavors.',
+        coffee: 'Coffee-forward milk tea blend for stronger energy and flavor.'
+      }[item.category] || 'Bubble tea menu item.'
+    }));
+  }
+  return csvMenu;
+}
+
+async function getInventoryItems() {
+  if (hasDbConfig()) {
+    const result = await queryDb(`
+      SELECT inventoryid AS id, itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor
+      FROM inventory
+      ORDER BY itemname
+    `);
+    return result.rows.map((item) => ({
+      id: Number(item.id),
+      itemName: item.itemname,
+      unit: item.unit,
+      quantityOnHand: Number(item.quantityonhand),
+      reorderThreshold: Number(item.reorderthreshold),
+      unitCost: Number(item.unitcost),
+      vendor: item.vendor,
+      status: Number(item.quantityonhand) <= Number(item.reorderthreshold) ? 'low' : 'ok'
+    }));
+  }
+  return csvInventory;
+}
+
+async function getDashboardData() {
+  const menuItems = await getMenuItems();
+  const inventoryItems = await getInventoryItems();
+  let salesMetrics = {
+    totalOrders: fallbackTransactions.length,
+    totalRevenue: fallbackTransactions.reduce((sum, tx) => sum + Number(tx.totalAmount || 0), 0),
+    completedOrders: fallbackTransactions.filter((tx) => tx.status === 'completed').length
+  };
+
+  if (hasDbConfig()) {
+    const txStats = await queryDb(`
+      SELECT COUNT(*)::int AS total_orders,
+             COALESCE(SUM(totalamount), 0)::numeric AS total_revenue,
+             COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_orders
+      FROM transactions
+    `);
+    salesMetrics = {
+      totalOrders: txStats.rows[0].total_orders,
+      totalRevenue: Number(txStats.rows[0].total_revenue),
+      completedOrders: txStats.rows[0].completed_orders
+    };
+  }
+
   const avgPrice = menuItems.length
     ? menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length
     : 0;
 
-  res.json({
+  return {
     metrics: {
       activeMenuItems: menuItems.length,
-      inventoryItems: inventory.length,
-      lowStockItems: lowStock.length,
-      averageMenuPrice: Number(avgPrice.toFixed(2))
+      inventoryItems: inventoryItems.length,
+      lowStockItems: lowStock(inventoryItems).length,
+      averageMenuPrice: Number(avgPrice.toFixed(2)),
+      totalOrders: salesMetrics.totalOrders,
+      totalRevenue: Number(salesMetrics.totalRevenue.toFixed(2)),
+      completedOrders: salesMetrics.completedOrders
     },
-    lowStock,
-    categories: categoryBreakdown(),
+    lowStock: lowStock(inventoryItems),
+    categories: categoryBreakdown(menuItems),
     announcements: [
+      hasDbConfig()
+        ? 'Database mode is active. Checkout can insert transactions into PostgreSQL.'
+        : 'CSV fallback mode is active. Add DB environment variables to enable real PostgreSQL checkout.',
       'Portal page is the centralized launch point for all interfaces.',
-      'Cashier and customer pages use touch-friendly layouts.',
-      'Manager view is back-office focused for keyboard-and-mouse usage.'
+      'Cashier and customer pages use separate layouts for the assignment requirements.'
     ]
+  };
+}
+
+async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (!safeItems.length) throw new Error('At least one item is required for checkout.');
+
+  const menuItems = await getMenuItems();
+  const menuMap = new Map(menuItems.map((item) => [Number(item.id), item]));
+  const normalized = safeItems.map((item) => {
+    const menu = menuMap.get(Number(item.id));
+    if (!menu) throw new Error(`Menu item ${item.id} was not found.`);
+    const quantity = Math.max(1, Number(item.quantity || 1));
+    return {
+      productId: menu.id,
+      name: menu.name,
+      unitPrice: Number(item.unitPrice || menu.price),
+      quantity,
+      lineTotal: Number((Number(item.unitPrice || menu.price) * quantity).toFixed(2)),
+      selections: item.selections || {}
+    };
   });
+
+  const totalAmount = normalized.reduce((sum, item) => sum + item.lineTotal, 0);
+
+  if (hasDbConfig()) {
+    const pool = getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const txResult = await client.query(
+        `INSERT INTO transactions (cashierid, transactiontime, totalamount, paymentmethod, status)
+         VALUES ($1, NOW(), $2, $3, 'completed')
+         RETURNING transactionid, transactiontime, totalamount, paymentmethod, status`,
+        [cashierId, totalAmount, String(paymentMethod).toLowerCase()]
+      );
+      const txRow = txResult.rows[0];
+
+      for (const item of normalized) {
+        await client.query(
+          `INSERT INTO transactionitem (transactionid, productid, quantity, unitprice)
+           VALUES ($1, $2, $3, $4)`,
+          [txRow.transactionid, item.productId, item.quantity, item.unitPrice]
+        );
+      }
+
+      await client.query('COMMIT');
+      return {
+        source: 'database',
+        transactionId: txRow.transactionid,
+        transactionTime: txRow.transactiontime,
+        totalAmount: Number(txRow.totalamount),
+        paymentMethod: txRow.paymentmethod,
+        status: txRow.status,
+        items: normalized
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  const transactionId = nextFallbackTransactionId++;
+  const transaction = {
+    transactionId,
+    cashierId,
+    transactionTime: new Date().toISOString(),
+    totalAmount,
+    paymentMethod: String(paymentMethod).toLowerCase(),
+    status: 'completed'
+  };
+  fallbackTransactions.push(transaction);
+  normalized.forEach((item) => {
+    fallbackTransactionItems.push({
+      transactionItemId: nextFallbackTransactionItemId++,
+      transactionId,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice
+    });
+  });
+  return { source: 'fallback', ...transaction, items: normalized };
+}
+
+app.get('/api/menu', async (_req, res) => {
+  try {
+    const items = await getMenuItems();
+    res.json({ items, categories: categoryBreakdown(items), source: hasDbConfig() ? 'database' : 'csv' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load menu.', details: error.message });
+  }
+});
+
+app.get('/api/inventory', async (_req, res) => {
+  try {
+    const items = await getInventoryItems();
+    res.json({ items, lowStock: lowStock(items), source: hasDbConfig() ? 'database' : 'csv' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load inventory.', details: error.message });
+  }
+});
+
+app.get('/api/dashboard', async (_req, res) => {
+  try {
+    res.json(await getDashboardData());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load dashboard.', details: error.message });
+  }
+});
+
+app.get('/api/orders/recent', async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const result = await queryDb(`
+        SELECT transactionid, cashierid, transactiontime, totalamount, paymentmethod, status
+        FROM transactions
+        ORDER BY transactiontime DESC
+        LIMIT 10
+      `);
+      return res.json({ items: result.rows, source: 'database' });
+    }
+    return res.json({ items: [...fallbackTransactions].reverse().slice(0, 10), source: 'fallback' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load recent orders.', details: error.message });
+  }
+});
+
+app.post('/api/checkout', async (req, res) => {
+  try {
+    const result = await createCheckout(req.body || {});
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({ error: 'Checkout failed.', details: error.message });
+  }
 });
 
 app.post('/api/assistant', async (req, res) => {
@@ -229,6 +448,10 @@ app.get('/api/auth/config', (_req, res) =>
     requiredEmail: 'reveille.bubbletea@gmail.com'
   })
 );
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, dbConfigured: hasDbConfig() });
+});
 
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
