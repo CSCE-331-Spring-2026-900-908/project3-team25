@@ -10,7 +10,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 function parseCsv(filePath) {
+  if (!fs.existsSync(filePath)) return [];
   const raw = fs.readFileSync(filePath, 'utf8').trim();
+  if (!raw) return [];
   const [headerLine, ...lines] = raw.split(/\r?\n/);
   const headers = headerLine.split(',');
   return lines.map((line) => {
@@ -77,7 +79,10 @@ function ruleBasedAssistant(message) {
 app.get('/api/menu', (_req, res) => res.json({ items: menuItems, categories: categoryBreakdown() }));
 app.get('/api/inventory', (_req, res) => res.json({ items: inventory, lowStock }));
 app.get('/api/dashboard', (_req, res) => {
-  const avgPrice = menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length;
+  const avgPrice = menuItems.length
+    ? menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length
+    : 0;
+
   res.json({
     metrics: {
       activeMenuItems: menuItems.length,
@@ -99,44 +104,72 @@ app.post('/api/assistant', async (req, res) => {
   const { message } = req.body || {};
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  if (!apiKey) return res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message) });
+
+  if (!apiKey) {
+    return res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message) });
+  }
+
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: 'You are a concise bubble tea kiosk assistant. Help users with ordering, menu choices, customization, allergens, and store guidance.' },
-          { role: 'user', content: String(message || '') }
+          {
+            role: 'system',
+            content: 'You are a concise bubble tea kiosk assistant. Help users with ordering, menu choices, customization, allergens, and store guidance.'
+          },
+          {
+            role: 'user',
+            content: String(message || '')
+          }
         ],
         temperature: 0.5,
         max_tokens: 180
       })
     });
+
     if (!response.ok) throw new Error(`OpenAI request failed with ${response.status}`);
+
     const data = await response.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || ruleBasedAssistant(message);
     res.json({ source: 'openai', reply });
   } catch (error) {
-    res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message), error: error.message });
+    res.json({
+      source: 'local-fallback',
+      reply: ruleBasedAssistant(message),
+      error: error.message
+    });
   }
 });
 
 app.get('/api/weather', async (req, res) => {
   const city = String(req.query.city || 'College Station').trim();
+
   try {
     const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
     const geoData = await geoRes.json();
     const place = geoData.results?.[0];
-    if (!place) return res.status(404).json({ error: 'Location not found.' });
+
+    if (!place) {
+      return res.status(404).json({ error: 'Location not found.' });
+    }
+
     const forecastRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`);
     const forecastData = await forecastRes.json();
+
     res.json({
       city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
       temperature: forecastData.current?.temperature_2m,
       weatherCode: forecastData.current?.weather_code,
-      recommendation: (forecastData.current?.temperature_2m ?? 0) >= 80 ? 'Warm weather today. Suggest fruit teas and iced drinks.' : 'Cooler weather today. Suggest milk teas and warmer flavors.'
+      recommendation:
+        (forecastData.current?.temperature_2m ?? 0) >= 80
+          ? 'Warm weather today. Suggest fruit teas and iced drinks.'
+          : 'Cooler weather today. Suggest milk teas and warmer flavors.'
     });
   } catch (error) {
     res.status(500).json({ error: 'Weather service unavailable.', details: error.message });
@@ -146,12 +179,20 @@ app.get('/api/weather', async (req, res) => {
 app.get('/api/translate', async (req, res) => {
   const text = String(req.query.text || '').trim();
   const target = String(req.query.target || 'es').trim();
-  if (!text) return res.status(400).json({ error: 'Text is required.' });
+
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required.' });
+  }
+
   try {
     const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${encodeURIComponent(target)}`);
     const data = await response.json();
     const translatedText = data.responseData?.translatedText;
-    if (!translatedText) return res.status(502).json({ error: 'Translation failed.' });
+
+    if (!translatedText) {
+      return res.status(502).json({ error: 'Translation failed.' });
+    }
+
     res.json({ translatedText, target });
   } catch (error) {
     res.status(500).json({ error: 'Translation service unavailable.', details: error.message });
@@ -162,12 +203,37 @@ app.post('/api/auth/mock-login', (req, res) => {
   const { email, role } = req.body || {};
   const safeRole = ['manager', 'cashier', 'customer'].includes(role) ? role : 'customer';
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const allowed = !normalizedEmail || normalizedEmail === 'reveille.bubbletea@gmail.com' || normalizedEmail.endsWith('@tamu.edu');
-  if (!allowed) return res.status(403).json({ ok: false, message: 'Starter build only accepts the required project email or a TAMU address for demo login.' });
-  res.json({ ok: true, role: safeRole, email: normalizedEmail || 'guest@demo.local', note: 'This is a starter mock-auth flow. Replace with Google OAuth before final submission.' });
+  const allowed =
+    !normalizedEmail ||
+    normalizedEmail === 'reveille.bubbletea@gmail.com' ||
+    normalizedEmail.endsWith('@tamu.edu');
+
+  if (!allowed) {
+    return res.status(403).json({
+      ok: false,
+      message: 'Starter build only accepts the required project email or a TAMU address for demo login.'
+    });
+  }
+
+  res.json({
+    ok: true,
+    role: safeRole,
+    email: normalizedEmail || 'guest@demo.local',
+    note: 'This is a starter mock-auth flow. Replace with Google OAuth before final submission.'
+  });
 });
 
-app.get('/api/auth/config', (_req, res) => res.json({ googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID), requiredEmail: 'reveille.bubbletea@gmail.com' }));
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/api/auth/config', (_req, res) =>
+  res.json({
+    googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
+    requiredEmail: 'reveille.bubbletea@gmail.com'
+  })
+);
 
-app.listen(PORT, () => console.log(`Project 3 Team 25 app running on http://localhost:${PORT}`));
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Project 3 Team 25 app running on port ${PORT}`);
+});
