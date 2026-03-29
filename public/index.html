@@ -34,10 +34,14 @@
       <p>Launch the customer kiosk, cashier POS, menu board, or manager dashboard from one central portal.</p>
       <div class="button-row" style="margin-top: 18px;">
         <a class="btn secondary" href="/customer.html">Open Customer Kiosk</a>
-        <a class="btn secondary" href="/cashier.html">Open Cashier POS</a>
+        <a class="btn secondary" id="portal-cashier-link" href="/auth/google">Cashier Sign-In Required</a>
         <a class="btn secondary" href="/menu-board.html">Open Menu Board</a>
-        <a class="btn secondary" href="/manager.html">Open Manager View</a>
+        <a class="btn secondary" id="portal-manager-link" href="/auth/google">Manager Sign-In Required</a>
       </div>
+    </section>
+
+    <section class="portal-card" id="auth-status" style="margin-bottom: 20px;">
+      <p class="muted">Checking sign-in status...</p>
     </section>
 
     <section class="portal-grid">
@@ -92,5 +96,6 @@
       </aside>
     </section>
   </main>
+  <script src="/js/auth.js"></script>
 </body>
 </html>
