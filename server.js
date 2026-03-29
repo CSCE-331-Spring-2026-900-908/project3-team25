@@ -11,6 +11,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
 
+const googleCallbackUrl =
+  process.env.GOOGLE_CALLBACK_URL ||
+  'https://project3-team25-m13k.onrender.com/auth/google/callback';
+
+app.set('trust proxy', 1);
 app.use(express.json());
 
 app.use(
@@ -73,7 +78,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/auth/google/callback'
+        callbackURL: googleCallbackUrl
       },
       (_accessToken, _refreshToken, profile, done) => {
         const email = profile.emails?.[0]?.value || '';
@@ -361,7 +366,9 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
 
 app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(500).send('Google OAuth is not configured.');
+    return res.status(500).send(
+      'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Render environment variables.'
+    );
   }
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
@@ -579,7 +586,8 @@ app.post('/api/auth/mock-login', (req, res) => {
 app.get('/api/auth/config', (_req, res) =>
   res.json({
     googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
-    requiredEmail: 'reveille.bubbletea@gmail.com'
+    requiredEmail: 'reveille.bubbletea@gmail.com',
+    googleCallbackUrl
   })
 );
 
