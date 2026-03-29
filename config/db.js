@@ -22,7 +22,13 @@ function getPool() {
       database: process.env.DB_NAME,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl: false
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+
+    pool.on('error', (err) => {
+      console.error('PostgreSQL pool error:', err);
     });
   }
   return pool;
