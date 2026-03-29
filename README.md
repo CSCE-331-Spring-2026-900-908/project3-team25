@@ -18,12 +18,11 @@ This is the Team 25 Project 3 web app for CSCE 331.
 
 ## Local setup
 1. Create `.env` in the project root using `.env.example`.
-2. Add your Google OAuth values to `.env` and to your Render environment variables.
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-4. Run the app:
+3. Run the app:
    ```bash
    npm start
    ```
@@ -38,8 +37,6 @@ Set these locally in `.env` and in Render environment variables:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `SESSION_SECRET`
-- `MANAGER_EMAILS`
-- `GOOGLE_CALLBACK_URL` (recommended on Render)
 
 Optional:
 - `OPENAI_API_KEY`
@@ -50,15 +47,6 @@ Optional:
 Use a **Web Service** with:
 - Build command: `npm install`
 - Start command: `npm start`
-
-In Render, add these environment variables:
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `SESSION_SECRET`
-- `MANAGER_EMAILS`
-- `GOOGLE_CALLBACK_URL=https://your-service-name.onrender.com/auth/google/callback`
-
-In Google Cloud Console, add the same deployed callback URL under **Authorized redirect URIs** and add your site root under **Authorized JavaScript origins**.
 
 ## Notes
 - If DB credentials are missing, the app stays usable in CSV fallback mode.

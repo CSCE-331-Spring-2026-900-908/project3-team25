@@ -67,16 +67,13 @@ passport.deserializeUser((user, done) => {
   done(null, user);
 });
 
-const googleCallbackUrl =
-  process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
-
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: googleCallbackUrl
+        callbackURL: '/auth/google/callback'
       },
       (_accessToken, _refreshToken, profile, done) => {
         const email = profile.emails?.[0]?.value || '';
@@ -364,9 +361,7 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
 
 app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(500).send(
-      'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.'
-    );
+    return res.status(500).send('Google OAuth is not configured.');
   }
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
