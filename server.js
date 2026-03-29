@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { getPool, hasDbConfig } = require('./config/db');
 
 const app = express();
@@ -9,7 +12,99 @@ const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'dev_only_change_me',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    }
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+const managerEmails = (process.env.MANAGER_EMAILS || '')
+  .split(',')
+  .map(email => email.trim().toLowerCase())
+  .filter(Boolean);
+
+function getUserRoleFromEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  if (managerEmails.includes(normalizedEmail)) {
+    return 'manager';
+  }
+
+  if (normalizedEmail.endsWith('@tamu.edu')) {
+    return 'cashier';
+  }
+
+  return 'customer';
+}
+
+function requireStaff(req, res, next) {
+  if (
+    req.isAuthenticated &&
+    req.isAuthenticated() &&
+    (req.user?.role === 'cashier' || req.user?.role === 'manager')
+  ) {
+    return next();
+  }
+  return res.redirect('/?unauthorized=1');
+}
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user, done) => {
+  done(null, user);
+});
+
+const googleCallbackUrl =
+  process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: googleCallbackUrl
+      },
+      (_accessToken, _refreshToken, profile, done) => {
+        const email = profile.emails?.[0]?.value || '';
+        const user = {
+          id: profile.id,
+          displayName: profile.displayName || 'User',
+          email,
+          role: getUserRoleFromEmail(email)
+        };
+        done(null, user);
+      }
+    )
+  );
+}
+
+function requireAuth(req, res, next) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  return res.redirect('/?authRequired=1');
+}
+
+function requireManager(req, res, next) {
+  if (req.isAuthenticated && req.isAuthenticated() && req.user?.role === 'manager') {
+    return next();
+  }
+  return res.redirect('/?unauthorized=1');
+}
 
 function parseCsv(filePath) {
   if (!fs.existsSync(filePath)) return [];
@@ -267,6 +362,50 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
   return { source: 'fallback', ...transaction, items: normalized };
 }
 
+app.get('/auth/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).send(
+      'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.'
+    );
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
+app.get(
+  '/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
+  (req, res) => {
+    res.redirect('/');
+  }
+);
+
+app.post('/auth/logout', (req, res, next) => {
+  req.logout((error) => {
+    if (error) return next(error);
+    req.session.destroy(() => {
+      res.json({ ok: true });
+    });
+  });
+});
+
+app.get('/api/me', (req, res) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return res.json({
+      authenticated: true,
+      user: {
+        displayName: req.user.displayName,
+        email: req.user.email,
+        role: req.user.role
+      }
+    });
+  }
+
+  return res.json({
+    authenticated: false,
+    user: null
+  });
+});
+
 app.get('/api/menu', async (_req, res) => {
   try {
     const items = await getMenuItems();
@@ -276,7 +415,7 @@ app.get('/api/menu', async (_req, res) => {
   }
 });
 
-app.get('/api/inventory', async (_req, res) => {
+app.get('/api/inventory', requireAuth, async (_req, res) => {
   try {
     const items = await getInventoryItems();
     res.json({ items, lowStock: lowStock(items), source: hasDbConfig() ? 'database' : 'csv' });
@@ -285,7 +424,7 @@ app.get('/api/inventory', async (_req, res) => {
   }
 });
 
-app.get('/api/dashboard', async (_req, res) => {
+app.get('/api/dashboard', requireManager, async (_req, res) => {
   try {
     res.json(await getDashboardData());
   } catch (error) {
@@ -293,7 +432,7 @@ app.get('/api/dashboard', async (_req, res) => {
   }
 });
 
-app.get('/api/orders/recent', async (_req, res) => {
+app.get('/api/orders/recent', requireManager, async (_req, res) => {
   try {
     if (hasDbConfig()) {
       const result = await queryDb(`
@@ -452,6 +591,16 @@ app.get('/api/auth/config', (_req, res) =>
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dbConfigured: hasDbConfig() });
 });
+
+app.get('/cashier.html', requireStaff, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cashier.html'));
+});
+
+app.get('/manager.html', requireManager, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'manager.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
