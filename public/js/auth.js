@@ -3,6 +3,29 @@ async function logout() {
   window.location.href = '/';
 }
 
+function showPortalMessage(message) {
+  const el = document.getElementById('portal-access-message');
+  if (!el) return;
+  el.textContent = message;
+}
+
+function setRestrictedLink(linkEl, label, message) {
+  if (!linkEl) return;
+  linkEl.textContent = label;
+  linkEl.href = '#';
+  linkEl.onclick = (event) => {
+    event.preventDefault();
+    showPortalMessage(message);
+  };
+}
+
+function setOpenLink(linkEl, label, href) {
+  if (!linkEl) return;
+  linkEl.textContent = label;
+  linkEl.href = href;
+  linkEl.onclick = null;
+}
+
 async function loadAuthState() {
   const statusWrap = document.getElementById('auth-status');
   const cashierLink = document.getElementById('portal-cashier-link');
@@ -22,23 +45,19 @@ async function loadAuthState() {
         </div>
       `;
 
-      if (cashierLink) {
-        if (role === 'cashier' || role === 'manager') {
-            cashierLink.textContent = 'Open Cashier POS';
-            cashierLink.href = '/cashier.html';
-        } else {
-            cashierLink.textContent = 'Cashier Access Only';
-            cashierLink.href = '#';
-            cashierLink.addEventListener('click', (event) => event.preventDefault());
-            }
-        }
+      setRestrictedLink(
+        cashierLink,
+        'Cashier POS',
+        'Cashier access requires a staff login.'
+      );
 
-        if (managerLink) {
-            managerLink.textContent = 'Manager Sign-In Required';
-            managerLink.href = '/auth/google';
-        }
+      setRestrictedLink(
+        managerLink,
+        'Manager View',
+        'Manager access is restricted to authorized manager accounts.'
+      );
 
-        return;
+      return;
     }
 
     const { displayName, email, role } = data.user;
@@ -53,28 +72,44 @@ async function loadAuthState() {
 
     document.getElementById('logout-btn').addEventListener('click', logout);
 
-    if (cashierLink) {
-      cashierLink.textContent = 'Open Cashier POS';
-      cashierLink.href = '/cashier.html';
+    if (role === 'cashier' || role === 'manager') {
+      setOpenLink(cashierLink, 'Open Cashier POS', '/cashier.html');
+    } else {
+      setRestrictedLink(
+        cashierLink,
+        'Cashier POS',
+        'Cashier access requires a staff login.'
+      );
     }
 
-    if (managerLink) {
-      if (role === 'manager') {
-        managerLink.textContent = 'Open Manager View';
-        managerLink.href = '/manager.html';
-      } else {
-        managerLink.textContent = 'Manager Access Only';
-        managerLink.href = '#';
-        managerLink.addEventListener('click', (event) => event.preventDefault());
-      }
+    if (role === 'manager') {
+      setOpenLink(managerLink, 'Open Manager View', '/manager.html');
+    } else {
+      setRestrictedLink(
+        managerLink,
+        'Manager View',
+        'Manager access is restricted to authorized manager accounts.'
+      );
     }
   } catch (error) {
     statusWrap.innerHTML = `
-        <p class="muted">Not signed in yet.</p>
-        <div class="button-row">
-            <a class="btn" href="/auth/google">Sign in with Google</a>
-        </div>
-        `;
+      <p class="muted">Not signed in yet.</p>
+      <div class="button-row">
+        <a class="btn" href="/auth/google">Sign in with Google</a>
+      </div>
+    `;
+
+    setRestrictedLink(
+      cashierLink,
+      'Cashier POS',
+      'Cashier access requires a staff login.'
+    );
+
+    setRestrictedLink(
+      managerLink,
+      'Manager View',
+      'Manager access is restricted to authorized manager accounts.'
+    );
   }
 }
 
