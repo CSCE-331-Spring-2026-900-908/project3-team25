@@ -23,16 +23,22 @@ async function loadAuthState() {
       `;
 
       if (cashierLink) {
-        cashierLink.textContent = 'Cashier Sign-In Required';
-        cashierLink.href = '/auth/google';
-      }
+        if (role === 'cashier' || role === 'manager') {
+            cashierLink.textContent = 'Open Cashier POS';
+            cashierLink.href = '/cashier.html';
+        } else {
+            cashierLink.textContent = 'Cashier Access Only';
+            cashierLink.href = '#';
+            cashierLink.addEventListener('click', (event) => event.preventDefault());
+            }
+        }
 
-      if (managerLink) {
-        managerLink.textContent = 'Manager Sign-In Required';
-        managerLink.href = '/auth/google';
-      }
+        if (managerLink) {
+            managerLink.textContent = 'Manager Sign-In Required';
+            managerLink.href = '/auth/google';
+        }
 
-      return;
+        return;
     }
 
     const { displayName, email, role } = data.user;
