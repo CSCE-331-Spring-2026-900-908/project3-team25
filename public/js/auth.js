@@ -69,7 +69,12 @@ async function loadAuthState() {
       }
     }
   } catch (error) {
-    statusWrap.innerHTML = `<p class="muted">Unable to load sign-in status.</p>`;
+    statusWrap.innerHTML = `
+        <p class="muted">Not signed in yet.</p>
+        <div class="button-row">
+            <a class="btn" href="/auth/google">Sign in with Google</a>
+        </div>
+        `;
   }
 }
 
