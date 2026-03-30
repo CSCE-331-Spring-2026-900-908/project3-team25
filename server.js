@@ -153,8 +153,17 @@ const csvInventory = parseCsv(path.join(dataDir, 'inventory.csv')).map((item) =>
 
 let fallbackTransactions = [];
 let fallbackTransactionItems = [];
-let nextFallbackTransactionId = 100001;
 let nextFallbackTransactionItemId = 500001;
+
+function getInitialTransactionId() {
+  const filePath = path.join(dataDir, 'transactions.csv');
+  if (!fs.existsSync(filePath)) return 100001;
+  const lines = fs.readFileSync(filePath, 'utf8').trim().split(/\r?\n/);
+  if (lines.length < 2) return 100001;
+  const id = Number(lines[lines.length - 1].split(',')[0]);
+  return isNaN(id) ? 100001 : id + 1;
+}
+let nextFallbackTransactionId = getInitialTransactionId();
 
 function categoryBreakdown(items) {
   const counts = {};
@@ -287,6 +296,21 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
 
   const menuItems = await getMenuItems();
   const menuMap = new Map(menuItems.map((item) => [Number(item.id), item]));
+
+  // Add toppings to the map so add-ons like Extra Boba (id 16) pass validation
+  if (hasDbConfig()) {
+    const toppingResult = await queryDb(
+      `SELECT productid AS id, name, baseprice AS price FROM product WHERE is_active = true AND category = 'topping'`
+    );
+    for (const t of toppingResult.rows) {
+      menuMap.set(Number(t.id), { id: Number(t.id), name: t.name, price: Number(t.price) });
+    }
+  } else {
+    parseCsv(path.join(dataDir, 'product.csv'))
+      .filter((r) => r.is_active === 'true' && r.category === 'topping')
+      .forEach((r) => menuMap.set(Number(r.productid), { id: Number(r.productid), name: r.name, price: Number(r.baseprice) }));
+  }
+
   const normalized = safeItems.map((item) => {
     const menu = menuMap.get(Number(item.id));
     if (!menu) throw new Error(`Menu item ${item.id} was not found.`);
@@ -343,10 +367,11 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
   }
 
   const transactionId = nextFallbackTransactionId++;
+  const transactionTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const transaction = {
     transactionId,
     cashierId,
-    transactionTime: new Date().toISOString(),
+    transactionTime,
     totalAmount,
     paymentMethod: String(paymentMethod).toLowerCase(),
     status: 'completed'
@@ -361,6 +386,11 @@ async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) 
       unitPrice: item.unitPrice
     });
   });
+
+  // Persist to CSV so transaction IDs survive server restarts
+  const txLine = `\n${transactionId},${cashierId},${transactionTime},${totalAmount.toFixed(2)},${transaction.paymentMethod},completed`;
+  fs.appendFileSync(path.join(dataDir, 'transactions.csv'), txLine);
+
   return { source: 'fallback', ...transaction, items: normalized };
 }
 
@@ -595,7 +625,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dbConfigured: hasDbConfig() });
 });
 
-app.get('/cashier.html', requireStaff, (_req, res) => {
+app.get('/cashier.html', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'cashier.html'));
 });
 

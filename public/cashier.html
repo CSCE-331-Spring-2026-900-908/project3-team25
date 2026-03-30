@@ -9,130 +9,138 @@
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true">
-  <span class="light light-1"></span>
-  <span class="light light-2"></span>
-  <span class="light light-3"></span>
-</div>
+    <span class="light light-1"></span>
+    <span class="light light-2"></span>
+    <span class="light light-3"></span>
+  </div>
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
   <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
+  <!-- Modify panel overlay (modal) -->
+  <div class="cashier-modify-overlay hidden" id="cashier-modify-overlay">
+    <div class="modify-card" id="cashier-modify-card">
+      <!-- injected by cashier.js -->
+    </div>
+  </div>
+
   <main class="restaurant-shell">
-    <header class="pos-topbar">
-      <div class="brand-mark">
-        <div class="brand-badge">RB</div>
-        <div>
-          <h1>Reveille Bubble Tea</h1>
-          <p>Cashier point-of-sale terminal</p>
-        </div>
-      </div>
-      <div class="tag-row">
-        <span class="tag">Staff interface</span>
-        <span class="tag">Fast add workflow</span>
-        <span class="tag">Counter-facing POS</span>
+
+    <!-- Top bar -->
+    <header class="cashier-topbar">
+      <span class="cashier-user-info">Logged in as: <strong id="cashier-user-name">—</strong></span>
+      <div class="cashier-topbar-right">
+        <span class="cashier-user-info">Cashier POS</span>
+        <a href="/" class="btn ghost cashier-portal-link">Portal</a>
       </div>
     </header>
 
-    <section class="hero compact cashier-hero">
-      <span class="pill">Cashier interface</span>
-      <h1>Cashier POS</h1>
-      <p>Quick order entry and checkout staff.</p>
-    </section>
+    <!-- Main 3-panel workspace -->
+    <div class="cashier-workspace">
 
-    <section class="cashier-layout">
-      <section class="cashier-left">
-        <div class="mini-top">
-          <div>
-            <h2 style="margin:0;">Order menu</h2>
-            <p class="muted" style="margin:6px 0 0;">Select a category and add drinks.</p>
-          </div>
-          <div class="tab-row" id="cashier-tabs"></div>
+      <!-- LEFT: Cart / order ticket -->
+      <section class="cashier-cart-panel">
+        <div class="cashier-cart-header">
+          <h2>Current Order</h2>
+          <span class="badge" id="cashier-item-count">0 items</span>
         </div>
 
-        <div id="cashier-menu" class="menu-grid compact-grid"></div>
-      </section>
+        <div class="cashier-cart-scroll">
+          <p class="cashier-cart-empty" id="cashier-cart-empty">No drinks added yet.</p>
+          <table class="cashier-cart-table" id="cashier-cart-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="col-center">Qty</th>
+                <th class="col-right">$</th>
+                <th class="col-center">Sweet</th>
+                <th class="col-center">Ice</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="cashier-cart-body"></tbody>
+          </table>
+        </div>
 
-      <aside class="cashier-right">
-        <section class="ticket-panel">
-          <div class="mini-top">
-            <div>
-              <h2 style="margin:0;">Current ticket</h2>
-              <p class="muted" style="margin:6px 0 0;">Order summary</p>
-            </div>
-            <span class="badge" id="cashier-item-count">0 items</span>
-          </div>
-
-          <div class="option-grid" style="margin-top:16px;">
-            <div>
-              <label for="cashier-sweetness">Sweetness</label>
-              <select id="cashier-sweetness">
-                <option>0%</option><option>25%</option><option selected>50%</option><option>75%</option><option>100%</option>
-              </select>
-            </div>
-            <div>
-              <label for="cashier-ice">Ice level</label>
-              <select id="cashier-ice">
-                <option>None</option><option>Light</option><option selected>Regular</option><option>Extra</option>
-              </select>
-            </div>
-            <div>
-              <label for="cashier-size">Size</label>
-              <select id="cashier-size">
-                <option>Regular</option><option>Large</option>
-              </select>
-            </div>
-            <div>
-              <label for="cashier-topping">Topping</label>
-              <select id="cashier-topping">
-                <option>None</option><option>Extra Boba</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="order-lines" id="cashier-order-lines">
-            <p class="cart-note">No drinks added yet.</p>
-          </div>
-
-          <div class="summary-box">
+        <div class="cashier-cart-footer">
+          <div class="summary-box" style="margin:0; padding:12px 14px; gap:7px;">
             <div class="summary-row"><span>Subtotal</span><strong id="cashier-subtotal">$0.00</strong></div>
-            <div class="summary-row"><span>Tax estimate</span><strong id="cashier-tax">$0.00</strong></div>
+            <div class="summary-row"><span>Tax (8.25%)</span><strong id="cashier-tax">$0.00</strong></div>
             <div class="summary-row total"><span>Total</span><strong id="cashier-total">$0.00</strong></div>
           </div>
 
-          <div class="kiosk-actions">
-            <button class="btn full" id="cashier-pay-btn">Take Payment</button>
-            <button class="btn ghost full" id="cashier-clear-btn">Clear Ticket</button>
+          <div class="cashier-pay-select">
+            <label for="cashier-payment-method">Payment</label>
+            <select id="cashier-payment-method">
+              <option value="card">Card</option>
+              <option value="applepay">Apple Pay</option>
+              <option value="cash">Cash</option>
+            </select>
           </div>
-          <p id="cashier-checkout-result" class="muted" style="margin-top:12px;"></p>
-        </section>
 
-        <section class="helper-grid two-col">
-          <article class="helper-card">
-            <h3>Customer Translation</h3>
-            <div class="button-row">
-              <input id="cashier-translate-text" value="Would you like extra boba?" aria-label="Translate text" />
-              <select id="cashier-translate-target" aria-label="Translate target">
-                <option value="es">Spanish</option>
-                <option value="ar">Arabic</option>
-                <option value="zh">Chinese</option>
-              </select>
-            </div>
-            <div class="button-row" style="margin-top:10px;">
-              <button class="btn" id="cashier-translate-btn">Translate</button>
-            </div>
-            <p id="cashier-translate-result" class="muted">Translation result appears here.</p>
-          </article>
+          <div class="cashier-cart-actions">
+            <button class="btn cashier-checkout-btn" id="cashier-pay-btn">Checkout</button>
+            <button class="btn ghost" id="cashier-remove-btn">Remove Item</button>
+            <button class="btn ghost" id="cashier-clear-btn">Clear All</button>
+          </div>
 
-          <article class="helper-card">
-            <h3>Assistant shortcut</h3>
-            <div class="button-row">
-              <input id="cashier-assistant-input" placeholder="What is popular?" aria-label="Ask assistant" />
-              <button class="btn" id="cashier-assistant-btn">Ask</button>
-            </div>
-            <p id="cashier-assistant-result" class="muted">Assistant reply appears here.</p>
-          </article>
-        </section>
-      </aside>
+          <p class="cashier-checkout-status" id="cashier-checkout-result"></p>
+        </div>
+      </section>
+
+      <!-- MIDDLE: Category sidebar -->
+      <nav class="cashier-cat-col" id="cashier-cat-col" aria-label="Menu categories">
+        <!-- injected by cashier.js -->
+      </nav>
+
+      <!-- RIGHT: Product grid -->
+      <div class="cashier-product-area">
+        <div class="cashier-product-grid" id="cashier-product-grid">
+          <!-- injected by cashier.js -->
+        </div>
+      </div>
+
+    </div><!-- end .cashier-workspace -->
+
+    <!-- Bottom quick-mod bar -->
+    <div class="cashier-bottom-bar">
+      <span class="cashier-mod-label">Modify selected:</span>
+      <button class="btn ghost mod-btn" id="mod-half-sweet">Half Sweet</button>
+      <button class="btn ghost mod-btn" id="mod-2x-sweet">2x Sweet</button>
+      <button class="btn ghost mod-btn" id="mod-half-ice">Half Ice</button>
+      <button class="btn ghost mod-btn" id="mod-no-ice">No Ice</button>
+      <button class="btn ghost mod-btn" id="mod-extra-boba">Extra Boba (+$0.75)</button>
+      <div class="mod-sep"></div>
+      <button class="btn mod-primary-btn" id="mod-modify-btn">Modify ▸</button>
+    </div>
+
+    <!-- Helper widgets -->
+    <section class="helper-grid two-col">
+      <article class="helper-card">
+        <h3>Customer Translation</h3>
+        <div class="button-row">
+          <input id="cashier-translate-text" value="Would you like extra boba?" aria-label="Translate text" />
+          <select id="cashier-translate-target" aria-label="Translate target language">
+            <option value="es">Spanish</option>
+            <option value="ar">Arabic</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </div>
+        <div class="button-row" style="margin-top:10px;">
+          <button class="btn" id="cashier-translate-btn">Translate</button>
+        </div>
+        <p id="cashier-translate-result" class="muted">Translation result appears here.</p>
+      </article>
+
+      <article class="helper-card">
+        <h3>Assistant Shortcut</h3>
+        <div class="button-row">
+          <input id="cashier-assistant-input" placeholder="What is popular?" aria-label="Ask assistant" />
+          <button class="btn" id="cashier-assistant-btn">Ask</button>
+        </div>
+        <p id="cashier-assistant-result" class="muted">Assistant reply appears here.</p>
+      </article>
     </section>
+
   </main>
 
   <script src="/js/cashier.js"></script>
