@@ -625,7 +625,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dbConfigured: hasDbConfig() });
 });
 
-app.get('/cashier.html', (_req, res) => {
+app.get('/cashier.html', requireStaff, (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'cashier.html'));
 });
 
