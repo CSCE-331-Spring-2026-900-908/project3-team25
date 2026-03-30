@@ -33,6 +33,15 @@ function customerTotal() {
   return subtotal + customerTax(subtotal);
 }
 
+function getDrinkImagePath(itemName) {
+  const fileName = itemName
+    .replace(/\s+/g, '-')
+    .replace(/'/g, '')
+    .replace(/[^\w-]/g, '') + '.PNG';
+
+  return `/boba/${fileName}`;
+}
+
 function setActiveScreen(screenName) {
   const screens = {
     menu: document.getElementById('screen-menu'),
@@ -90,7 +99,7 @@ function customerRenderTabs() {
           data-category="${category}"
           type="button"
         >
-          ${category.replace('_', ' ')}
+          ${category.replace(/_/g, ' ')}
         </button>
       `
     )
@@ -110,9 +119,20 @@ function customerRenderMenu() {
   const filtered = customerMenu.filter((item) => item.category === customerActiveCategory);
 
   wrap.innerHTML = filtered
-    .map(
-      (item) => `
+    .map((item) => {
+      const imagePath = getDrinkImagePath(item.name);
+
+      return `
         <article class="menu-card">
+          <div class="drink-image-wrap">
+            <img
+              src="${imagePath}"
+              alt="${item.name}"
+              class="drink-image"
+              onerror="this.style.display='none'"
+            />
+          </div>
+
           <div class="topline">
             <div>
               <h3>${item.name}</h3>
@@ -120,13 +140,14 @@ function customerRenderMenu() {
             </div>
             ${item.popular ? '<span class="tag">Popular</span>' : ''}
           </div>
+
           <div class="price-line">
             <span class="price">$${Number(item.price).toFixed(2)}</span>
             <button class="btn add-btn" data-id="${item.id}" type="button">Add</button>
           </div>
         </article>
-      `
-    )
+      `;
+    })
     .join('');
 
   wrap.querySelectorAll('.add-btn').forEach((btn) => {
@@ -181,23 +202,21 @@ function customerRenderOrder() {
   }
 
   lines.innerHTML = customerOrder
-    .map(
-      (item, index) => `
-        <article class="order-item">
-          <div class="line-top">
-            <strong>${item.name}</strong>
-            <strong>$${Number(item.linePrice).toFixed(2)}</strong>
-          </div>
-          <small>
-            ${item.selections.size} •
-            ${item.selections.sweetness} sugar •
-            ${item.selections.ice} ice •
-            ${item.selections.topping}
-          </small>
-          <button class="btn ghost remove-btn" data-index="${index}" type="button">Remove</button>
-        </article>
-      `
-    )
+    .map((item, index) => `
+      <article class="order-item">
+        <div class="line-top">
+          <strong>${item.name}</strong>
+          <strong>$${Number(item.linePrice).toFixed(2)}</strong>
+        </div>
+        <small>
+          ${item.selections.size} •
+          ${item.selections.sweetness} •
+          ${item.selections.ice} ice •
+          ${item.selections.topping}
+        </small>
+        <button class="btn ghost remove-btn" data-index="${index}" type="button">Remove</button>
+      </article>
+    `)
     .join('');
 
   lines.querySelectorAll('.remove-btn').forEach((btn) => {
