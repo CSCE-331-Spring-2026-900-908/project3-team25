@@ -3,23 +3,25 @@ let ytReady = false;
 let saveTimer = null;
 
 const YT_VIDEO_ID = 'XDELAKWrnMc';
+const FIXED_VOLUME = 20;
+
 const MUSIC_STORAGE_KEYS = {
   playing: 'rbt_music_playing',
   time: 'rbt_music_time',
-  volume: 'rbt_music_volume'
+  muted: 'rbt_music_muted'
 };
 
 function getSavedPlaying() {
-  return localStorage.getItem(MUSIC_STORAGE_KEYS.playing) === 'true';
+  const value = localStorage.getItem(MUSIC_STORAGE_KEYS.playing);
+  return value === null ? true : value === 'true';
 }
 
 function getSavedTime() {
   return Number(localStorage.getItem(MUSIC_STORAGE_KEYS.time) || '0');
 }
 
-function getSavedVolume() {
-  const value = Number(localStorage.getItem(MUSIC_STORAGE_KEYS.volume) || '85');
-  return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 85;
+function getSavedMuted() {
+  return localStorage.getItem(MUSIC_STORAGE_KEYS.muted) === 'true';
 }
 
 function setSavedPlaying(value) {
@@ -30,24 +32,19 @@ function setSavedTime(value) {
   localStorage.setItem(MUSIC_STORAGE_KEYS.time, String(value || 0));
 }
 
-function setSavedVolume(value) {
-  localStorage.setItem(MUSIC_STORAGE_KEYS.volume, String(value));
+function setSavedMuted(value) {
+  localStorage.setItem(MUSIC_STORAGE_KEYS.muted, String(value));
 }
 
-function updateMusicButton() {
-  const btn = document.getElementById('musicBtn');
+function updateMuteButton() {
+  const btn = document.getElementById('musicMuteBtn');
   if (!btn) return;
-  btn.textContent = getSavedPlaying() ? 'Pause Music' : 'Play Music';
-}
-
-function updateVolumeLabel() {
-  const label = document.getElementById('musicVolumeLabel');
-  if (!label) return;
-  label.textContent = `Volume: ${getSavedVolume()}%`;
+  btn.textContent = getSavedMuted() ? 'Unmute Music' : 'Mute Music';
 }
 
 function savePlayerState() {
   if (!ytPlayer || !ytReady) return;
+
   try {
     const currentTime = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
     setSavedTime(currentTime);
@@ -59,77 +56,70 @@ function savePlayerState() {
 function startSaveLoop() {
   if (saveTimer) clearInterval(saveTimer);
   saveTimer = setInterval(() => {
-    if (getSavedPlaying()) savePlayerState();
+    if (getSavedPlaying()) {
+      savePlayerState();
+    }
   }, 1000);
+}
+
+function applyMuteState() {
+  if (!ytPlayer || !ytReady) return;
+
+  ytPlayer.setVolume(FIXED_VOLUME);
+
+  if (getSavedMuted()) {
+    ytPlayer.mute();
+  } else {
+    ytPlayer.unMute();
+    ytPlayer.setVolume(FIXED_VOLUME);
+  }
+
+  updateMuteButton();
 }
 
 function restorePlayback() {
   if (!ytPlayer || !ytReady) return;
 
   const savedTime = getSavedTime();
-  const savedVolume = getSavedVolume();
   const shouldPlay = getSavedPlaying();
 
-  ytPlayer.setVolume(savedVolume);
+  ytPlayer.setVolume(FIXED_VOLUME);
 
   if (savedTime > 0) {
     ytPlayer.seekTo(savedTime, true);
   }
 
+  applyMuteState();
+
   if (shouldPlay) {
     ytPlayer.playVideo();
-  } else {
-    ytPlayer.pauseVideo();
   }
-
-  updateMusicButton();
-  updateVolumeLabel();
 }
 
-function toggleMusic() {
+function toggleMute() {
   if (!ytPlayer || !ytReady) return;
 
-  const shouldPlay = !getSavedPlaying();
-  setSavedPlaying(shouldPlay);
+  const nextMuted = !getSavedMuted();
+  setSavedMuted(nextMuted);
 
-  if (shouldPlay) {
-    ytPlayer.playVideo();
+  if (nextMuted) {
+    ytPlayer.mute();
   } else {
-    savePlayerState();
-    ytPlayer.pauseVideo();
+    ytPlayer.unMute();
+    ytPlayer.setVolume(FIXED_VOLUME);
   }
 
-  updateMusicButton();
-}
-
-function setMusicVolume(value) {
-  const volume = Math.max(0, Math.min(100, Number(value)));
-  setSavedVolume(volume);
-
-  if (ytPlayer && ytReady) {
-    ytPlayer.setVolume(volume);
-  }
-
-  updateVolumeLabel();
+  updateMuteButton();
 }
 
 function attachMusicControls() {
-  const btn = document.getElementById('musicBtn');
-  const slider = document.getElementById('musicVolume');
+  const muteBtn = document.getElementById('musicMuteBtn');
 
-  if (btn) {
-    btn.addEventListener('click', toggleMusic);
+  if (muteBtn) {
+    muteBtn.addEventListener('click', toggleMute);
   }
 
-  if (slider) {
-    slider.value = String(getSavedVolume());
-    slider.addEventListener('input', (e) => {
-      setMusicVolume(e.target.value);
-    });
-  }
-
-  updateMusicButton();
-  updateVolumeLabel();
+  updateMuteButton();
 }
 
 function onPlayerReady() {
@@ -147,13 +137,11 @@ function onPlayerStateChange(event) {
 
   if (event.data === window.YT.PlayerState.PLAYING) {
     setSavedPlaying(true);
-    updateMusicButton();
+    applyMuteState();
   }
 
   if (event.data === window.YT.PlayerState.PAUSED) {
     savePlayerState();
-    setSavedPlaying(false);
-    updateMusicButton();
   }
 }
 
@@ -163,7 +151,7 @@ window.onYouTubeIframeAPIReady = function () {
     width: '1',
     videoId: YT_VIDEO_ID,
     playerVars: {
-      autoplay: 0,
+      autoplay: 1,
       controls: 0,
       disablekb: 1,
       fs: 0,
