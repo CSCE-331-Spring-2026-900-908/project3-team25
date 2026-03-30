@@ -4,10 +4,41 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reveille Bubble Tea | Team 25 Portal</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .music-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: #a9473a;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .music-toggle:hover {
+      opacity: 0.92;
+    }
+
+    .music-note {
+      font-size: 0.9rem;
+      margin-top: 10px;
+      color: rgba(255,255,255,0.9);
+    }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+
+  <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
+  <button id="musicBtn" class="music-toggle" type="button">Play Music</button>
+
   <main id="main" class="page-shell">
     <header class="brand-strip" aria-label="Brand header">
       <div class="brand-lockup">
@@ -40,6 +71,7 @@
         <a class="btn secondary" id="portal-manager-link" href="/auth/google">Manager Sign-In Required</a>
       </div>
       <p id="portal-access-message" class="muted" style="margin-top: 12px;"></p>
+      <p class="music-note">Optional background music button in the bottom-right corner.</p>
     </section>
 
     <section class="portal-card" id="auth-status" style="margin-bottom: 20px;">
@@ -90,14 +122,52 @@
         <article class="promo-card">
           <h3 style="margin-top:0;">Still left for the team</h3>
           <ul class="notice-list">
-            <li>Replace mock auth with Google OAuth.</li>
-            <li>Decide whether to deduct inventory on checkout.</li>
-            <li>Add images, branding, and final presentation polish.</li>
+            <li>Google OAuth is now connected.</li>
+            <li>Finalize database credentials and production polish.</li>
+            <li>Add logo, branding, and final presentation touches.</li>
           </ul>
         </article>
       </aside>
     </section>
   </main>
+
   <script src="/js/auth.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let player;
+    let isPlaying = false;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtube-player', {
+        height: '1',
+        width: '1',
+        videoId: 'XDELAKWrnMc',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          loop: 1,
+          playlist: 'XDELAKWrnMc',
+          modestbranding: 1,
+          rel: 0
+        }
+      });
+    }
+
+    const musicBtn = document.getElementById('musicBtn');
+
+    musicBtn.addEventListener('click', () => {
+      if (!player) return;
+
+      if (!isPlaying) {
+        player.playVideo();
+        isPlaying = true;
+        musicBtn.textContent = 'Pause Music';
+      } else {
+        player.pauseVideo();
+        isPlaying = false;
+        musicBtn.textContent = 'Play Music';
+      }
+    });
+  </script>
 </body>
 </html>
