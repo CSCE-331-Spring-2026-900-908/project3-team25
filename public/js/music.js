@@ -21,7 +21,8 @@ function getSavedTime() {
 }
 
 function getSavedMuted() {
-  return localStorage.getItem(MUSIC_STORAGE_KEYS.muted) === 'true';
+  const value = localStorage.getItem(MUSIC_STORAGE_KEYS.muted);
+  return value === null ? true : value === 'true';
 }
 
 function setSavedPlaying(value) {
@@ -122,10 +123,34 @@ function attachMusicControls() {
   updateMuteButton();
 }
 
+function unlockMusicOnFirstInteraction() {
+  const unlock = () => {
+    if (!ytPlayer || !ytReady) return;
+
+    if (getSavedMuted()) {
+      ytPlayer.unMute();
+      ytPlayer.setVolume(FIXED_VOLUME);
+      setSavedMuted(false);
+      updateMuteButton();
+    }
+
+    ytPlayer.playVideo();
+
+    window.removeEventListener('click', unlock);
+    window.removeEventListener('keydown', unlock);
+    window.removeEventListener('touchstart', unlock);
+  };
+
+  window.addEventListener('click', unlock);
+  window.addEventListener('keydown', unlock);
+  window.addEventListener('touchstart', unlock);
+}
+
 function onPlayerReady() {
   ytReady = true;
   restorePlayback();
   startSaveLoop();
+  unlockMusicOnFirstInteraction();
 
   window.addEventListener('beforeunload', () => {
     savePlayerState();
