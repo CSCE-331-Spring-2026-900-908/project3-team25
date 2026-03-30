@@ -636,15 +636,10 @@ label {
   gap: 10px;
 }
 
-.portal-launch-icon {
-  font-size: 2.4rem;
-  line-height: 1;
-  margin-bottom: 4px;
-}
 
 .portal-launch-card h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   color: var(--accent-dark);
 }
 
