@@ -3,110 +3,71 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reveille Bubble Tea | Team 25 Portal</title>
+  <title>Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true">
-  <span class="light light-1"></span>
-  <span class="light light-2"></span>
-  <span class="light light-3"></span>
-</div>
-  <a class="skip-link" href="#main">Skip to content</a>
+    <span class="light light-1"></span>
+    <span class="light light-2"></span>
+    <span class="light light-3"></span>
+  </div>
 
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
   <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <main id="main" class="page-shell">
-    <header class="brand-strip" aria-label="Brand header">
-      <div class="brand-lockup">
+  <main class="page-shell">
+
+    <!-- Header -->
+    <header class="portal-header">
+      <div class="brand-mark">
         <div class="brand-badge">RB</div>
         <div>
           <h1>Reveille Bubble Tea</h1>
-          <p>Team 25 Project 3 multi-view restaurant system</p>
+          <p class="muted">Team 25</p>
         </div>
       </div>
-      <div class="tag-row">
-        <span class="tag">Portal page</span>
-        <span class="tag">4 required interfaces</span>
-        <span class="tag">Database-ready</span>
+      <div id="auth-status" class="portal-auth">
+        <p class="muted">Checking sign-in status…</p>
       </div>
     </header>
 
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="tag-row">
-        <span class="pill">Fast-food ordering flow</span>
-        <span class="pill">Customer + cashier separation</span>
-        <span class="pill">Accessibility-aware layout</span>
-      </div>
-      <h1 id="hero-title">Reveille Bubble Tea Web Portal</h1>
-      <p>Launch the customer kiosk, cashier POS, menu board, or manager dashboard from one central portal.</p>
-      <div class="button-row" style="margin-top: 18px;">
-        <a class="btn" href="/auth/google">Sign in with Google</a>
-        <a class="btn secondary" href="/customer.html">Open Customer Kiosk</a>
-        <a class="btn secondary" id="portal-cashier-link" href="/auth/google">Cashier Sign-In Required</a>
-        <a class="btn secondary" href="/menu-board.html">Open Menu Board</a>
-        <a class="btn secondary" id="portal-manager-link" href="/auth/google">Manager Sign-In Required</a>
-      </div>
-      <p id="portal-access-message" class="muted" style="margin-top: 12px;"></p>
-    </section>
+    <p id="portal-access-message" class="muted portal-access-msg"></p>
 
-    <section class="portal-card" id="auth-status" style="margin-bottom: 20px;">
-      <p class="muted">Checking sign-in status...</p>
-    </section>
+    <!-- Interface cards -->
+    <div class="portal-launch-grid">
 
-    <section class="portal-grid">
-      <section class="summary-stack">
-        <article class="portal-card">
-          <h2 style="margin-top:0;">Required interface launch</h2>
-          <div class="launch-row">
-            <a class="btn" href="/customer.html">Customer kiosk</a>
-            <a class="btn" href="/cashier.html">Cashier screen</a>
-            <a class="btn" href="/menu-board.html">Menu board</a>
-            <a class="btn" href="/manager.html">Manager dashboard</a>
-          </div>
-        </article>
+      <article class="portal-launch-card">
+        <div class="portal-launch-icon">🧋</div>
+        <h2>Customer Kiosk</h2>
+        <p class="muted">Self-order station for customers</p>
+        <a href="/customer.html" class="btn portal-launch-btn">Open Kiosk</a>
+      </article>
 
-        <section class="card-grid">
-          <article class="interface-card">
-            <h3>Customer Kiosk</h3>
-            <p>Self-order station with category chips, large menu cards, customization controls, and a sticky order summary.</p>
-          </article>
-          <article class="interface-card">
-            <h3>Cashier POS</h3>
-            <p>Counter terminal with quick add buttons, ticket summary, and staff support widgets.</p>
-          </article>
-          <article class="interface-card">
-            <h3>Menu Board</h3>
-            <p>Large lobby-style display with grouped categories and featured items.</p>
-          </article>
-          <article class="interface-card">
-            <h3>Manager View</h3>
-            <p>Back-office dashboard for menu counts, low-stock items, and recent orders.</p>
-          </article>
-        </section>
-      </section>
+      <article class="portal-launch-card">
+        <div class="portal-launch-icon">🖥️</div>
+        <h2>Cashier POS</h2>
+        <p class="muted">Counter terminal for staff</p>
+        <a href="/cashier.html" class="btn portal-launch-btn" id="portal-cashier-link">Cashier POS</a>
+      </article>
 
-      <aside class="summary-stack">
-        <article class="promo-card">
-          <h3 style="margin-top:0;">Project 2 carryover</h3>
-          <ul class="notice-list">
-            <li>Uses the same product, inventory, transaction, and transaction item concepts.</li>
-            <li>Supports PostgreSQL access through environment variables and a Node backend.</li>
-            <li>Keeps your data, queries, and schema files in the repo.</li>
-          </ul>
-        </article>
-        <article class="promo-card">
-          <h3 style="margin-top:0;">Still left for the team</h3>
-          <ul class="notice-list">
-            <li>Google OAuth is now connected.</li>
-            <li>Finalize database credentials and production polish.</li>
-            <li>Add logo, branding, and final presentation touches.</li>
-          </ul>
-        </article>
-      </aside>
-    </section>
+      <article class="portal-launch-card">
+        <div class="portal-launch-icon">📋</div>
+        <h2>Menu Board</h2>
+        <p class="muted">Lobby display screen</p>
+        <a href="/menu-board.html" class="btn portal-launch-btn">Open Board</a>
+      </article>
+
+      <article class="portal-launch-card">
+        <div class="portal-launch-icon">📊</div>
+        <h2>Manager</h2>
+        <p class="muted">Dashboard and analytics</p>
+        <a href="/manager.html" class="btn portal-launch-btn" id="portal-manager-link">Manager View</a>
+      </article>
+
+    </div>
+
   </main>
 
   <script src="/js/auth.js"></script>
