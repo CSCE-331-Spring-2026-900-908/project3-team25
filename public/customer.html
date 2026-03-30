@@ -9,80 +9,121 @@
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true">
-  <span class="light light-1"></span>
-  <span class="light light-2"></span>
-  <span class="light light-3"></span>
-</div>
+    <span class="light light-1"></span>
+    <span class="light light-2"></span>
+    <span class="light light-3"></span>
+  </div>
+
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
   <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
   <main class="restaurant-shell">
-    <header class="pos-topbar">
+    <header class="pos-topbar kawaii-topbar">
       <div class="brand-mark">
-        <div class="brand-badge">RB</div>
+        <div class="brand-badge">🧋</div>
         <div>
           <h1>Reveille Bubble Tea</h1>
-          <p>Self-order kiosk</p>
+          <p>Kawaii self-order kiosk</p>
         </div>
       </div>
       <div class="tag-row">
-        <span class="tag">Touchscreen ready</span>
-        <span class="tag">Customizable drinks</span>
+        <span class="tag">Cute drinks</span>
+        <span class="tag">Touch to order</span>
+        <span class="tag">Made fresh</span>
       </div>
     </header>
 
-    <section class="hero compact customer-hero">
-      <span class="pill">Customer interface</span>
-      <h1>Build Your Drink</h1>
-      <p>Choose a drink, customize it, and review your order.</p>
+    <section class="hero compact customer-hero kawaii-hero">
+      <span class="pill">Welcome friend ✨</span>
+      <h1>Build Your Dream Boba</h1>
+      <p>Choose your drink, review your order, and head to payment in a simple kiosk flow.</p>
     </section>
 
-    <section class="order-layout" aria-label="Customer ordering layout">
+    <section class="kiosk-progress" aria-label="Order progress">
+      <div class="progress-step active" id="step-indicator-menu">
+        <span class="step-num">1</span>
+        <span>Choose Drinks</span>
+      </div>
+      <div class="progress-step" id="step-indicator-review">
+        <span class="step-num">2</span>
+        <span>Review Order</span>
+      </div>
+      <div class="progress-step" id="step-indicator-payment">
+        <span class="step-num">3</span>
+        <span>Payment</span>
+      </div>
+      <div class="progress-step" id="step-indicator-confirm">
+        <span class="step-num">4</span>
+        <span>Done</span>
+      </div>
+    </section>
+
+    <section id="screen-menu" class="kiosk-screen active-screen" aria-label="Drink menu">
       <section class="category-shell">
         <div class="mini-top" style="margin-bottom:16px;">
           <div>
-            <h2 style="margin:0;">Menu</h2>
-            <p class="muted" style="margin:6px 0 0;">Tap a category, then add drinks to your order.</p>
-          </div>
-          <div class="tab-row" id="customer-tabs"></div>
-        </div>
-        <div id="customer-menu" class="menu-grid"></div>
-      </section>
-
-      <aside class="order-shell" aria-label="Order summary">
-        <div class="mini-top">
-          <div>
-            <h2 style="margin:0;">Your order</h2>
-            <p class="muted" style="margin:6px 0 0;">Customize before checkout.</p>
+            <h2 style="margin:0;">Choose your drink</h2>
+            <p class="muted" style="margin:6px 0 0;">Tap a category, customize your drink, and add it to your order.</p>
           </div>
           <span class="badge" id="customer-item-count">0 items</span>
         </div>
 
-        <div class="option-grid" style="margin-top:16px;">
+        <div class="tab-row" id="customer-tabs" style="margin-bottom:18px;"></div>
+
+        <div class="option-grid kiosk-customize-row" style="margin-bottom:20px;">
           <div>
             <label for="sweetness">Sweetness</label>
             <select id="sweetness">
-              <option>0%</option><option>25%</option><option selected>50%</option><option>75%</option><option>100%</option>
-            </select>
+  <option>No Sugar</option>
+  <option selected>Half Sugar</option>
+  <option>Regular Sugar</option>
+</select>
           </div>
           <div>
             <label for="ice-level">Ice level</label>
             <select id="ice-level">
-              <option>None</option><option>Light</option><option selected>Regular</option><option>Extra</option>
+              <option>None</option>
+              <option>Light</option>
+              <option selected>Regular</option>
+              <option>Extra</option>
             </select>
           </div>
           <div>
             <label for="size">Size</label>
             <select id="size">
-              <option>Regular</option><option>Large</option>
+              <option>Regular</option>
+              <option>Large</option>
             </select>
           </div>
           <div>
             <label for="topping">Topping</label>
             <select id="topping">
-              <option>None</option><option>Extra Boba</option>
+              <option>None</option>
+              <option>Extra Boba</option>
             </select>
           </div>
+        </div>
+
+        <div id="customer-menu" class="menu-grid"></div>
+
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <div class="summary-pill">
+            <strong id="menu-screen-count">0</strong>
+            <span>drink(s) selected</span>
+          </div>
+          <button class="btn" id="go-to-review-btn" type="button">Review Order →</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="screen-review" class="kiosk-screen hidden-screen" aria-label="Review order">
+      <div class="order-shell">
+        <div class="mini-top">
+          <div>
+            <h2 style="margin:0;">Review your order</h2>
+            <p class="muted" style="margin:6px 0 0;">Double-check your drinks before payment.</p>
+          </div>
+          <span class="badge" id="review-item-count">0 items</span>
         </div>
 
         <div class="order-lines" id="customer-order-lines">
@@ -95,46 +136,71 @@
           <div class="summary-row total"><span>Total</span><strong id="customer-total">$0.00</strong></div>
         </div>
 
-        <div class="kiosk-actions">
-          <button class="btn full" id="customer-checkout-btn">Review & Checkout</button>
-          <button class="btn ghost full" id="customer-clear-btn">Clear order</button>
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <button class="btn ghost" id="back-to-menu-btn" type="button">← Back to Menu</button>
+          <div class="button-row">
+            <button class="btn ghost" id="customer-clear-btn" type="button">Clear Order</button>
+            <button class="btn" id="go-to-payment-btn" type="button">Continue to Payment →</button>
+          </div>
         </div>
-        <p id="customer-checkout-result" class="muted" style="margin-top:12px;"></p>
-      </aside>
+      </div>
     </section>
 
-    <section class="helper-grid">
-      <article class="helper-card">
-        <h3>Weather suggestion</h3>
-        <div class="button-row">
-          <input id="city-input" value="College Station" aria-label="Weather city" />
-          <button class="btn" id="weather-btn">Get weather</button>
+    <section id="screen-payment" class="kiosk-screen hidden-screen" aria-label="Payment">
+      <div class="order-shell">
+        <div class="mini-top">
+          <div>
+            <h2 style="margin:0;">Payment</h2>
+            <p class="muted" style="margin:6px 0 0;">Choose a payment method to place your order.</p>
+          </div>
+          <span class="badge">Almost done</span>
         </div>
-        <p id="weather-result" class="muted">Weather-based recommendation will appear here.</p>
-      </article>
 
-      <article class="helper-card">
-        <h3>Translate menu phrase</h3>
-        <div class="button-row">
-          <input id="translate-text" value="Brown Sugar Milk Tea" aria-label="Text to translate" />
-          <select id="translate-target" aria-label="Target language">
-            <option value="es">Spanish</option>
-            <option value="ar">Arabic</option>
-            <option value="zh">Chinese</option>
-          </select>
-          <button class="btn" id="translate-btn">Translate</button>
+        <div class="payment-total-box">
+          <p class="muted" style="margin:0;">Order total</p>
+          <h2 id="payment-total" style="margin:8px 0 0;">$0.00</h2>
         </div>
-        <p id="translate-result" class="muted">Translation output will appear here.</p>
-      </article>
 
-      <article class="helper-card">
-        <h3>Ask the kiosk assistant</h3>
-        <div class="button-row">
-          <input id="assistant-input" placeholder="What is popular today?" aria-label="Assistant question" />
-          <button class="btn" id="assistant-btn">Ask</button>
+        <div class="payment-grid">
+          <button class="payment-option active-payment" type="button" data-payment="card">💳 Card</button>
+          <button class="payment-option" type="button" data-payment="applepay">📱 Apple Pay</button>
+          <button class="payment-option" type="button" data-payment="cash">💵 Cash</button>
         </div>
-        <p id="assistant-result" class="muted">Assistant response will appear here.</p>
-      </article>
+
+        <p id="selected-payment-label" class="muted" style="margin-top:16px;">Selected payment: Card</p>
+
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <button class="btn ghost" id="back-to-review-btn" type="button">← Back to Review</button>
+          <button class="btn" id="customer-checkout-btn" type="button">Place Cute Order</button>
+        </div>
+
+        <p id="customer-checkout-result" class="muted" style="margin-top:14px;"></p>
+      </div>
+    </section>
+
+    <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
+      <div class="order-shell confirmation-shell">
+        <div class="confirmation-emoji">🎉</div>
+        <h2 style="margin-bottom:8px;">Order placed!</h2>
+        <p class="muted" id="confirmation-message" style="margin-top:0;">
+          Thank you for your order.
+        </p>
+
+        <div class="summary-box" style="max-width:420px; margin:24px auto 0;">
+          <div class="summary-row">
+            <span>Status</span>
+            <strong>Sent to kitchen</strong>
+          </div>
+          <div class="summary-row">
+            <span>Pickup</span>
+            <strong>Listen for your name</strong>
+          </div>
+        </div>
+
+        <div class="kiosk-footer-actions centered-actions" style="margin-top:28px;">
+          <button class="btn" id="start-new-order-btn" type="button">Start New Order</button>
+        </div>
+      </div>
     </section>
   </main>
 
