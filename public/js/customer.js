@@ -28,18 +28,26 @@ function customerTax(subtotal) {
   return subtotal * 0.0825;
 }
 
-function customerTotal() {
-  const subtotal = customerSubtotal();
-  return subtotal + customerTax(subtotal);
-}
-
 function getDrinkImagePath(itemName) {
-  const fileName = itemName
-    .replace(/\s+/g, '-')
-    .replace(/'/g, '')
-    .replace(/[^\w-]/g, '') + '.PNG';
+  const imageMap = {
+    'Classic Milk Tea': '/boba/Classic-Milk-Tea.PNG',
+    'Brown Sugar Milk Tea': '/boba/Brown-Sugar-Milk-Tea.PNG',
+    'Taro Milk Tea': '/boba/Taro-Milk-Tea.PNG',
+    'Matcha Milk Tea': '/boba/Matcha-Milk-Tea.PNG',
+    'Thai Tea': '/boba/Thai-Milk-Tea.PNG',
+    'Honey Green Tea': '/boba/Honey-Green-Tea.PNG',
+    'Wintermelon Milk Tea': '/boba/Wintermelon-Milk-Tea.PNG',
+    'Oolong Milk Tea': '/boba/Ooglong-Tea.png',
+    'Coffee Milk Tea': '/boba/Coffee-Milk-Tea.png',
+    'Lychee Green Tea': '/boba/Lychee.png',
+    'Mango Green Tea': '/boba/Mango.png',
+    'Peach Green Tea': '/boba/Peach.png',
+    'Strawberry Green Tea': '/boba/Strawberry-.png',
+    'Jasmine Green Tea': '/boba/Sonny-Boba.png',
+    'Black Tea Lemonade': '/boba/Sonny-Boba.png'
+  };
 
-  return `/boba/${fileName}`;
+  return imageMap[itemName] || '/boba/Sonny-Boba.png';
 }
 
 function setActiveScreen(screenName) {
@@ -129,7 +137,7 @@ function customerRenderMenu() {
               src="${imagePath}"
               alt="${item.name}"
               class="drink-image"
-              onerror="this.style.display='none'"
+              onerror="this.src='/boba/Sonny-Boba.png'"
             />
           </div>
 
