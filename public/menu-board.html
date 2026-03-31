@@ -7,35 +7,34 @@
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
-<body class="menu-board-body">
+<body>
   <div class="ambient-bg" aria-hidden="true">
-  <span class="light light-1"></span>
-  <span class="light light-2"></span>
-  <span class="light light-3"></span>
-</div>
+    <span class="light light-1"></span>
+    <span class="light light-2"></span>
+    <span class="light light-3"></span>
+  </div>
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
   <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <main class="menu-board-shell">
-    <section class="menu-board-hero">
-      <div>
-        <p class="board-kicker">Reveille Bubble Tea</p>
-        <h1>Fresh drinks. Fast service. Real boba shop energy.</h1>
-        <p class="board-copy">Featured drinks, seasonal favorites, and customer picks — displayed in a lobby-style menu board format.</p>
-      </div>
-      <div class="board-feature">
-        <span class="tag">Most Popular</span>
-        <h2>Brown Sugar Milk Tea</h2>
-        <p>Signature sweet milk tea with chewy boba pearls.</p>
-        <div class="board-price">$5.75</div>
-      </div>
-    </section>
+  <main class="restaurant-shell">
 
-    <section class="board-columns" id="menu-board-columns">
+    <header class="cashier-topbar" style="margin-bottom: 24px;">
+      <div class="brand-mark">
+        <div class="brand-badge">RB</div>
+        <div>
+          <h1 style="margin:0; font-size:1.3rem;">Reveille Bubble Tea</h1>
+          <p class="muted" style="margin:2px 0 0;">Menu Board</p>
+        </div>
+      </div>
+      <a href="/" class="btn ghost cashier-portal-link">Portal</a>
+    </header>
+
+    <div class="board-columns" id="menu-board-columns">
       <article class="board-panel">
-        <h3>Loading menu board...</h3>
+        <h3>Loading menu…</h3>
       </article>
-    </section>
+    </div>
+
   </main>
 
   <script src="/js/menu-board.js"></script>
