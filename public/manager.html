@@ -8,21 +8,15 @@
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-
-  <a class="skip-link" href="#main-content">Skip to main content</a>
-  <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
-    <button id="musicMuteBtn" class="music-toggle icon-only" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
-  </div>
-
   <div class="ambient-bg" aria-hidden="true">
   <span class="light light-1"></span>
   <span class="light light-2"></span>
   <span class="light light-3"></span>
 </div>
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
+  <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <main id="main-content" class="page-shell">
+  <main class="page-shell">
     <header class="brand-strip">
       <div class="brand-lockup">
         <div class="brand-badge">RB</div>
@@ -53,42 +47,42 @@
                   <th>Item</th>
                   <th>On hand</th>
                   <th>Threshold</th>
+                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody id="inventory-tbody">
-                <tr><td colspan="3">Loading inventory…</td></tr>
-              </tbody>
+              <tbody id="inventory-table-body"></tbody>
             </table>
           </div>
         </article>
 
         <article class="portal-card">
-          <h2 style="margin-top:0;">Sales snapshot</h2>
+          <h2 style="margin-top:0;">Recent orders</h2>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Period</th>
-                  <th>Transactions</th>
-                  <th>Revenue</th>
+                  <th>ID</th>
+                  <th>Cashier</th>
+                  <th>Total</th>
+                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody id="sales-tbody">
-                <tr><td colspan="3">Loading sales…</td></tr>
-              </tbody>
+              <tbody id="recent-orders-body"></tbody>
             </table>
           </div>
         </article>
+
+        <article class="portal-card">
+          <h2 style="margin-top:0;">System notes</h2>
+          <ul id="announcements" class="notice-list"></ul>
+        </article>
       </section>
 
-      <aside class="portal-card">
-        <h2 style="margin-top:0;">Actions</h2>
-        <p class="muted">Use the manager API endpoints and exported reports for deeper insights.</p>
-        <div class="cta-stack">
-          <a class="btn" href="/">Return to portal</a>
-          <a class="btn ghost" href="/sales/sales_data.csv" download>Download sales CSV</a>
-          <a class="btn ghost" href="/queries" target="_blank" rel="noopener noreferrer">Open query folder reference</a>
-        </div>
+      <aside class="summary-stack">
+        <article class="promo-card">
+          <h3 style="margin-top:0;">Menu category breakdown</h3>
+          <section class="metric-grid" id="category-grid"></section>
+        </article>
       </aside>
     </section>
   </main>
@@ -96,6 +90,5 @@
   <script src="/js/manager.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/js/music.js"></script>
-  <script src="/js/accessibility.js"></script>
 </body>
 </html>

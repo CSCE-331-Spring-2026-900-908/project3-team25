@@ -19,13 +19,6 @@
 
 </head>
 <body>
-
-  <a class="skip-link" href="#main-content">Skip to main content</a>
-  <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
-    <button id="musicMuteBtn" class="music-toggle icon-only" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
-  </div>
-
   <div class="ambient-bg" aria-hidden="true">
 
 
@@ -42,8 +35,9 @@
   </div>
 
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
+  <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <main id="main-content" class="restaurant-shell">
+  <main class="restaurant-shell">
     <header class="pos-topbar kawaii-topbar">
       <div class="brand-mark">
         <div class="brand-badge">🧋</div>
@@ -72,112 +66,160 @@
       </div>
       <div class="progress-step" id="step-indicator-review">
         <span class="step-num">2</span>
-        <span>Review Cart</span>
+        <span>Review Order</span>
       </div>
       <div class="progress-step" id="step-indicator-payment">
         <span class="step-num">3</span>
         <span>Payment</span>
       </div>
+      <div class="progress-step" id="step-indicator-confirm">
+        <span class="step-num">4</span>
+        <span>Done</span>
+      </div>
     </section>
 
-    <div class="portal-grid kiosk-layout">
-      <section class="portal-card kiosk-menu-card">
-        <div class="section-heading">
+    <section id="screen-menu" class="kiosk-screen active-screen" aria-label="Drink menu">
+      <section class="category-shell">
+        <div class="mini-top" style="margin-bottom:16px;">
           <div>
-            <h2 style="margin:0;">Menu</h2>
-            <p class="muted" style="margin:6px 0 0;">Pick a category and tap a drink to add it.</p>
+            <h2 style="margin:0;">Choose your drink</h2>
+            <p class="muted" style="margin:6px 0 0;">Tap a category, customize your drink, and add it to your order.</p>
           </div>
-          <div class="tab-row" role="tablist" aria-label="Menu categories">
-            <button class="tab-btn active" data-category="Classic Milk Tea">Classic Milk Tea</button>
-            <button class="tab-btn" data-category="Fruit Tea">Fruit Tea</button>
-            <button class="tab-btn" data-category="Mochi Waffle">Mochi Waffle</button>
+          <span class="badge" id="customer-item-count">0 items</span>
+        </div>
+
+        <div class="tab-row" id="customer-tabs" style="margin-bottom:18px;"></div>
+
+        <div class="option-grid kiosk-customize-row" style="margin-bottom:20px;">
+          <div>
+            <label for="sweetness">Sweetness</label>
+            <select id="sweetness">
+  <option>No Sugar</option>
+  <option selected>Half Sugar</option>
+  <option>Regular Sugar</option>
+</select>
+          </div>
+          <div>
+            <label for="ice-level">Ice level</label>
+            <select id="ice-level">
+              <option>None</option>
+              <option>Light</option>
+              <option selected>Regular</option>
+              <option>Extra</option>
+            </select>
+          </div>
+          <div>
+            <label for="size">Size</label>
+            <select id="size">
+              <option>Regular</option>
+              <option>Large</option>
+            </select>
+          </div>
+          <div>
+            <label for="topping">Topping</label>
+            <select id="topping">
+              <option>None</option>
+              <option>Extra Boba</option>
+            </select>
           </div>
         </div>
-        <div class="drink-grid" id="menu-grid" aria-live="polite">
-          <article class="menu-card">
-            <h3>Loading…</h3>
-            <p class="muted">Please wait while we fetch the menu.</p>
-          </article>
+
+        <div id="customer-menu" class="menu-grid"></div>
+
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <div class="summary-pill">
+            <strong id="menu-screen-count">0</strong>
+            <span>drink(s) selected</span>
+          </div>
+          <button class="btn" id="go-to-review-btn" type="button">Review Order →</button>
         </div>
       </section>
+    </section>
 
-      <aside class="portal-card kiosk-order-card">
-        <div class="section-heading">
+    <section id="screen-review" class="kiosk-screen hidden-screen" aria-label="Review order">
+      <div class="order-shell">
+        <div class="mini-top">
           <div>
-            <h2 style="margin:0;">Your Order</h2>
-            <p class="muted" style="margin:6px 0 0;">Everything you add shows up here.</p>
+            <h2 style="margin:0;">Review your order</h2>
+            <p class="muted" style="margin:6px 0 0;">Double-check your drinks before payment.</p>
           </div>
-          <span class="pill" id="cart-count-pill">0 items</span>
+          <span class="badge" id="review-item-count">0 items</span>
         </div>
 
-        <div id="cart-list" class="cart-list">
-          <p class="muted">Your cart is empty. Add a drink to get started.</p>
+        <div class="order-lines" id="customer-order-lines">
+          <p class="cart-note">No drinks added yet. Pick a drink from the menu to start.</p>
         </div>
 
-        <div class="cart-summary-card">
-          <div class="cart-summary-row">
-            <span>Subtotal</span>
-            <strong id="subtotal-amount">$0.00</strong>
-          </div>
-          <div class="cart-summary-row">
-            <span>Tax</span>
-            <strong id="tax-amount">$0.00</strong>
-          </div>
-          <div class="cart-summary-row total">
-            <span>Total</span>
-            <strong id="total-amount">$0.00</strong>
-          </div>
+        <div class="summary-box">
+          <div class="summary-row"><span>Subtotal</span><strong id="customer-subtotal">$0.00</strong></div>
+          <div class="summary-row"><span>Tax estimate</span><strong id="customer-tax">$0.00</strong></div>
+          <div class="summary-row total"><span>Total</span><strong id="customer-total">$0.00</strong></div>
         </div>
 
-        <div class="checkout-actions">
-          <button class="btn ghost" id="clear-cart-btn">Clear Cart</button>
-          <button class="btn" id="review-order-btn">Review Order</button>
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <button class="btn ghost" id="back-to-menu-btn" type="button">← Back to Menu</button>
+          <div class="button-row">
+            <button class="btn ghost" id="customer-clear-btn" type="button">Clear Order</button>
+            <button class="btn" id="go-to-payment-btn" type="button">Continue to Payment →</button>
+          </div>
         </div>
-      </aside>
-    </div>
-
-    <section class="portal-card review-card hidden" id="review-panel">
-      <div class="section-heading">
-        <div>
-          <h2 style="margin:0;">Review Order</h2>
-          <p class="muted" style="margin:6px 0 0;">Take one more look before you pay.</p>
-        </div>
-      </div>
-      <div id="review-list" class="cart-list"></div>
-      <div class="checkout-actions">
-        <button class="btn ghost" id="back-to-menu-btn">Back to Menu</button>
-        <button class="btn" id="continue-to-payment-btn">Continue to Payment</button>
       </div>
     </section>
 
-    <section class="portal-card payment-card hidden" id="payment-panel">
-      <div class="section-heading">
-        <div>
-          <h2 style="margin:0;">Choose Payment Method</h2>
-          <p class="muted" style="margin:6px 0 0;">Select how you would like to pay.</p>
+    <section id="screen-payment" class="kiosk-screen hidden-screen" aria-label="Payment">
+      <div class="order-shell">
+        <div class="mini-top">
+          <div>
+            <h2 style="margin:0;">Payment</h2>
+            <p class="muted" style="margin:6px 0 0;">Choose a payment method to place your order.</p>
+          </div>
+          <span class="badge">Almost done</span>
         </div>
-      </div>
 
-      <div class="payment-options" role="radiogroup" aria-label="Payment methods">
-        <button class="payment-option" data-payment="Cash" aria-label="Cash payment option">💵 Cash</button>
-        <button class="payment-option" data-payment="Card" aria-label="Card payment option">💳 Card</button>
-        <button class="payment-option" data-payment="Mobile" aria-label="Mobile payment option">📱 Mobile</button>
-      </div>
+        <div class="payment-total-box">
+          <p class="muted" style="margin:0;">Order total</p>
+          <h2 id="payment-total" style="margin:8px 0 0;">$0.00</h2>
+        </div>
 
-      <div class="checkout-actions">
-        <button class="btn ghost" id="back-to-review-btn">Back to Review</button>
-        <button class="btn" id="place-order-btn">Place Order</button>
+        <div class="payment-grid">
+          <button class="payment-option active-payment" type="button" data-payment="card">💳 Card</button>
+          <button class="payment-option" type="button" data-payment="applepay">📱 Apple Pay</button>
+          <button class="payment-option" type="button" data-payment="cash">💵 Cash</button>
+        </div>
+
+        <p id="selected-payment-label" class="muted" style="margin-top:16px;">Selected payment: Card</p>
+
+        <div class="kiosk-footer-actions" style="margin-top:24px;">
+          <button class="btn ghost" id="back-to-review-btn" type="button">← Back to Review</button>
+          <button class="btn" id="customer-checkout-btn" type="button">Place Cute Order</button>
+        </div>
+
+        <p id="customer-checkout-result" class="muted" style="margin-top:14px;"></p>
       </div>
     </section>
 
-    <section class="portal-card hidden" id="order-success-panel">
-      <div class="hero compact success-hero">
-        <span class="pill">Order placed 🎉</span>
-        <h2 style="margin:12px 0 6px;">Thank you!</h2>
-        <p>Your order has been sent to the counter. A cashier will prepare it shortly.</p>
-      </div>
-      <div class="checkout-actions">
-        <button class="btn" id="new-order-btn">Start Another Order</button>
+    <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
+      <div class="order-shell confirmation-shell">
+        <div class="confirmation-emoji">🎉</div>
+        <h2 style="margin-bottom:8px;">Order placed!</h2>
+        <p class="muted" id="confirmation-message" style="margin-top:0;">
+          Thank you for your order.
+        </p>
+
+        <div class="summary-box" style="max-width:420px; margin:24px auto 0;">
+          <div class="summary-row">
+            <span>Status</span>
+            <strong>Sent to kitchen</strong>
+          </div>
+          <div class="summary-row">
+            <span>Pickup</span>
+            <strong>Listen for your name</strong>
+          </div>
+        </div>
+
+        <div class="kiosk-footer-actions centered-actions" style="margin-top:28px;">
+          <button class="btn" id="start-new-order-btn" type="button">Start New Order</button>
+        </div>
       </div>
     </section>
   </main>
@@ -185,6 +227,5 @@
   <script src="/js/customer.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/js/music.js"></script>
-  <script src="/js/accessibility.js"></script>
 </body>
 </html>
