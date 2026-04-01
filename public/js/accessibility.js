@@ -4,6 +4,8 @@
   let voiceEnabled = localStorage.getItem(STORAGE_KEY) === "true";
   let hoverTimer = null;
   let lastSpoken = "";
+  let pendingActivationElement = null;
+  let pendingActivationTimer = null;
 
   function getVoiceButton() {
     return document.getElementById("voiceGuideToggle");
@@ -86,12 +88,30 @@
       live.textContent = clean;
     }, 10);
 
-    if (alsoSpeak) {
-      if (clean !== lastSpoken) {
-        lastSpoken = clean;
-        speak(clean);
-      }
+    if (alsoSpeak && clean !== lastSpoken) {
+      lastSpoken = clean;
+      speak(clean);
     }
+  }
+
+  function clearPendingActivation() {
+    pendingActivationElement = null;
+    if (pendingActivationTimer) {
+      clearTimeout(pendingActivationTimer);
+      pendingActivationTimer = null;
+    }
+  }
+
+  function armPendingActivation(el) {
+    pendingActivationElement = el;
+
+    if (pendingActivationTimer) {
+      clearTimeout(pendingActivationTimer);
+    }
+
+    pendingActivationTimer = setTimeout(() => {
+      clearPendingActivation();
+    }, 4000);
   }
 
   function updateVoiceButton() {
@@ -111,17 +131,9 @@
   function toggleVoiceGuide() {
     voiceEnabled = !voiceEnabled;
     localStorage.setItem(STORAGE_KEY, String(voiceEnabled));
+    clearPendingActivation();
     updateVoiceButton();
     announce(`Voice guide ${voiceEnabled ? "enabled" : "disabled"}.`, true);
-  }
-
-  function shouldTrack(el) {
-    if (!el) return false;
-    if (el.id === "voiceGuideToggle" || el.id === "musicMuteBtn") return true;
-
-    return !!el.closest(
-      'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .portal-launch-btn'
-    );
   }
 
   function getTrackedElement(target) {
@@ -161,46 +173,52 @@
   }
 
   function wireClickSpeech() {
-    document.addEventListener("click", (event) => {
-      const el = getTrackedElement(event.target);
-      if (!el) return;
+    document.addEventListener(
+      "click",
+      (event) => {
+        const el = getTrackedElement(event.target);
+        if (!el) return;
 
-      if (el.id === "voiceGuideToggle") {
+        if (el.id === "voiceGuideToggle") {
+          event.preventDefault();
+          toggleVoiceGuide();
+          return;
+        }
+
+        if (!voiceEnabled) return;
+
+        if (el.id === "musicMuteBtn") {
+          announce("Music toggle", true);
+          return;
+        }
+
+        if (pendingActivationElement === el) {
+          clearPendingActivation();
+          return;
+        }
+
         event.preventDefault();
-        toggleVoiceGuide();
-        return;
-      }
+        event.stopPropagation();
 
-      if (!voiceEnabled) return;
-
-      if (el.id === "musicMuteBtn") {
-        announce("Music toggle", true);
-        return;
-      }
-
-      announce(describeElement(el), true);
-      // IMPORTANT:
-      // no preventDefault here
-      // no stopPropagation here
-      // clicks stay normal
-    });
+        armPendingActivation(el);
+        announce(`${getElementLabel(el)}. Click again to activate.`, true);
+      },
+      true
+    );
   }
 
   function improveLabels() {
     document.querySelectorAll(".menu-card").forEach((card) => {
       const title = normalizeText(card.querySelector("h3")?.textContent || "menu item");
-      const price =
-        normalizeText(
-          card.querySelector(".price")?.textContent ||
-          card.querySelector(".price-line .price")?.textContent ||
-          ""
-        );
+      const price = normalizeText(
+        card.querySelector(".price")?.textContent ||
+        card.querySelector(".price-line .price")?.textContent ||
+        ""
+      );
+
       card.setAttribute("tabindex", "0");
       card.setAttribute("role", "button");
-      card.setAttribute(
-        "aria-label",
-        price ? `${title}, ${price}` : title
-      );
+      card.setAttribute("aria-label", price ? `${title}, ${price}` : title);
     });
 
     document.querySelectorAll(".payment-option").forEach((btn) => {
