@@ -111,7 +111,7 @@
 
     pendingActivationTimer = setTimeout(() => {
       clearPendingActivation();
-    }, 4000);
+    }, 2000);
   }
 
   function updateVoiceButton() {
@@ -201,7 +201,7 @@
         event.stopPropagation();
 
         armPendingActivation(el);
-        announce(`${getElementLabel(el)}. Click again to activate.`, true);
+        announce(describeElement(el), true);
       },
       true
     );
