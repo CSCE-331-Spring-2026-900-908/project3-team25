@@ -16,6 +16,10 @@ const CATEGORY_LABELS = {
 const EXTRA_BOBA_PRODUCT_ID = 16;
 const EXTRA_BOBA_PRICE = 0.75;
 
+function announceCashier(message) {
+  if (window.announceAccessibility) window.announceAccessibility(message);
+}
+
 //  INIT 
 async function initCashier() {
   // Load logged-in user display name
@@ -110,6 +114,7 @@ function renderProductGrid() {
       });
       cashierSelectedRow = cashierOrder.length - 1;
       renderCart();
+      announceCashier(`${item.name} added to current order.`);
     });
   });
 }
@@ -192,6 +197,7 @@ function applyQuickMod(type, value) {
   }
 
   renderCart();
+  announceCashier('Extra boba added to the selected order item.');
 }
 
 function applyExtraBoba() {
@@ -281,8 +287,10 @@ function showModifyPanel() {
     };
     overlay.classList.add('hidden');
     renderCart();
+    announceCashier('Selected item updated.');
   });
 }
+
 
 //  CART ACTIONS 
 function bindCartActions() {
@@ -291,6 +299,7 @@ function bindCartActions() {
     cashierOrder.splice(cashierSelectedRow, 1);
     cashierSelectedRow = cashierOrder.length ? Math.min(cashierSelectedRow, cashierOrder.length - 1) : -1;
     renderCart();
+    announceCashier('Selected item removed from current order.');
   });
 
   document.getElementById('cashier-clear-btn').addEventListener('click', () => {
@@ -298,6 +307,7 @@ function bindCartActions() {
     cashierSelectedRow = -1;
     setStatus('');
     renderCart();
+    announceCashier('Cart cleared.');
   });
 
   document.getElementById('cashier-pay-btn').addEventListener('click', async () => {
@@ -330,6 +340,7 @@ function bindCartActions() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.details || data.error || 'Checkout failed.');
       setStatus(`Payment complete — Transaction #${data.transactionId}`, 'success');
+      announceCashier(`Payment complete. Transaction ${data.transactionId}.`);
       cashierOrder = [];
       cashierSelectedRow = -1;
       renderCart();

@@ -2,6 +2,10 @@ let ytPlayer;
 let ytReady = false;
 let saveTimer = null;
 
+function audioDisabledByAccessibility() {
+  return !!window.getAccessibilitySettings?.().disableAudio;
+}
+
 const YT_VIDEO_ID = 'XDELAKWrnMc';
 const FIXED_VOLUME = 20;
 
@@ -40,11 +44,19 @@ function setSavedMuted(value) {
 function updateMuteButton() {
   const btn = document.getElementById('musicMuteBtn');
   if (!btn) return;
+  if (audioDisabledByAccessibility()) {
+    btn.textContent = 'Music Disabled';
+    return;
+  }
   btn.textContent = getSavedMuted() ? 'Unmute Music' : 'Mute Music';
 }
 
 function savePlayerState() {
   if (!ytPlayer || !ytReady) return;
+  if (audioDisabledByAccessibility()) {
+    ytPlayer.mute();
+    return;
+  }
 
   try {
     const currentTime = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
@@ -92,13 +104,18 @@ function restorePlayback() {
 
   applyMuteState();
 
-  if (shouldPlay) {
+  if (shouldPlay && !audioDisabledByAccessibility()) {
     ytPlayer.playVideo();
   }
 }
 
 function toggleMute() {
   if (!ytPlayer || !ytReady) return;
+  if (audioDisabledByAccessibility()) {
+    setSavedMuted(true);
+    updateMuteButton();
+    return;
+  }
 
   const nextMuted = !getSavedMuted();
   setSavedMuted(nextMuted);
@@ -120,12 +137,26 @@ function attachMusicControls() {
     muteBtn.addEventListener('click', toggleMute);
   }
 
+  window.addEventListener('rbt-audio-setting-changed', () => {
+    if (!ytPlayer || !ytReady) return;
+    if (audioDisabledByAccessibility()) {
+      ytPlayer.pauseVideo();
+      ytPlayer.mute();
+      setSavedMuted(true);
+    } else {
+      ytPlayer.unMute();
+      ytPlayer.setVolume(FIXED_VOLUME);
+    }
+    updateMuteButton();
+  });
+
   updateMuteButton();
 }
 
 function unlockMusicOnFirstInteraction() {
   const unlock = () => {
     if (!ytPlayer || !ytReady) return;
+    if (audioDisabledByAccessibility()) return;
 
     if (getSavedMuted()) {
       ytPlayer.unMute();
