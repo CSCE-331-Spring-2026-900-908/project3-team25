@@ -1,7 +1,3 @@
-function announceManager(message) {
-  if (window.announceAccessibility) window.announceAccessibility(message);
-}
-
 async function loadDashboard() {
   const response = await fetch('/api/dashboard');
   const data = await response.json();
@@ -23,7 +19,6 @@ async function loadDashboard() {
   document.getElementById('category-grid').innerHTML = Object.entries(data.categories).map(([key, value]) => `
     <article class="metric"><h3>${key.replace('_', ' ')}</h3><div class="value">${value}</div><small>items in category</small></article>
   `).join('');
-  announceManager('Manager dashboard loaded.');
   const recentRes = await fetch('/api/orders/recent');
   const recent = await recentRes.json();
   document.getElementById('recent-orders-body').innerHTML = (recent.items || []).map(item => `

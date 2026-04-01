@@ -4,10 +4,6 @@ let customerActiveCategory = '';
 let customerOrder = [];
 let selectedPaymentMethod = 'card';
 
-function announceCustomer(message) {
-  if (window.announceAccessibility) window.announceAccessibility(message);
-}
-
 function customerSelections() {
   return {
     sweetness: document.getElementById('sweetness').value,
@@ -71,8 +67,6 @@ function setActiveScreen(screenName) {
   screens[screenName].classList.add('active-screen');
 
   updateStepIndicators(screenName);
-  const labels = { menu: 'Choose drinks screen', review: 'Review order screen', payment: 'Payment screen', confirm: 'Order confirmation screen' };
-  announceCustomer(labels[screenName]);
 }
 
 function updateStepIndicators(screenName) {
@@ -182,7 +176,6 @@ function customerRenderMenu() {
       });
 
       customerRenderOrder();
-      announceCustomer(`${item.name} added to order.`);
     });
   });
 }
@@ -238,7 +231,6 @@ function customerRenderOrder() {
     btn.addEventListener('click', () => {
       customerOrder.splice(Number(btn.dataset.index), 1);
       customerRenderOrder();
-      announceCustomer(`${item.name} added to order.`);
     });
   });
 }
@@ -267,7 +259,6 @@ function setPaymentMethod(method) {
 
   document.getElementById('selected-payment-label').textContent =
     `Selected payment: ${labelMap[method] || 'Card'}`;
-  announceCustomer(`Payment method set to ${labelMap[method] || 'Card'}.`);
 
   document.querySelectorAll('.payment-option').forEach((btn) => {
     btn.classList.toggle('active-payment', btn.dataset.payment === method);
@@ -312,7 +303,6 @@ document.getElementById('back-to-review-btn').addEventListener('click', () => {
 document.getElementById('customer-clear-btn').addEventListener('click', () => {
   customerOrder = [];
   customerRenderOrder();
-  announceCustomer('Order cleared.');
 });
 
 document.getElementById('start-new-order-btn').addEventListener('click', () => {
@@ -358,7 +348,6 @@ document.getElementById('customer-checkout-btn').addEventListener('click', async
 
     document.getElementById('confirmation-message').textContent =
       `Your order has been placed! Transaction #${data.transactionId} was saved using ${data.source}.`;
-    announceCustomer(`Order placed successfully. Transaction ${data.transactionId}.`);
 
     out.textContent = '';
     setActiveScreen('confirm');

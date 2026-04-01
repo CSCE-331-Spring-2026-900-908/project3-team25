@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
+
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="accessibility-toolbar" aria-label="Accessibility controls">
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="contrastToggle" class="access-btn" type="button" aria-pressed="false">High Contrast: Off</button>
+    <button id="motionToggle" class="access-btn" type="button" aria-pressed="false">Reduce Motion: Off</button>
+  </div>
+
   <div class="ambient-bg" aria-hidden="true">
     <span class="light light-1"></span>
     <span class="light light-2"></span>
@@ -15,9 +23,9 @@
   </div>
 
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-  <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
+  <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music">Unmute Music</button>
 
-  <main id="main-content" tabindex="-1" class="page-shell">
+  <main id="main-content" class="page-shell">
 
     <!-- Header -->
     <header class="portal-header">
@@ -67,8 +75,8 @@
   </main>
 
   <script src="/js/auth.js"></script>
-  <script src="/js/accessibility.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/js/music.js"></script>
+  <script src="/js/accessibility.js"></script>
 </body>
 </html>

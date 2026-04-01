@@ -2,10 +2,6 @@ let ytPlayer;
 let ytReady = false;
 let saveTimer = null;
 
-function audioDisabledByAccessibility() {
-  return !!window.getAccessibilitySettings?.().disableAudio;
-}
-
 const YT_VIDEO_ID = 'XDELAKWrnMc';
 const FIXED_VOLUME = 20;
 
@@ -17,7 +13,7 @@ const MUSIC_STORAGE_KEYS = {
 
 function getSavedPlaying() {
   const value = localStorage.getItem(MUSIC_STORAGE_KEYS.playing);
-  return value === null ? true : value === 'true';
+  return value === null ? false : value === 'true';
 }
 
 function getSavedTime() {
@@ -44,19 +40,11 @@ function setSavedMuted(value) {
 function updateMuteButton() {
   const btn = document.getElementById('musicMuteBtn');
   if (!btn) return;
-  if (audioDisabledByAccessibility()) {
-    btn.textContent = 'Music Disabled';
-    return;
-  }
   btn.textContent = getSavedMuted() ? 'Unmute Music' : 'Mute Music';
 }
 
 function savePlayerState() {
   if (!ytPlayer || !ytReady) return;
-  if (audioDisabledByAccessibility()) {
-    ytPlayer.mute();
-    return;
-  }
 
   try {
     const currentTime = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
@@ -104,18 +92,13 @@ function restorePlayback() {
 
   applyMuteState();
 
-  if (shouldPlay && !audioDisabledByAccessibility()) {
+  if (shouldPlay) {
     ytPlayer.playVideo();
   }
 }
 
 function toggleMute() {
   if (!ytPlayer || !ytReady) return;
-  if (audioDisabledByAccessibility()) {
-    setSavedMuted(true);
-    updateMuteButton();
-    return;
-  }
 
   const nextMuted = !getSavedMuted();
   setSavedMuted(nextMuted);
@@ -137,51 +120,17 @@ function attachMusicControls() {
     muteBtn.addEventListener('click', toggleMute);
   }
 
-  window.addEventListener('rbt-audio-setting-changed', () => {
-    if (!ytPlayer || !ytReady) return;
-    if (audioDisabledByAccessibility()) {
-      ytPlayer.pauseVideo();
-      ytPlayer.mute();
-      setSavedMuted(true);
-    } else {
-      ytPlayer.unMute();
-      ytPlayer.setVolume(FIXED_VOLUME);
-    }
-    updateMuteButton();
-  });
-
   updateMuteButton();
 }
 
 function unlockMusicOnFirstInteraction() {
-  const unlock = () => {
-    if (!ytPlayer || !ytReady) return;
-    if (audioDisabledByAccessibility()) return;
-
-    if (getSavedMuted()) {
-      ytPlayer.unMute();
-      ytPlayer.setVolume(FIXED_VOLUME);
-      setSavedMuted(false);
-      updateMuteButton();
-    }
-
-    ytPlayer.playVideo();
-
-    window.removeEventListener('click', unlock);
-    window.removeEventListener('keydown', unlock);
-    window.removeEventListener('touchstart', unlock);
-  };
-
-  window.addEventListener('click', unlock);
-  window.addEventListener('keydown', unlock);
-  window.addEventListener('touchstart', unlock);
+  // Keep music off unless the user explicitly unmutes it.
 }
 
 function onPlayerReady() {
   ytReady = true;
   restorePlayback();
   startSaveLoop();
-  unlockMusicOnFirstInteraction();
 
   window.addEventListener('beforeunload', () => {
     savePlayerState();
@@ -207,7 +156,7 @@ window.onYouTubeIframeAPIReady = function () {
     width: '1',
     videoId: YT_VIDEO_ID,
     playerVars: {
-      autoplay: 1,
+      autoplay: 0,
       controls: 0,
       disablekb: 1,
       fs: 0,

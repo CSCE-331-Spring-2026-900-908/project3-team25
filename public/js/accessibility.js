@@ -1,171 +1,169 @@
-const ACCESSIBILITY_STORAGE_KEY = 'rbt_accessibility_settings';
-const DEFAULT_ACCESSIBILITY_SETTINGS = {
-  fontScale: 1,
-  highContrast: false,
-  reduceMotion: false,
-  disableAudio: false
-};
 
-function getAccessibilitySettings() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(ACCESSIBILITY_STORAGE_KEY) || '{}');
-    return { ...DEFAULT_ACCESSIBILITY_SETTINGS, ...saved };
-  } catch (_) {
-    return { ...DEFAULT_ACCESSIBILITY_SETTINGS };
-  }
-}
+(function () {
+  const STORAGE = {
+    voice: 'rbt_access_voice',
+    contrast: 'rbt_access_contrast',
+    motion: 'rbt_access_reduce_motion'
+  };
 
-function saveAccessibilitySettings(settings) {
-  localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify(settings));
-  window.__accessibilitySettings = settings;
-}
+  let voiceEnabled = localStorage.getItem(STORAGE.voice) === 'true';
 
-function announceAccessibility(message) {
-  const liveRegion = document.getElementById('sr-live-region');
-  if (!liveRegion || !message) return;
-  liveRegion.textContent = '';
-  window.setTimeout(() => {
-    liveRegion.textContent = message;
-  }, 30);
-}
+  function qs(sel){ return document.querySelector(sel); }
+  function qsa(sel){ return Array.from(document.querySelectorAll(sel)); }
 
-function updateToolbarButtons(settings) {
-  const contrastBtn = document.getElementById('toggle-contrast-btn');
-  const motionBtn = document.getElementById('toggle-motion-btn');
-  const audioBtn = document.getElementById('toggle-audio-btn');
-  const scaleLabel = document.getElementById('font-scale-label');
-
-  if (contrastBtn) {
-    contrastBtn.setAttribute('aria-pressed', String(settings.highContrast));
-    contrastBtn.textContent = settings.highContrast ? 'Standard Colors' : 'High Contrast';
-  }
-
-  if (motionBtn) {
-    motionBtn.setAttribute('aria-pressed', String(settings.reduceMotion));
-    motionBtn.textContent = settings.reduceMotion ? 'Allow Motion' : 'Reduce Motion';
-  }
-
-  if (audioBtn) {
-    audioBtn.setAttribute('aria-pressed', String(settings.disableAudio));
-    audioBtn.textContent = settings.disableAudio ? 'Enable Music' : 'Mute Site Music';
-  }
-
-  if (scaleLabel) {
-    scaleLabel.textContent = `${Math.round(settings.fontScale * 100)}%`;
-  }
-}
-
-function applyAccessibilitySettings(settings) {
-  const safeScale = Math.max(0.9, Math.min(1.4, Number(settings.fontScale || 1)));
-  document.documentElement.style.fontSize = `${safeScale * 100}%`;
-  document.body.classList.toggle('high-contrast-mode', !!settings.highContrast);
-  document.body.classList.toggle('reduce-motion-mode', !!settings.reduceMotion);
-  document.body.classList.toggle('audio-disabled-mode', !!settings.disableAudio);
-  updateToolbarButtons({ ...settings, fontScale: safeScale });
-}
-
-function updateSetting(updater, announcement) {
-  const current = getAccessibilitySettings();
-  const next = updater({ ...current });
-  saveAccessibilitySettings(next);
-  applyAccessibilitySettings(next);
-  if (announcement) announceAccessibility(announcement(next));
-}
-
-function injectAccessibilityUI() {
-  const body = document.body;
-  if (!body) return;
-
-  const skipLink = document.createElement('a');
-  skipLink.href = '#main-content';
-  skipLink.className = 'skip-link';
-  skipLink.textContent = 'Skip to main content';
-  body.prepend(skipLink);
-
-  const toolbar = document.createElement('section');
-  toolbar.className = 'accessibility-toolbar';
-  toolbar.setAttribute('aria-label', 'Accessibility controls');
-  toolbar.innerHTML = `
-    <div class="accessibility-toolbar__group">
-      <strong>Accessibility</strong>
-      <span class="toolbar-hint">Alt + = / Alt + - / Alt + 2</span>
-    </div>
-    <div class="accessibility-toolbar__group">
-      <button class="btn ghost toolbar-btn" id="decrease-font-btn" type="button">A-</button>
-      <span class="font-scale-pill" id="font-scale-label">100%</span>
-      <button class="btn ghost toolbar-btn" id="increase-font-btn" type="button">A+</button>
-    </div>
-    <div class="accessibility-toolbar__group toolbar-toggle-group">
-      <button class="btn ghost toolbar-btn" id="toggle-contrast-btn" type="button" aria-pressed="false">High Contrast</button>
-      <button class="btn ghost toolbar-btn" id="toggle-motion-btn" type="button" aria-pressed="false">Reduce Motion</button>
-      <button class="btn ghost toolbar-btn" id="toggle-audio-btn" type="button" aria-pressed="false">Mute Site Music</button>
-    </div>
-  `;
-  body.insertBefore(toolbar, body.firstChild.nextSibling);
-
-  const live = document.createElement('div');
-  live.id = 'sr-live-region';
-  live.className = 'sr-only';
-  live.setAttribute('aria-live', 'polite');
-  live.setAttribute('aria-atomic', 'true');
-  body.appendChild(live);
-
-  const main = document.querySelector('main');
-  if (main && !main.id) {
-    main.id = 'main-content';
-    main.setAttribute('tabindex', '-1');
-  }
-
-  document.getElementById('increase-font-btn')?.addEventListener('click', () => {
-    updateSetting((settings) => ({ ...settings, fontScale: Math.min(1.4, Number(settings.fontScale || 1) + 0.1) }),
-      (settings) => `Text size set to ${Math.round(settings.fontScale * 100)} percent.`);
-  });
-
-  document.getElementById('decrease-font-btn')?.addEventListener('click', () => {
-    updateSetting((settings) => ({ ...settings, fontScale: Math.max(0.9, Number(settings.fontScale || 1) - 0.1) }),
-      (settings) => `Text size set to ${Math.round(settings.fontScale * 100)} percent.`);
-  });
-
-  document.getElementById('toggle-contrast-btn')?.addEventListener('click', () => {
-    updateSetting((settings) => ({ ...settings, highContrast: !settings.highContrast }),
-      (settings) => settings.highContrast ? 'High contrast mode enabled.' : 'High contrast mode disabled.');
-  });
-
-  document.getElementById('toggle-motion-btn')?.addEventListener('click', () => {
-    updateSetting((settings) => ({ ...settings, reduceMotion: !settings.reduceMotion }),
-      (settings) => settings.reduceMotion ? 'Reduced motion enabled.' : 'Reduced motion disabled.');
-  });
-
-  document.getElementById('toggle-audio-btn')?.addEventListener('click', () => {
-    updateSetting((settings) => ({ ...settings, disableAudio: !settings.disableAudio }),
-      (settings) => settings.disableAudio ? 'Background music muted for accessibility.' : 'Background music enabled.');
-    window.dispatchEvent(new CustomEvent('rbt-audio-setting-changed'));
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (!event.altKey) return;
-    if (event.key === '=' || event.key === '+') {
-      event.preventDefault();
-      document.getElementById('increase-font-btn')?.click();
-    } else if (event.key === '-') {
-      event.preventDefault();
-      document.getElementById('decrease-font-btn')?.click();
-    } else if (event.key === '2') {
-      event.preventDefault();
-      document.getElementById('toggle-contrast-btn')?.click();
-    } else if (event.key.toLowerCase() === 'm') {
-      event.preventDefault();
-      document.getElementById('toggle-motion-btn')?.click();
+  function announcer(){
+    let live = document.getElementById('sr-live-region');
+    if (!live) {
+      live = document.createElement('div');
+      live.id = 'sr-live-region';
+      live.className = 'sr-only';
+      live.setAttribute('aria-live', 'polite');
+      live.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(live);
     }
+    return live;
+  }
+
+  function announce(message, speakToo = false){
+    const live = announcer();
+    live.textContent = '';
+    setTimeout(() => { live.textContent = message; }, 10);
+    if (speakToo && voiceEnabled && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('Speech synthesis unavailable', e);
+      }
+    }
+  }
+
+  function labelFor(el){
+    if (!el) return '';
+    return (
+      el.getAttribute('data-accessibility-label') ||
+      el.getAttribute('aria-label') ||
+      (el.labels && el.labels[0] && el.labels[0].textContent.trim()) ||
+      el.getAttribute('title') ||
+      el.textContent.trim() ||
+      el.placeholder ||
+      el.name ||
+      el.id ||
+      el.className ||
+      'Control'
+    ).replace(/\s+/g, ' ').trim();
+  }
+
+  function applyStates(){
+    document.body.classList.toggle('access-high-contrast', localStorage.getItem(STORAGE.contrast) === 'true');
+    document.body.classList.toggle('access-reduce-motion', localStorage.getItem(STORAGE.motion) === 'true');
+    document.body.classList.toggle('voice-guide-enabled', voiceEnabled);
+
+    const voiceBtn = document.getElementById('voiceGuideToggle');
+    const contrastBtn = document.getElementById('contrastToggle');
+    const motionBtn = document.getElementById('motionToggle');
+    const musicBtn = document.getElementById('musicMuteBtn');
+
+    if (voiceBtn) {
+      voiceBtn.textContent = voiceEnabled ? 'Voice Guide: On' : 'Voice Guide: Off';
+      voiceBtn.setAttribute('aria-pressed', String(voiceEnabled));
+    }
+    if (contrastBtn) {
+      const on = localStorage.getItem(STORAGE.contrast) === 'true';
+      contrastBtn.textContent = on ? 'High Contrast: On' : 'High Contrast: Off';
+      contrastBtn.setAttribute('aria-pressed', String(on));
+    }
+    if (motionBtn) {
+      const on = localStorage.getItem(STORAGE.motion) === 'true';
+      motionBtn.textContent = on ? 'Reduce Motion: On' : 'Reduce Motion: Off';
+      motionBtn.setAttribute('aria-pressed', String(on));
+    }
+    if (musicBtn && !musicBtn.hasAttribute('aria-label')) {
+      musicBtn.setAttribute('aria-label', 'Toggle background music');
+    }
+  }
+
+  function toggleSetting(key){
+    const next = localStorage.getItem(key) !== 'true';
+    localStorage.setItem(key, String(next));
+    applyStates();
+    const name = key === STORAGE.contrast ? 'High contrast' : 'Reduce motion';
+    announce(`${name} ${next ? 'enabled' : 'disabled'}.`, true);
+  }
+
+  function wireToolbar(){
+    const voiceBtn = document.getElementById('voiceGuideToggle');
+    const contrastBtn = document.getElementById('contrastToggle');
+    const motionBtn = document.getElementById('motionToggle');
+
+    if (voiceBtn) {
+      voiceBtn.addEventListener('click', () => {
+        voiceEnabled = !voiceEnabled;
+        localStorage.setItem(STORAGE.voice, String(voiceEnabled));
+        applyStates();
+        announce(`Voice guide ${voiceEnabled ? 'enabled' : 'disabled'}.`, true);
+      });
+    }
+    if (contrastBtn) contrastBtn.addEventListener('click', () => toggleSetting(STORAGE.contrast));
+    if (motionBtn) motionBtn.addEventListener('click', () => toggleSetting(STORAGE.motion));
+  }
+
+  function interactionMessage(el, eventType){
+    const role = (el.getAttribute('role') || el.tagName || 'element').toLowerCase();
+    const label = labelFor(el);
+    if (eventType === 'focusin') {
+      if (role === 'input' || role === 'select' || role === 'textarea') {
+        return `${label}. Input field.`;
+      }
+      return `${label}. ${role === 'a' ? 'Link.' : role === 'button' ? 'Button.' : ''}`.trim();
+    }
+    if (eventType === 'click') {
+      return `${label} selected.`;
+    }
+    return label;
+  }
+
+  function wireVoiceGuide(){
+    const selector = 'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .progress-step';
+    document.addEventListener('focusin', (e) => {
+      const el = e.target.closest(selector);
+      if (!el) return;
+      announce(interactionMessage(el, 'focusin'), true);
+    });
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest(selector);
+      if (!el) return;
+      announce(interactionMessage(el, 'click'), true);
+    });
+  }
+
+  function improveLabels(){
+    qsa('.menu-card').forEach((card) => {
+      const title = card.querySelector('h3')?.textContent?.trim() || 'Drink';
+      const price = card.querySelector('.price')?.textContent?.trim() || '';
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `${title}${price ? ', ' + price : ''}`);
+    });
+    qsa('.payment-option').forEach((btn) => {
+      const payment = btn.getAttribute('data-payment') || btn.textContent.trim();
+      btn.setAttribute('aria-label', `${payment} payment option`);
+    });
+    qsa('.tab-btn').forEach((btn) => {
+      btn.setAttribute('aria-label', `${btn.textContent.trim()} category`);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    applyStates();
+    wireToolbar();
+    wireVoiceGuide();
+    improveLabels();
+    const skip = document.querySelector('.skip-link');
+    if (skip) skip.addEventListener('click', () => announce('Skipped to main content.', true));
+    announce('Accessibility features ready.', false);
   });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  injectAccessibilityUI();
-  const settings = getAccessibilitySettings();
-  saveAccessibilitySettings(settings);
-  applyAccessibilitySettings(settings);
-});
-
-window.announceAccessibility = announceAccessibility;
-window.getAccessibilitySettings = getAccessibilitySettings;
+})();

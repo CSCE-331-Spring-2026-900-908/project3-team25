@@ -1,7 +1,3 @@
-function announceBoard(message) {
-  if (window.announceAccessibility) window.announceAccessibility(message);
-}
-
 const CATEGORY_LABELS = {
   milk_tea:  'Milky Series',
   fruit_tea: 'Fruity Beverage',
@@ -35,7 +31,6 @@ async function loadMenuBoard() {
         </ul>
       </article>
     `).join('');
-    announceBoard('Menu board loaded.');
   } catch (_) {
     columns.innerHTML = '<article class="board-panel"><p class="muted">Failed to load menu.</p></article>';
   }
