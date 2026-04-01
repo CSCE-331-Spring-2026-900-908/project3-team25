@@ -13,19 +13,23 @@
     <span class="light light-2"></span>
     <span class="light light-3"></span>
   </div>
-  <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-  <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <!-- Modify panel overlay (modal) -->
+  <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
+
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="accessibility-toolbar" aria-label="Accessibility controls">
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
+  </div>
+
   <div class="cashier-modify-overlay hidden" id="cashier-modify-overlay">
     <div class="modify-card" id="cashier-modify-card">
       <!-- injected by cashier.js -->
     </div>
   </div>
 
-  <main class="restaurant-shell">
+  <main id="main-content" class="restaurant-shell">
 
-    <!-- Top bar -->
     <header class="cashier-topbar">
       <span class="cashier-user-info">Logged in as: <strong id="cashier-user-name">—</strong></span>
       <div class="cashier-topbar-right">
@@ -34,10 +38,8 @@
       </div>
     </header>
 
-    <!-- Main 3-panel workspace -->
     <div class="cashier-workspace">
 
-      <!-- LEFT: Cart / order ticket -->
       <section class="cashier-cart-panel">
         <div class="cashier-cart-header">
           <h2>Current Order</h2>
@@ -87,21 +89,18 @@
         </div>
       </section>
 
-      <!-- MIDDLE: Category sidebar -->
       <nav class="cashier-cat-col" id="cashier-cat-col" aria-label="Menu categories">
         <!-- injected by cashier.js -->
       </nav>
 
-      <!-- RIGHT: Product grid -->
       <div class="cashier-product-area">
         <div class="cashier-product-grid" id="cashier-product-grid">
           <!-- injected by cashier.js -->
         </div>
       </div>
 
-    </div><!-- end .cashier-workspace -->
+    </div>
 
-    <!-- Bottom quick-mod bar -->
     <div class="cashier-bottom-bar">
       <span class="cashier-mod-label">Modify selected:</span>
       <button class="btn ghost mod-btn" id="mod-half-sweet">Half Sweet</button>
@@ -113,7 +112,6 @@
       <button class="btn mod-primary-btn" id="mod-modify-btn">Modify ▸</button>
     </div>
 
-    <!-- Helper widgets -->
     <section class="helper-grid two-col">
       <article class="helper-card">
         <h3>Customer Translation</h3>
@@ -146,5 +144,6 @@
   <script src="/js/cashier.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/js/music.js"></script>
+  <script src="/js/accessibility.js"></script>
 </body>
 </html>

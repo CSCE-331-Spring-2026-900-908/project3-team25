@@ -3,41 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  
   <title>Customer Kiosk | Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
-
-
-
-
-
-
-  
   <link rel="stylesheet" href="/css/styles.css" />
-
-
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true">
-
-
     <span class="light light-1"></span>
-
-
-
     <span class="light light-2"></span>
-
-
-
-
     <span class="light light-3"></span>
   </div>
 
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-  <button id="musicMuteBtn" class="music-toggle" type="button">Mute Music</button>
 
-  <main class="restaurant-shell">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="accessibility-toolbar" aria-label="Accessibility controls">
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
+  </div>
+
+  <main id="main-content" class="restaurant-shell">
     <header class="pos-topbar kawaii-topbar">
       <div class="brand-mark">
         <div class="brand-badge">🧋</div>
@@ -94,10 +79,10 @@
           <div>
             <label for="sweetness">Sweetness</label>
             <select id="sweetness">
-  <option>No Sugar</option>
-  <option selected>Half Sugar</option>
-  <option>Regular Sugar</option>
-</select>
+              <option>No Sugar</option>
+              <option selected>Half Sugar</option>
+              <option>Regular Sugar</option>
+            </select>
           </div>
           <div>
             <label for="ice-level">Ice level</label>
@@ -227,5 +212,6 @@
   <script src="/js/customer.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/js/music.js"></script>
+  <script src="/js/accessibility.js"></script>
 </body>
 </html>
