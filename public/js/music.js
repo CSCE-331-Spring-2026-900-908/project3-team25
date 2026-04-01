@@ -40,12 +40,15 @@ function setSavedMuted(value) {
 function updateMuteButton() {
   const btn = document.getElementById('musicMuteBtn');
   if (!btn) return;
-  btn.textContent = getSavedMuted() ? 'Unmute Music' : 'Mute Music';
+  const muted = getSavedMuted();
+  btn.textContent = muted ? '🔇' : '🔊';
+  btn.setAttribute('aria-label', muted ? 'Unmute background music' : 'Mute background music');
+  btn.setAttribute('title', muted ? 'Unmute music' : 'Mute music');
+  btn.classList.toggle('is-muted', muted);
 }
 
 function savePlayerState() {
   if (!ytPlayer || !ytReady) return;
-
   try {
     const currentTime = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0;
     setSavedTime(currentTime);
@@ -57,81 +60,57 @@ function savePlayerState() {
 function startSaveLoop() {
   if (saveTimer) clearInterval(saveTimer);
   saveTimer = setInterval(() => {
-    if (getSavedPlaying()) {
-      savePlayerState();
-    }
+    if (getSavedPlaying()) savePlayerState();
   }, 1000);
 }
 
 function applyMuteState() {
   if (!ytPlayer || !ytReady) return;
-
   ytPlayer.setVolume(FIXED_VOLUME);
-
   if (getSavedMuted()) {
     ytPlayer.mute();
   } else {
     ytPlayer.unMute();
     ytPlayer.setVolume(FIXED_VOLUME);
   }
-
   updateMuteButton();
 }
 
 function restorePlayback() {
   if (!ytPlayer || !ytReady) return;
-
   const savedTime = getSavedTime();
   const shouldPlay = getSavedPlaying();
-
   ytPlayer.setVolume(FIXED_VOLUME);
-
-  if (savedTime > 0) {
-    ytPlayer.seekTo(savedTime, true);
-  }
-
+  if (savedTime > 0) ytPlayer.seekTo(savedTime, true);
   applyMuteState();
-
-  if (shouldPlay) {
-    ytPlayer.playVideo();
-  }
+  if (shouldPlay) ytPlayer.playVideo();
 }
 
 function toggleMute() {
   if (!ytPlayer || !ytReady) return;
-
   const nextMuted = !getSavedMuted();
   setSavedMuted(nextMuted);
-
   if (nextMuted) {
     ytPlayer.mute();
   } else {
     ytPlayer.unMute();
     ytPlayer.setVolume(FIXED_VOLUME);
+    ytPlayer.playVideo();
+    setSavedPlaying(true);
   }
-
   updateMuteButton();
 }
 
 function attachMusicControls() {
   const muteBtn = document.getElementById('musicMuteBtn');
-
-  if (muteBtn) {
-    muteBtn.addEventListener('click', toggleMute);
-  }
-
+  if (muteBtn) muteBtn.addEventListener('click', toggleMute);
   updateMuteButton();
-}
-
-function unlockMusicOnFirstInteraction() {
-  // Keep music off unless the user explicitly unmutes it.
 }
 
 function onPlayerReady() {
   ytReady = true;
   restorePlayback();
   startSaveLoop();
-
   window.addEventListener('beforeunload', () => {
     savePlayerState();
   });
@@ -139,15 +118,11 @@ function onPlayerReady() {
 
 function onPlayerStateChange(event) {
   if (!window.YT || !window.YT.PlayerState) return;
-
   if (event.data === window.YT.PlayerState.PLAYING) {
     setSavedPlaying(true);
     applyMuteState();
   }
-
-  if (event.data === window.YT.PlayerState.PAUSED) {
-    savePlayerState();
-  }
+  if (event.data === window.YT.PlayerState.PAUSED) savePlayerState();
 }
 
 window.onYouTubeIframeAPIReady = function () {

@@ -12,8 +12,7 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
     <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
-    <button id="contrastToggle" class="access-btn" type="button" aria-pressed="false">High Contrast: Off</button>
-    <button id="motionToggle" class="access-btn" type="button" aria-pressed="false">Reduce Motion: Off</button>
+    <button id="musicMuteBtn" class="music-toggle icon-only" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
   </div>
 
   <div class="ambient-bg" aria-hidden="true">
@@ -23,11 +22,9 @@
   </div>
 
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-  <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music">Unmute Music</button>
 
   <main id="main-content" class="page-shell">
 
-    <!-- Header -->
     <header class="portal-header">
       <div class="brand-mark">
         <div class="brand-badge">RB</div>
@@ -43,9 +40,7 @@
 
     <p id="portal-access-message" class="muted portal-access-msg"></p>
 
-    <!-- Interface cards -->
     <div class="portal-launch-grid">
-
       <article class="portal-launch-card">
         <h2>Customer Kiosk</h2>
         <p class="muted">Self-order station for customers</p>
@@ -69,7 +64,6 @@
         <p class="muted">Dashboard and analytics</p>
         <a href="/manager.html" class="btn portal-launch-btn" id="portal-manager-link">Manager View</a>
       </article>
-
     </div>
 
   </main>

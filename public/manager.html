@@ -12,8 +12,7 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
     <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
-    <button id="contrastToggle" class="access-btn" type="button" aria-pressed="false">High Contrast: Off</button>
-    <button id="motionToggle" class="access-btn" type="button" aria-pressed="false">Reduce Motion: Off</button>
+    <button id="musicMuteBtn" class="music-toggle icon-only" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
   </div>
 
   <div class="ambient-bg" aria-hidden="true">
@@ -22,7 +21,6 @@
   <span class="light light-3"></span>
 </div>
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-  <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music">Unmute Music</button>
 
   <main id="main-content" class="page-shell">
     <header class="brand-strip">
@@ -55,42 +53,42 @@
                   <th>Item</th>
                   <th>On hand</th>
                   <th>Threshold</th>
-                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody id="inventory-table-body"></tbody>
+              <tbody id="inventory-tbody">
+                <tr><td colspan="3">Loading inventory…</td></tr>
+              </tbody>
             </table>
           </div>
         </article>
 
         <article class="portal-card">
-          <h2 style="margin-top:0;">Recent orders</h2>
+          <h2 style="margin-top:0;">Sales snapshot</h2>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Cashier</th>
-                  <th>Total</th>
-                  <th>Status</th>
+                  <th>Period</th>
+                  <th>Transactions</th>
+                  <th>Revenue</th>
                 </tr>
               </thead>
-              <tbody id="recent-orders-body"></tbody>
+              <tbody id="sales-tbody">
+                <tr><td colspan="3">Loading sales…</td></tr>
+              </tbody>
             </table>
           </div>
         </article>
-
-        <article class="portal-card">
-          <h2 style="margin-top:0;">System notes</h2>
-          <ul id="announcements" class="notice-list"></ul>
-        </article>
       </section>
 
-      <aside class="summary-stack">
-        <article class="promo-card">
-          <h3 style="margin-top:0;">Menu category breakdown</h3>
-          <section class="metric-grid" id="category-grid"></section>
-        </article>
+      <aside class="portal-card">
+        <h2 style="margin-top:0;">Actions</h2>
+        <p class="muted">Use the manager API endpoints and exported reports for deeper insights.</p>
+        <div class="cta-stack">
+          <a class="btn" href="/">Return to portal</a>
+          <a class="btn ghost" href="/sales/sales_data.csv" download>Download sales CSV</a>
+          <a class="btn ghost" href="/queries" target="_blank" rel="noopener noreferrer">Open query folder reference</a>
+        </div>
       </aside>
     </section>
   </main>

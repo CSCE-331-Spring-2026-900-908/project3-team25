@@ -1,14 +1,13 @@
-
 (function () {
   const STORAGE = {
-    voice: 'rbt_access_voice',
-    contrast: 'rbt_access_contrast',
-    motion: 'rbt_access_reduce_motion'
+    voice: 'rbt_access_voice'
   };
 
   let voiceEnabled = localStorage.getItem(STORAGE.voice) === 'true';
+  let hoverTimer = null;
+  let armedElement = null;
+  let armedUntil = 0;
 
-  function qs(sel){ return document.querySelector(sel); }
   function qsa(sel){ return Array.from(document.querySelectorAll(sel)); }
 
   function announcer(){
@@ -24,25 +23,28 @@
     return live;
   }
 
+  function speak(message){
+    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis unavailable', e);
+    }
+  }
+
   function announce(message, speakToo = false){
     const live = announcer();
     live.textContent = '';
     setTimeout(() => { live.textContent = message; }, 10);
-    if (speakToo && voiceEnabled && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(message);
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        window.speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.warn('Speech synthesis unavailable', e);
-      }
-    }
+    if (speakToo) speak(message);
   }
 
   function labelFor(el){
-    if (!el) return '';
+    if (!el) return 'Control';
     return (
       el.getAttribute('data-accessibility-label') ||
       el.getAttribute('aria-label') ||
@@ -52,92 +54,49 @@
       el.placeholder ||
       el.name ||
       el.id ||
-      el.className ||
       'Control'
     ).replace(/\s+/g, ' ').trim();
   }
 
+  function roleFor(el){
+    const role = (el.getAttribute('role') || el.tagName || 'element').toLowerCase();
+    if (role === 'a') return 'link';
+    if (role === 'button') return 'button';
+    if (role === 'input' || role === 'select' || role === 'textarea') return 'input';
+    return role;
+  }
+
+  function describe(el){
+    const label = labelFor(el);
+    const role = roleFor(el);
+    if (role === 'input') return `${label}. Input field.`;
+    if (role === 'button') return `${label}. Button.`;
+    if (role === 'link') return `${label}. Link.`;
+    return `${label}.`;
+  }
+
   function applyStates(){
-    document.body.classList.toggle('access-high-contrast', localStorage.getItem(STORAGE.contrast) === 'true');
-    document.body.classList.toggle('access-reduce-motion', localStorage.getItem(STORAGE.motion) === 'true');
     document.body.classList.toggle('voice-guide-enabled', voiceEnabled);
-
     const voiceBtn = document.getElementById('voiceGuideToggle');
-    const contrastBtn = document.getElementById('contrastToggle');
-    const motionBtn = document.getElementById('motionToggle');
-    const musicBtn = document.getElementById('musicMuteBtn');
-
     if (voiceBtn) {
       voiceBtn.textContent = voiceEnabled ? 'Voice Guide: On' : 'Voice Guide: Off';
       voiceBtn.setAttribute('aria-pressed', String(voiceEnabled));
+      voiceBtn.setAttribute('aria-label', voiceEnabled ? 'Turn voice guide off' : 'Turn voice guide on');
     }
-    if (contrastBtn) {
-      const on = localStorage.getItem(STORAGE.contrast) === 'true';
-      contrastBtn.textContent = on ? 'High Contrast: On' : 'High Contrast: Off';
-      contrastBtn.setAttribute('aria-pressed', String(on));
-    }
-    if (motionBtn) {
-      const on = localStorage.getItem(STORAGE.motion) === 'true';
-      motionBtn.textContent = on ? 'Reduce Motion: On' : 'Reduce Motion: Off';
-      motionBtn.setAttribute('aria-pressed', String(on));
-    }
-    if (musicBtn && !musicBtn.hasAttribute('aria-label')) {
-      musicBtn.setAttribute('aria-label', 'Toggle background music');
-    }
-  }
-
-  function toggleSetting(key){
-    const next = localStorage.getItem(key) !== 'true';
-    localStorage.setItem(key, String(next));
-    applyStates();
-    const name = key === STORAGE.contrast ? 'High contrast' : 'Reduce motion';
-    announce(`${name} ${next ? 'enabled' : 'disabled'}.`, true);
   }
 
   function wireToolbar(){
     const voiceBtn = document.getElementById('voiceGuideToggle');
-    const contrastBtn = document.getElementById('contrastToggle');
-    const motionBtn = document.getElementById('motionToggle');
-
     if (voiceBtn) {
       voiceBtn.addEventListener('click', () => {
         voiceEnabled = !voiceEnabled;
         localStorage.setItem(STORAGE.voice, String(voiceEnabled));
+        armedElement = null;
+        armedUntil = 0;
         applyStates();
         announce(`Voice guide ${voiceEnabled ? 'enabled' : 'disabled'}.`, true);
       });
     }
-    if (contrastBtn) contrastBtn.addEventListener('click', () => toggleSetting(STORAGE.contrast));
-    if (motionBtn) motionBtn.addEventListener('click', () => toggleSetting(STORAGE.motion));
-  }
-
-  function interactionMessage(el, eventType){
-    const role = (el.getAttribute('role') || el.tagName || 'element').toLowerCase();
-    const label = labelFor(el);
-    if (eventType === 'focusin') {
-      if (role === 'input' || role === 'select' || role === 'textarea') {
-        return `${label}. Input field.`;
-      }
-      return `${label}. ${role === 'a' ? 'Link.' : role === 'button' ? 'Button.' : ''}`.trim();
-    }
-    if (eventType === 'click') {
-      return `${label} selected.`;
-    }
-    return label;
-  }
-
-  function wireVoiceGuide(){
-    const selector = 'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .progress-step';
-    document.addEventListener('focusin', (e) => {
-      const el = e.target.closest(selector);
-      if (!el) return;
-      announce(interactionMessage(el, 'focusin'), true);
-    });
-    document.addEventListener('click', (e) => {
-      const el = e.target.closest(selector);
-      if (!el) return;
-      announce(interactionMessage(el, 'click'), true);
-    });
   }
 
   function improveLabels(){
@@ -157,13 +116,60 @@
     });
   }
 
+  function wireHoverAndFocusSpeech(){
+    const selector = 'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .progress-step';
+
+    document.addEventListener('focusin', (e) => {
+      const el = e.target.closest(selector);
+      if (!el || !voiceEnabled) return;
+      announce(describe(el), true);
+    });
+
+    document.addEventListener('mouseover', (e) => {
+      const el = e.target.closest(selector);
+      if (!el || !voiceEnabled) return;
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        announce(describe(el), true);
+      }, 650);
+    });
+
+    document.addEventListener('mouseout', () => {
+      clearTimeout(hoverTimer);
+    });
+  }
+
+  function wireConfirmActivation(){
+    const selector = 'a, button, .menu-card, .payment-option, .tab-btn';
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest(selector);
+      if (!el || !voiceEnabled) return;
+      if (el.id === 'voiceGuideToggle' || el.id === 'musicMuteBtn' || el.closest('.accessibility-toolbar')) return;
+
+      const now = Date.now();
+      if (armedElement === el && now < armedUntil) {
+        armedElement = null;
+        armedUntil = 0;
+        return;
+      }
+
+      armedElement = el;
+      armedUntil = now + 4000;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      announce(`${labelFor(el)} selected. Click again to activate.`, true);
+    }, true);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     applyStates();
     wireToolbar();
-    wireVoiceGuide();
     improveLabels();
+    wireHoverAndFocusSpeech();
+    wireConfirmActivation();
     const skip = document.querySelector('.skip-link');
     if (skip) skip.addEventListener('click', () => announce('Skipped to main content.', true));
-    announce('Accessibility features ready.', false);
+    announce('Voice accessibility ready.', false);
   });
 })();
