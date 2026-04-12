@@ -8,12 +8,50 @@
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
-
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
     <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
-    <button id="musicMuteBtn" class="music-toggle" type="button" aria-label="Toggle background music" title="Toggle background music">🔇</button>
+  </div>
+
+  <div class="edit-modal-overlay hidden" id="edit-modal-overlay">
+    <div class="edit-modal">
+      <h3 id="edit-modal-title">Edit item</h3>
+      <div>
+        <label for="edit-sweetness">Sweetness</label>
+        <select id="edit-sweetness">
+          <option>No Sugar</option>
+          <option>Half Sugar</option>
+          <option>Regular Sugar</option>
+        </select>
+      </div>
+      <div>
+        <label for="edit-ice">Ice level</label>
+        <select id="edit-ice">
+          <option>None</option>
+          <option>Light</option>
+          <option>Regular</option>
+          <option>Extra</option>
+        </select>
+      </div>
+      <div>
+        <label for="edit-size">Size</label>
+        <select id="edit-size">
+          <option>Regular</option>
+          <option>Large</option>
+        </select>
+      </div>
+      <div>
+        <label for="edit-topping">Topping</label>
+        <select id="edit-topping">
+          <option>None</option>
+          <option>Extra Boba</option>
+        </select>
+      </div>
+      <div class="edit-modal-actions">
+        <button class="btn ghost" id="edit-modal-cancel" type="button">Cancel</button>
+        <button class="btn" id="edit-modal-save" type="button">Save</button>
+      </div>
+    </div>
   </div>
 
   <main id="main-content" class="restaurant-shell">
@@ -30,24 +68,6 @@
       </div>
     </header>
 
-    <section class="kiosk-progress" aria-label="Order progress">
-      <div class="progress-step active" id="step-indicator-menu">
-        <span class="step-num">1</span>
-        <span>Choose Drinks</span>
-      </div>
-      <div class="progress-step" id="step-indicator-review">
-        <span class="step-num">2</span>
-        <span>Review Order</span>
-      </div>
-      <div class="progress-step" id="step-indicator-payment">
-        <span class="step-num">3</span>
-        <span>Payment</span>
-      </div>
-      <div class="progress-step" id="step-indicator-confirm">
-        <span class="step-num">4</span>
-        <span>Done</span>
-      </div>
-    </section>
 
     <section id="screen-menu" class="kiosk-screen active-screen" aria-label="Drink menu">
       <section class="category-shell">
@@ -190,8 +210,6 @@
   </main>
 
   <script src="/js/customer.js"></script>
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="/js/music.js"></script>
   <script src="/js/accessibility.js"></script>
 </body>
 </html>

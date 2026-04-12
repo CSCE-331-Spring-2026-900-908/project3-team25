@@ -119,7 +119,7 @@
   function getTrackedElement(target) {
     if (!target) return null;
 
-    if (target.id === "voiceGuideToggle" || target.id === "musicMuteBtn") {
+    if (target.id === "voiceGuideToggle") {
       return target;
     }
 
@@ -174,11 +174,6 @@
         }
 
         if (!voiceEnabled) return;
-
-        if (el.id === "musicMuteBtn") {
-          announce("Music toggle", true);
-          return;
-        }
 
         announce(describeElement(el), true);
       },

@@ -65,36 +65,20 @@ function setActiveScreen(screenName) {
 
   screens[screenName].classList.remove('hidden-screen');
   screens[screenName].classList.add('active-screen');
-
-  updateStepIndicators(screenName);
 }
 
-function updateStepIndicators(screenName) {
-  const ids = [
-    'step-indicator-menu',
-    'step-indicator-review',
-    'step-indicator-payment',
-    'step-indicator-confirm'
-  ];
-
-  ids.forEach((id) => {
-    document.getElementById(id).classList.remove('active');
-  });
-
-  if (screenName === 'menu') {
-    document.getElementById('step-indicator-menu').classList.add('active');
-  } else if (screenName === 'review') {
-    document.getElementById('step-indicator-menu').classList.add('active');
-    document.getElementById('step-indicator-review').classList.add('active');
-  } else if (screenName === 'payment') {
-    document.getElementById('step-indicator-menu').classList.add('active');
-    document.getElementById('step-indicator-review').classList.add('active');
-    document.getElementById('step-indicator-payment').classList.add('active');
-  } else if (screenName === 'confirm') {
-    ids.forEach((id) => {
-      document.getElementById(id).classList.add('active');
-    });
+let toastTimer = null;
+function showToast(message) {
+  let toast = document.getElementById('kiosk-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'kiosk-toast';
+    document.body.appendChild(toast);
   }
+  toast.textContent = message;
+  toast.classList.add('kiosk-toast-show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('kiosk-toast-show'), 2000);
 }
 
 function customerRenderTabs() {
@@ -174,6 +158,7 @@ function customerRenderMenu() {
         linePrice: finalPrice
       });
 
+      showToast(`${item.name} added`);
       customerRenderOrder();
     });
   });
@@ -215,13 +200,16 @@ function customerRenderOrder() {
           <strong>${item.name}</strong>
           <strong>$${Number(item.linePrice).toFixed(2)}</strong>
         </div>
-        <small>
-          ${item.selections.size} •
-          ${item.selections.sweetness} •
-          ${item.selections.ice} ice •
-          ${item.selections.topping}
-        </small>
-        <button class="btn ghost remove-btn" data-index="${index}" type="button">Remove</button>
+        <small>${[
+            item.selections.size !== 'Regular' ? item.selections.size : null,
+            item.selections.sweetness !== 'Regular Sugar' ? item.selections.sweetness : null,
+            item.selections.ice !== 'Regular' ? item.selections.ice + ' ice' : null,
+            item.selections.topping !== 'None' ? item.selections.topping : null
+          ].filter(Boolean).join(', ') || 'No modifications'}</small>
+        <div class="order-item-actions">
+          <button class="btn ghost edit-btn" data-index="${index}" type="button">Edit</button>
+          <button class="btn ghost remove-btn" data-index="${index}" type="button">Remove</button>
+        </div>
       </article>
     `)
     .join('');
@@ -232,7 +220,50 @@ function customerRenderOrder() {
       customerRenderOrder();
     });
   });
+
+  lines.querySelectorAll('.edit-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openEditModal(Number(btn.dataset.index));
+    });
+  });
 }
+
+let editingIndex = -1;
+
+function openEditModal(index) {
+  const item = customerOrder[index];
+  if (!item) return;
+  editingIndex = index;
+
+  document.getElementById('edit-modal-title').textContent = item.name;
+  document.getElementById('edit-sweetness').value = item.selections.sweetness;
+  document.getElementById('edit-ice').value = item.selections.ice;
+  document.getElementById('edit-size').value = item.selections.size;
+  document.getElementById('edit-topping').value = item.selections.topping;
+
+  document.getElementById('edit-modal-overlay').classList.remove('hidden');
+}
+
+document.getElementById('edit-modal-cancel').addEventListener('click', () => {
+  document.getElementById('edit-modal-overlay').classList.add('hidden');
+});
+
+document.getElementById('edit-modal-save').addEventListener('click', () => {
+  if (editingIndex < 0) return;
+  const item = customerOrder[editingIndex];
+  const newSelections = {
+    sweetness: document.getElementById('edit-sweetness').value,
+    ice: document.getElementById('edit-ice').value,
+    size: document.getElementById('edit-size').value,
+    topping: document.getElementById('edit-topping').value
+  };
+  const extra = customerExtraPrice(newSelections);
+  const newPrice = Number(item.price) + extra;
+
+  customerOrder[editingIndex] = { ...item, selections: newSelections, unitPrice: newPrice, linePrice: newPrice };
+  document.getElementById('edit-modal-overlay').classList.add('hidden');
+  customerRenderOrder();
+});
 
 async function loadCustomerMenu() {
   const res = await fetch('/api/menu');
