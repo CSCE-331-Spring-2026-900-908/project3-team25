@@ -8,12 +8,6 @@
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <div class="ambient-bg" aria-hidden="true">
-    <span class="light light-1"></span>
-    <span class="light light-2"></span>
-    <span class="light light-3"></span>
-  </div>
-
   <div id="youtube-player" style="position: fixed; left: -9999px; width: 1px; height: 1px;"></div>
 
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -23,26 +17,18 @@
   </div>
 
   <main id="main-content" class="restaurant-shell">
-    <header class="pos-topbar kawaii-topbar">
+    <header class="cashier-topbar">
       <div class="brand-mark">
-        <div class="brand-badge">🧋</div>
+        <div class="brand-badge">RE</div>
         <div>
-          <h1>Reveille Bubble Tea</h1>
-          <p>Kawaii self-order kiosk</p>
+          <h1 style="font-size:1.1rem; margin:0;">Reveille Bubble Tea</h1>
         </div>
       </div>
-      <div class="tag-row">
-        <span class="tag">Cute drinks</span>
-        <span class="tag">Touch to order</span>
-        <span class="tag">Made fresh</span>
+      <div class="cashier-topbar-right">
+        <span class="cashier-user-info">Customer Kiosk</span>
+        <a href="/" class="btn ghost cashier-portal-link">Portal</a>
       </div>
     </header>
-
-    <section class="hero compact customer-hero kawaii-hero">
-      <span class="pill">Welcome friend ✨</span>
-      <h1>Build Your Dream Boba</h1>
-      <p>Choose your drink, review your order, and head to payment in a simple kiosk flow.</p>
-    </section>
 
     <section class="kiosk-progress" aria-label="Order progress">
       <div class="progress-step active" id="step-indicator-menu">
@@ -68,7 +54,6 @@
         <div class="mini-top" style="margin-bottom:16px;">
           <div>
             <h2 style="margin:0;">Choose your drink</h2>
-            <p class="muted" style="margin:6px 0 0;">Tap a category, customize your drink, and add it to your order.</p>
           </div>
           <span class="badge" id="customer-item-count">0 items</span>
         </div>
@@ -80,8 +65,8 @@
             <label for="sweetness">Sweetness</label>
             <select id="sweetness">
               <option>No Sugar</option>
-              <option selected>Half Sugar</option>
-              <option>Regular Sugar</option>
+              <option>Half Sugar</option>
+              <option selected>Regular Sugar</option>
             </select>
           </div>
           <div>
@@ -126,13 +111,12 @@
         <div class="mini-top">
           <div>
             <h2 style="margin:0;">Review your order</h2>
-            <p class="muted" style="margin:6px 0 0;">Double-check your drinks before payment.</p>
           </div>
           <span class="badge" id="review-item-count">0 items</span>
         </div>
 
         <div class="order-lines" id="customer-order-lines">
-          <p class="cart-note">No drinks added yet. Pick a drink from the menu to start.</p>
+          <p class="cart-note">No items added yet.</p>
         </div>
 
         <div class="summary-box">
@@ -156,9 +140,7 @@
         <div class="mini-top">
           <div>
             <h2 style="margin:0;">Payment</h2>
-            <p class="muted" style="margin:6px 0 0;">Choose a payment method to place your order.</p>
           </div>
-          <span class="badge">Almost done</span>
         </div>
 
         <div class="payment-total-box">
@@ -167,16 +149,15 @@
         </div>
 
         <div class="payment-grid">
-          <button class="payment-option active-payment" type="button" data-payment="card">💳 Card</button>
-          <button class="payment-option" type="button" data-payment="applepay">📱 Apple Pay</button>
-          <button class="payment-option" type="button" data-payment="cash">💵 Cash</button>
+          <button class="payment-option active-payment" type="button" data-payment="card">Card</button>
+          <button class="payment-option" type="button" data-payment="applepay">Apple Pay</button>
+          <button class="payment-option" type="button" data-payment="cash">Cash</button>
         </div>
 
-        <p id="selected-payment-label" class="muted" style="margin-top:16px;">Selected payment: Card</p>
 
         <div class="kiosk-footer-actions" style="margin-top:24px;">
           <button class="btn ghost" id="back-to-review-btn" type="button">← Back to Review</button>
-          <button class="btn" id="customer-checkout-btn" type="button">Place Cute Order</button>
+          <button class="btn" id="customer-checkout-btn" type="button">Place Order</button>
         </div>
 
         <p id="customer-checkout-result" class="muted" style="margin-top:14px;"></p>
@@ -185,20 +166,19 @@
 
     <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
       <div class="order-shell confirmation-shell">
-        <div class="confirmation-emoji">🎉</div>
         <h2 style="margin-bottom:8px;">Order placed!</h2>
         <p class="muted" id="confirmation-message" style="margin-top:0;">
-          Thank you for your order.
+          Your order has been received.
         </p>
 
         <div class="summary-box" style="max-width:420px; margin:24px auto 0;">
           <div class="summary-row">
             <span>Status</span>
-            <strong>Sent to kitchen</strong>
+            <strong>Order received</strong>
           </div>
           <div class="summary-row">
             <span>Pickup</span>
-            <strong>Listen for your name</strong>
+            <strong>Pick up at the counter</strong>
           </div>
         </div>
 

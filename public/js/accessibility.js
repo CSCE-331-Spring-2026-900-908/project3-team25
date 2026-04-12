@@ -3,9 +3,7 @@
 
   let voiceEnabled = localStorage.getItem(STORAGE_KEY) === "true";
   let hoverTimer = null;
-  let lastSpoken = "";
-  let pendingActivationElement = null;
-  let pendingActivationTimer = null;
+  let lastHoveredEl = null;
 
   function getVoiceButton() {
     return document.getElementById("voiceGuideToggle");
@@ -31,6 +29,24 @@
   function getElementLabel(el) {
     if (!el) return "control";
 
+    const tag = (el.tagName || "").toLowerCase();
+
+    if (tag === "select") {
+      const associated = el.id && document.querySelector(`label[for="${el.id}"]`);
+      return normalizeText(
+        el.getAttribute("data-accessibility-label") ||
+        el.getAttribute("aria-label") ||
+        (associated ? associated.textContent : null) ||
+        el.id ||
+        el.name ||
+        "dropdown"
+      );
+    }
+
+    if (tag === "option") {
+      return normalizeText(el.textContent || el.value || "option");
+    }
+
     return normalizeText(
       el.getAttribute("data-accessibility-label") ||
       el.getAttribute("aria-label") ||
@@ -44,23 +60,8 @@
     );
   }
 
-  function getElementType(el) {
-    const tag = (el.tagName || "").toLowerCase();
-    const role = (el.getAttribute("role") || "").toLowerCase();
-
-    if (role) return role;
-    if (tag === "a") return "link";
-    if (tag === "button") return "button";
-    if (tag === "input") return "input";
-    if (tag === "select") return "dropdown";
-    if (tag === "textarea") return "text area";
-    return "control";
-  }
-
   function describeElement(el) {
-    const label = getElementLabel(el);
-    const type = getElementType(el);
-    return `${label}, ${type}`;
+    return getElementLabel(el);
   }
 
   function speak(text) {
@@ -88,31 +89,11 @@
       live.textContent = clean;
     }, 10);
 
-    if (alsoSpeak && clean !== lastSpoken) {
-      lastSpoken = clean;
+    if (alsoSpeak) {
       speak(clean);
     }
   }
 
-  function clearPendingActivation() {
-    pendingActivationElement = null;
-    if (pendingActivationTimer) {
-      clearTimeout(pendingActivationTimer);
-      pendingActivationTimer = null;
-    }
-  }
-
-  function armPendingActivation(el) {
-    pendingActivationElement = el;
-
-    if (pendingActivationTimer) {
-      clearTimeout(pendingActivationTimer);
-    }
-
-    pendingActivationTimer = setTimeout(() => {
-      clearPendingActivation();
-    }, 2000);
-  }
 
   function updateVoiceButton() {
     const btn = getVoiceButton();
@@ -131,7 +112,6 @@
   function toggleVoiceGuide() {
     voiceEnabled = !voiceEnabled;
     localStorage.setItem(STORAGE_KEY, String(voiceEnabled));
-    clearPendingActivation();
     updateVoiceButton();
     announce(`Voice guide ${voiceEnabled ? "enabled" : "disabled"}.`, true);
   }
@@ -140,6 +120,10 @@
     if (!target) return null;
 
     if (target.id === "voiceGuideToggle" || target.id === "musicMuteBtn") {
+      return target;
+    }
+
+    if ((target.tagName || "").toLowerCase() === "option") {
       return target;
     }
 
@@ -152,14 +136,18 @@
     document.addEventListener("mouseover", (event) => {
       const el = getTrackedElement(event.target);
       if (!voiceEnabled || !el) return;
+      if (el === lastHoveredEl) return;
 
+      lastHoveredEl = el;
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
         announce(describeElement(el), true);
       }, 500);
     });
 
-    document.addEventListener("mouseout", () => {
+    document.addEventListener("mouseout", (event) => {
+      const el = getTrackedElement(event.target);
+      if (el) lastHoveredEl = null;
       clearTimeout(hoverTimer);
     });
   }
@@ -192,15 +180,6 @@
           return;
         }
 
-        if (pendingActivationElement === el) {
-          clearPendingActivation();
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        armPendingActivation(el);
         announce(describeElement(el), true);
       },
       true
@@ -232,6 +211,15 @@
     });
   }
 
+  function wireSelectSpeech() {
+    document.addEventListener("change", (event) => {
+      const el = event.target;
+      if (!voiceEnabled || (el.tagName || "").toLowerCase() !== "select") return;
+      const selected = el.options[el.selectedIndex];
+      if (selected) speak(normalizeText(selected.textContent));
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     getLiveRegion();
     updateVoiceButton();
@@ -239,5 +227,6 @@
     wireHoverSpeech();
     wireFocusSpeech();
     wireClickSpeech();
+    wireSelectSpeech();
   });
 })();

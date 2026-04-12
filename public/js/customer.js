@@ -144,7 +144,6 @@ function customerRenderMenu() {
           <div class="topline">
             <div>
               <h3>${item.name}</h3>
-              <p>${item.description}</p>
             </div>
             ${item.popular ? '<span class="tag">Popular</span>' : ''}
           </div>
@@ -251,15 +250,6 @@ async function loadCustomerMenu() {
 function setPaymentMethod(method) {
   selectedPaymentMethod = method;
 
-  const labelMap = {
-    card: 'Card',
-    applepay: 'Apple Pay',
-    cash: 'Cash'
-  };
-
-  document.getElementById('selected-payment-label').textContent =
-    `Selected payment: ${labelMap[method] || 'Card'}`;
-
   document.querySelectorAll('.payment-option').forEach((btn) => {
     btn.classList.toggle('active-payment', btn.dataset.payment === method);
   });
@@ -272,7 +262,7 @@ function resetCustomerOrder() {
   setPaymentMethod('card');
 
   document.getElementById('customer-checkout-result').textContent = '';
-  document.getElementById('confirmation-message').textContent = 'Thank you for your order.';
+  document.getElementById('confirmation-message').textContent = 'Your order has been received.';
   setActiveScreen('menu');
 }
 
