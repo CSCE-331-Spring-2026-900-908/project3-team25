@@ -378,6 +378,31 @@ function bindHelpers() {
       out.textContent = e.message;
     }
   });
+
+  // ── Weather ────────────────────────────────────────────────────────────────
+  const weatherCard = document.getElementById('cashier-weather-card');
+  if (weatherCard) {
+    try {
+      const res  = await fetch('/api/weather?city=College+Station');
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        weatherCard.innerHTML = '<p class="muted">Weather unavailable right now.</p>';
+      } else {
+        const temp  = data.temperature !== null ? `${Math.round(data.temperature)}°F` : '—';
+        const feels = data.feelsLike   !== null ? `Feels like ${Math.round(data.feelsLike)}°F` : '';
+        const wind  = data.windSpeed   !== null ? `💨 ${Math.round(data.windSpeed)} mph` : '';
+        const icon  = data.isDay ? '☀️' : '🌙';
+        weatherCard.innerHTML = `
+          <div style="display:grid;gap:6px;">
+            <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);">${icon} ${temp}</div>
+            <div style="font-size:0.85rem;color:var(--muted);">${data.weatherLabel || ''} ${feels ? '· ' + feels : ''} ${wind ? '· ' + wind : ''}</div>
+            <div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-top:4px;">${data.drinkSuggestion || ''}</div>
+          </div>`;
+      }
+    } catch(_) {
+      if (weatherCard) weatherCard.innerHTML = '<p class="muted">Weather unavailable.</p>';
+    }
+  }
 }
 
 //  START 

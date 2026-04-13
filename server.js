@@ -248,20 +248,9 @@ app.get('/api/dashboard', async (req, res) => {
 
 app.get('/api/orders/recent', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  const limit = Math.min(Number(req.query.limit || 50), 200);
   try {
-    if (hasDbConfig()) {
-      const r = await queryDb(`
-        SELECT t.transactionid, t.cashierid,
-               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
-               (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS transactiontime,
-               t.totalamount, t.paymentmethod, t.status
-        FROM transactions t
-        LEFT JOIN cashier c ON c.cashierid = t.cashierid
-        ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
-      return res.json({ items: r.rows, source: 'database' });
-    }
-    res.json({ items: [...fallbackTransactions].reverse().slice(0, limit), source: 'fallback' });
+    if (hasDbConfig()) { const r = await queryDb(`SELECT transactionid,cashierid,transactiontime,totalamount,paymentmethod,status FROM transactions ORDER BY transactiontime DESC LIMIT 10`); return res.json({ items: r.rows, source: 'database' }); }
+    res.json({ items: [...fallbackTransactions].reverse().slice(0,10), source: 'fallback' });
   } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
 });
 
@@ -447,17 +436,65 @@ app.post('/api/assistant', async (req, res) => {
   } catch(e) { res.json({ source:'local-fallback', reply: ruleBasedAssistant(message) }); }
 });
 
+// ─── Weather (cached, College Station focused) ────────────────────────────────
+
+const weatherCache = new Map();
+const WEATHER_CACHE_MS = 60 * 60 * 1000; // 1 hour
+
+function getWeatherLabel(code) {
+  const map = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+    45:'Fog', 48:'Icy fog', 51:'Light drizzle', 53:'Moderate drizzle', 55:'Heavy drizzle',
+    61:'Slight rain', 63:'Moderate rain', 65:'Heavy rain',
+    71:'Slight snow', 73:'Moderate snow', 75:'Heavy snow',
+    80:'Rain showers', 81:'Moderate showers', 82:'Violent showers',
+    95:'Thunderstorm', 96:'Thunderstorm + hail', 99:'Thunderstorm + heavy hail' };
+  return map[Number(code)] || 'Mixed conditions';
+}
+
+function getDrinkSuggestion(temp, code) {
+  const t = Number(temp ?? 0);
+  if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — cozy milk teas are a great pick! ☔';
+  if (t >= 85) return 'Hot day — fruit teas and extra ice are perfect! ☀️';
+  if (t >= 72) return 'Nice weather — fruit teas or classic milk teas both work great! 🌤';
+  return 'Cooler weather — milk teas and richer flavors are a great pick! 🍵';
+}
+
 app.get('/api/weather', async (req, res) => {
-  const city = String(req.query.city||'College Station').trim();
+  const city = String(req.query.city || 'College Station').trim().toLowerCase();
+  const cacheKey = city;
+  const now = Date.now();
+  const cached = weatherCache.get(cacheKey);
+  if (cached && (now - cached.timestamp) < WEATHER_CACHE_MS) {
+    return res.json({ ...cached.data, source: 'cache' });
+  }
   try {
     const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
     const geoData = await geoRes.json();
     const place = geoData.results?.[0];
-    if (!place) return res.status(404).json({ error:'Location not found.' });
-    const fr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`);
+    if (!place) return res.status(404).json({ error: 'Location not found.' });
+
+    const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`;
+    const fr = await fetch(forecastUrl);
     const fd = await fr.json();
-    res.json({ city:`${place.name}${place.admin1?', '+place.admin1:''}`, temperature:fd.current?.temperature_2m, weatherCode:fd.current?.weather_code, recommendation:(fd.current?.temperature_2m??0)>=80?'Warm weather today. Suggest fruit teas and iced drinks.':'Cooler weather today. Suggest milk teas and warmer flavors.' });
-  } catch(e) { res.status(500).json({ error:'Weather unavailable.' }); }
+    const current = fd.current || {};
+
+    const data = {
+      city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
+      temperature: current.temperature_2m ?? null,
+      feelsLike: current.apparent_temperature ?? null,
+      windSpeed: current.wind_speed_10m ?? null,
+      weatherCode: current.weather_code ?? null,
+      weatherLabel: getWeatherLabel(current.weather_code),
+      isDay: current.is_day ?? 1,
+      drinkSuggestion: getDrinkSuggestion(current.temperature_2m, current.weather_code)
+    };
+
+    weatherCache.set(cacheKey, { timestamp: now, data });
+    return res.json({ ...data, source: 'live' });
+  } catch(e) {
+    if (cached) return res.json({ ...cached.data, source: 'stale-cache' });
+    return res.status(503).json({ error: 'Weather temporarily unavailable.', details: e.message });
+  }
 });
 
 app.get('/api/translate', async (req, res) => {
@@ -491,94 +528,6 @@ app.get('/manager.html', (req, res) => {
   res.redirect('/?unauthorized=1');
 });
 
-
-// ─── Inventory CRUD ───────────────────────────────────────────────────────────
-
-app.put('/api/inventory/:id', async (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  const { quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
-  try {
-    await queryDb(
-      `UPDATE inventory SET quantityonhand=$1, reorderthreshold=$2, unitcost=$3, vendor=$4 WHERE inventoryid=$5`,
-      [Number(quantityOnHand), Number(reorderThreshold), Number(unitCost), vendor || null, Number(req.params.id)]
-    );
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/inventory', async (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  const { itemName, unit, quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
-  if (!itemName || !unit) return res.status(400).json({ error: 'itemName and unit required.' });
-  try {
-    const r = await queryDb(
-      `INSERT INTO inventory (itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor) VALUES ($1,$2,$3,$4,$5,$6) RETURNING inventoryid`,
-      [itemName, unit, Number(quantityOnHand||0), Number(reorderThreshold||0), Number(unitCost||0), vendor||null]
-    );
-    res.status(201).json({ id: r.rows[0].inventoryid });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── Manager CRUD ─────────────────────────────────────────────────────────────
-
-app.post('/api/managers', async (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  const { firstName, lastName, hireDate, pin } = req.body || {};
-  if (!firstName || !lastName || !hireDate) return res.status(400).json({ error: 'firstName, lastName, hireDate required.' });
-  try {
-    const r = await queryDb(
-      `INSERT INTO manager (firstname, lastname, hiredate, pin, is_active) VALUES ($1,$2,$3,$4,true) RETURNING managerid`,
-      [firstName, lastName, hireDate, pin || '1234']
-    );
-    res.status(201).json({ id: r.rows[0].managerid });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/managers/:id', async (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  const { firstName, lastName, hireDate, pin } = req.body || {};
-  try {
-    await queryDb(`UPDATE manager SET firstname=$1, lastname=$2, hiredate=$3, pin=$4 WHERE managerid=$5`,
-      [firstName, lastName, hireDate, pin || '1234', Number(req.params.id)]);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/managers/:id/toggle', async (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  try {
-    await queryDb(`UPDATE manager SET is_active=$1 WHERE managerid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── Active sessions (who is logged in) ──────────────────────────────────────
-
-const activeSessions = new Map(); // userId -> { name, role, loginTime }
-
-// Track logins
-app.use((req, _res, next) => {
-  if (req.isAuthenticated?.() && req.user?.id) {
-    activeSessions.set(req.user.id, {
-      name: req.user.displayName,
-      role: req.user.role,
-      email: req.user.email,
-      loginTime: activeSessions.get(req.user.id)?.loginTime || new Date().toISOString()
-    });
-  }
-  next();
-});
-
-app.get('/api/active-sessions', (req, res) => {
-  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  const sessions = Array.from(activeSessions.entries()).map(([id, s]) => ({ id, ...s }));
-  res.json({ sessions });
-});
 
 // ─── Analytics routes ─────────────────────────────────────────────────────────
 
@@ -640,11 +589,10 @@ app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
     const r = await queryDb(`
       WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
       day_tx AS (
-        SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
+        SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
                totalamount, paymentmethod
         FROM transactions
-        WHERE status='completed'
-          AND DATE(transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') = CURRENT_DATE AT TIME ZONE 'America/Chicago'
+        WHERE status='completed' AND DATE(transactiontime)=CURRENT_DATE
       )
       SELECT h.hour_of_day,
              COALESCE(COUNT(d.totalamount),0) AS orders,

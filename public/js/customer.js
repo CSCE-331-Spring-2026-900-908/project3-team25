@@ -901,6 +901,37 @@ function checkDeepLink() {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+async function loadCustomerWeather() {
+  const banner = document.getElementById('customer-weather-banner');
+  if (!banner) return;
+  try {
+    const res  = await fetch('/api/weather?city=College+Station');
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      banner.innerHTML = '<p class="muted" style="margin:0;">Weather unavailable right now.</p>';
+      return;
+    }
+    const temp   = data.temperature !== null ? `${Math.round(data.temperature)}°F` : '—';
+    const feels  = data.feelsLike   !== null ? `Feels like ${Math.round(data.feelsLike)}°F` : '';
+    const wind   = data.windSpeed   !== null ? `💨 ${Math.round(data.windSpeed)} mph` : '';
+    const icon   = data.isDay ? '☀️' : '🌙';
+
+    banner.innerHTML = `
+      <div class="weather-banner-content">
+        <div>
+          <span class="weather-temp">${icon} ${temp}</span>
+          <span class="muted" style="margin-left:10px;font-size:0.88rem;">${data.weatherLabel || ''}</span>
+          ${feels ? `<span class="muted" style="margin-left:10px;font-size:0.82rem;">${feels}</span>` : ''}
+          ${wind  ? `<span class="muted" style="margin-left:10px;font-size:0.82rem;">${wind}</span>`  : ''}
+        </div>
+        <p class="weather-suggestion" style="margin:0;font-size:0.88rem;">${data.drinkSuggestion || ''}</p>
+      </div>`;
+  } catch(_) {
+    const banner = document.getElementById('customer-weather-banner');
+    if (banner) banner.innerHTML = '<p class="muted" style="margin:0;">Weather unavailable.</p>';
+  }
+}
+
 async function loadCustomerMenu() {
   const res  = await fetch('/api/menu');
   const data = await res.json();
@@ -915,6 +946,7 @@ async function loadCustomerMenu() {
 async function init() {
   await loadUser();
   await loadCustomerMenu();
+  loadCustomerWeather();
   setPaymentMethod('card');
   setActiveScreen('menu');
   checkDeepLink();
