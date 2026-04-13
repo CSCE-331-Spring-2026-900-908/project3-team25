@@ -912,9 +912,37 @@ async function loadCustomerMenu() {
   renderOrder();
 }
 
+async function loadCustomerWeather() {
+  const banner = document.getElementById('customer-weather-banner');
+  if (!banner) return;
+
+  banner.innerHTML = '<p class="muted">Loading weather…</p>';
+
+  try {
+    const res = await fetch('/api/weather?city=College%20Station');
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Weather failed.');
+
+    banner.innerHTML = `
+      <div class="weather-banner-content">
+        <div>
+          <strong>${data.city}</strong> · ${data.weatherLabel}
+        </div>
+        <div>
+          ${Math.round(data.temperature)}°F · ${data.drinkSuggestion}
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    banner.innerHTML = `<p class="muted">${err.message}</p>`;
+  }
+}
+
 async function init() {
   await loadUser();
   await loadCustomerMenu();
+  await loadCustomerWeather();
   setPaymentMethod('card');
   setActiveScreen('menu');
   checkDeepLink();
