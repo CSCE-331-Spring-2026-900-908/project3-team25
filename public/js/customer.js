@@ -230,7 +230,7 @@ function addModalItemToOrder() {
     linePrice
   });
 
-  showToast(`${modalItem.name} × ${modalQty} added! 🧋`);
+  showToast(`${modalItem.name} x ${modalQty} added`);
   closeDrinkModal();
   renderOrder();
 }
@@ -564,7 +564,7 @@ async function openRewardsModal() {
         appliedPromoLabel  = '';
         // Calculate discount immediately using type/value from data attrs
         calcRewardDiscount(btn.dataset.type, Number(btn.dataset.value || 0));
-        showToast(`${btn.dataset.label} applied — −$${discountAmount.toFixed(2)}`);
+        showToast(`${btn.dataset.label} applied — -$${discountAmount.toFixed(2)}`);
         closeRewardsModal();
         renderAppliedDiscount();
         renderTotals();
@@ -909,7 +909,7 @@ document.getElementById('customer-checkout-btn').addEventListener('click', async
 
 // ─── Navigation wiring ────────────────────────────────────────────────────────
 document.getElementById('go-to-review-btn').addEventListener('click', () => {
-  if (!customerOrder.length) { showToast('Add at least one drink first! 🧋'); return; }
+  if (!customerOrder.length) { showToast('Add at least one drink first.'); return; }
   renderOrder();
   setActiveScreen('review');
   loadCheckoutRewardsPanel();

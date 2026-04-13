@@ -1378,13 +1378,8 @@ body.voice-guide-enabled
 /* ── Menu cards (cleaner, clickable) ─────────────────────────── */
 .menu-card {
   cursor: pointer;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
   border-radius: 14px;
   overflow: hidden;
-}
-.menu-card:hover {
-  box-shadow: 0 8px 28px rgba(0,0,0,0.10);
-  transform: translateY(-2px);
 }
 .menu-card .drink-image-wrap {
   border-radius: 10px 10px 0 0;
