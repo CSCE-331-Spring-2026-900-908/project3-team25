@@ -242,7 +242,10 @@
             </table>
           </div>
           <div class="mgr-card">
-            <h3>🕐 Recent Orders</h3>
+            <div class="top-row" style="margin-bottom:12px;">
+              <h3 style="margin:0;">🕐 Recent Orders</h3>
+              <button class="action-btn" id="orders-refresh-btn" onclick="loadOverview()">🔄 Refresh</button>
+            </div>
             <div style="max-height:400px;overflow-y:auto;border-radius:8px;">
               <table>
                 <thead><tr><th>ID</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Date</th><th>Status</th></tr></thead>

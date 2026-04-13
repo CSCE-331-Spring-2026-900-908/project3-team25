@@ -254,7 +254,8 @@ app.get('/api/orders/recent', async (req, res) => {
       const r = await queryDb(`
         SELECT t.transactionid, t.cashierid,
                COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
-               t.transactiontime, t.totalamount, t.paymentmethod, t.status
+               (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS transactiontime,
+               t.totalamount, t.paymentmethod, t.status
         FROM transactions t
         LEFT JOIN cashier c ON c.cashierid = t.cashierid
         ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
@@ -639,10 +640,11 @@ app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
     const r = await queryDb(`
       WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
       day_tx AS (
-        SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
+        SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
                totalamount, paymentmethod
         FROM transactions
-        WHERE status='completed' AND DATE(transactiontime)=CURRENT_DATE
+        WHERE status='completed'
+          AND DATE(transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') = CURRENT_DATE AT TIME ZONE 'America/Chicago'
       )
       SELECT h.hour_of_day,
              COALESCE(COUNT(d.totalamount),0) AS orders,

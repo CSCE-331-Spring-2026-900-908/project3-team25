@@ -35,7 +35,7 @@ async function loadOverview() {
   try {
     const [dashRes, recentRes, payRes] = await Promise.all([
       fetch('/api/dashboard'),
-      fetch('/api/orders/recent'),
+      fetch('/api/orders/recent?limit=50'),
       fetch('/api/analytics/payment-split')
     ]);
     const dash   = await dashRes.json();
@@ -43,22 +43,26 @@ async function loadOverview() {
     const pay    = payRes.ok ? await payRes.json() : { splits: [] };
 
     // Stats
-    document.getElementById('s-items').textContent  = dash.metrics.activeMenuItems;
-    document.getElementById('s-inv').textContent    = dash.metrics.inventoryItems;
-    document.getElementById('s-low').textContent    = dash.metrics.lowStockItems;
-    document.getElementById('s-rev').textContent    = fmt(dash.metrics.totalRevenue);
-    document.getElementById('s-orders').textContent = fmtN(dash.metrics.totalOrders);
+    document.getElementById('s-items').textContent  = dash.metrics?.activeMenuItems ?? '--';
+    document.getElementById('s-inv').textContent    = dash.metrics?.inventoryItems  ?? '--';
+    document.getElementById('s-low').textContent    = dash.metrics?.lowStockItems   ?? '--';
+    document.getElementById('s-rev').textContent    = fmt(dash.metrics?.totalRevenue);
+    document.getElementById('s-orders').textContent = fmtN(dash.metrics?.totalOrders);
 
     // Low stock table
     document.getElementById('inv-tbody').innerHTML = (dash.lowStock || []).map(i => `
       <tr>
         <td>${i.itemName}</td>
-        <td>${i.quantityOnHand}</td>
+        <td style="${i.quantityOnHand < 0 ? 'color:#dc2626;font-weight:700;' : ''}">${i.quantityOnHand}</td>
         <td>${i.reorderThreshold}</td>
         <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'Low stock':'OK'}</span></td>
       </tr>`).join('') || '<tr><td colspan="4" class="muted">No data.</td></tr>';
 
-    // Recent orders — cashier name, time, scrollable
+    // Recent orders — show refresh time
+    const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    const refreshBtn = document.getElementById('orders-refresh-btn');
+    if (refreshBtn) refreshBtn.textContent = `🔄 Last updated ${now}`;
+
     document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
       <tr>
         <td>#${i.transactionid || i.transactionId}</td>
@@ -563,3 +567,11 @@ async function loadUser() {
 loadUser();
 loadOverview();
 loadActiveSessions();
+
+// Auto-refresh overview every 30 seconds
+setInterval(() => {
+  const activeTab = document.querySelector('.mgr-tab.active');
+  if (!activeTab || activeTab.dataset.tab === 'overview') {
+    loadOverview();
+  }
+}, 30000);
