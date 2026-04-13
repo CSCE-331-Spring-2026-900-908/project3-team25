@@ -966,31 +966,55 @@ async function loadCustomerMenu() {
 async function loadCustomerWeather() {
   const banner = document.getElementById('customer-weather-banner');
   if (!banner) return;
-
   banner.innerHTML = '<p class="muted">Loading weather…</p>';
 
-  try {
-    const res = await fetch('/api/weather?city=College%20Station');
-    const data = await res.json();
+  // College Station, TX coordinates — call Open-Meteo directly from browser
+  // (avoids server outbound network restrictions on Render free plan)
+  const LAT = 30.6280, LON = -96.3344;
 
-    if (!res.ok) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
-      return;
-    }
+  function weatherLabel(code) {
+    const m = { 0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+      45:'Foggy',51:'Light drizzle',53:'Drizzle',61:'Light rain',63:'Moderate rain',
+      65:'Heavy rain',80:'Rain showers',81:'Moderate showers',82:'Heavy showers',
+      95:'Thunderstorm',96:'Thunderstorm + hail',99:'Thunderstorm + hail' };
+    return m[Number(code)] || 'Mixed conditions';
+  }
+  function drinkSuggestion(temp, code) {
+    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — cozy milk teas are perfect.';
+    if (temp >= 85) return 'Hot day — fruit teas and extra ice are a must.';
+    if (temp >= 72) return 'Nice weather — fruit teas or classic milk teas both work.';
+    return 'Cool weather — milk teas and richer flavors hit the spot.';
+  }
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    const cur  = data.current || {};
+
+    const temp  = cur.temperature_2m        != null ? Math.round(cur.temperature_2m)        : null;
+    const feels = cur.apparent_temperature  != null ? Math.round(cur.apparent_temperature)  : null;
+    const wind  = cur.wind_speed_10m        != null ? Math.round(cur.wind_speed_10m)        : null;
+    const code  = cur.weather_code ?? null;
+    const icon  = '';
+    const label = weatherLabel(code);
+    const tip   = drinkSuggestion(temp, code);
+
+    if (temp === null) throw new Error('No temperature data');
 
     banner.innerHTML = `
       <div class="weather-banner-content">
         <div>
-          <strong>${data.city}</strong> · ${data.weatherLabel}
+          <span class="weather-temp">${temp}°F</span>
+          <span class="muted" style="margin-left:10px;">${label}</span>
+          ${feels !== null ? `<span class="muted" style="margin-left:8px;font-size:0.83rem;">Feels like ${feels}°F</span>` : ''}
+          ${wind  !== null ? `<span class="muted" style="margin-left:8px;font-size:0.83rem;">${wind} mph wind</span>` : ''}
         </div>
-        <div>
-          ${Math.round(data.temperature)}°F · ${data.drinkSuggestion}
-        </div>
-      </div>
-    `;
+        <p class="weather-suggestion" style="margin:0;">${tip}</p>
+      </div>`;
   } catch (_) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
-    }
+    banner.innerHTML = '<p class="muted" style="margin:0;">Weather unavailable right now.</p>';
+  }
 }
 
 async function init() {

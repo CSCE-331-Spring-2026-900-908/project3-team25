@@ -385,40 +385,51 @@ function bindHelpers() {
 async function loadCashierWeather() {
   const wrap = document.getElementById('cashier-weather-card');
   if (!wrap) return;
-
   wrap.innerHTML = '<p class="muted">Loading weather…</p>';
 
+  // Call Open-Meteo directly from browser (Render free plan blocks outbound server calls)
+  const LAT = 30.6280, LON = -96.3344;
+
+  function weatherLabel(code) {
+    const m = { 0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+      45:'Foggy',51:'Light drizzle',53:'Drizzle',61:'Light rain',63:'Moderate rain',
+      65:'Heavy rain',80:'Rain showers',81:'Moderate showers',82:'Heavy showers',
+      95:'Thunderstorm',96:'Thunderstorm + hail' };
+    return m[Number(code)] || 'Mixed conditions';
+  }
+  function drinkSuggestion(temp, code) {
+    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — recommend cozy milk teas.';
+    if (temp >= 85) return 'Hot day — push fruit teas and extra ice.';
+    if (temp >= 72) return 'Nice weather — fruit teas or milk teas work great.';
+    return 'Cool weather — milk teas and warm flavors are popular.';
+  }
+
   try {
-    const res = await fetch('/api/weather?city=College%20Station');
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago`;
+    const res  = await fetch(url);
     const data = await res.json();
+    const cur  = data.current || {};
 
-    if (!res.ok) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
-      return;
-    }
+    const temp  = cur.temperature_2m       != null ? Math.round(cur.temperature_2m)       : null;
+    const feels = cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : null;
+    const wind  = cur.wind_speed_10m       != null ? Math.round(cur.wind_speed_10m)       : null;
+    const code  = cur.weather_code ?? null;
 
-    const temp = data.temperature != null ? Math.round(data.temperature) : '—';
-    const feels = data.feelsLike != null
-      ? Math.round(data.feelsLike)
-      : (data.temperature != null ? Math.round(data.temperature) : '—');
-    const wind = data.windSpeed != null ? Math.round(data.windSpeed) : '—';
+    if (temp === null) throw new Error('No data');
 
     wrap.innerHTML = `
-      <div class="weather-mini">
-        <div class="weather-main">
-          <strong>${data.city}</strong>
-          <span>${data.weatherLabel}</span>
+      <div style="display:grid;gap:6px;">
+        <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);">${temp}°F</div>
+        <div style="font-size:0.85rem;color:var(--muted);">
+          ${weatherLabel(code)}
+          ${feels !== null ? ` · Feels like ${feels}°F` : ''}
+          ${wind  !== null ? ` · ${wind} mph wind` : ''}
         </div>
-        <div class="weather-temp">${temp}°F</div>
-        <p class="muted">
-          Feels like: ${feels}°F · Wind: ${wind} mph
-        </p>
-        <p class="weather-suggestion">${data.drinkSuggestion}</p>
-      </div>
-    `;
+        <div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-top:4px;">${drinkSuggestion(temp, code)}</div>
+      </div>`;
   } catch (_) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
-    }
+    wrap.innerHTML = '<p class="muted">Weather unavailable right now.</p>';
+  }
 }
 
 //  START 
