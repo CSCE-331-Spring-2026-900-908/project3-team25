@@ -346,7 +346,7 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const userId = req.isAuthenticated?.() ? req.user?.id : null;
     const body = req.body || {};
-    const { items, paymentMethod = 'card', cashierId = 1, promoCode = null, rewardId = null } = body;
+    const { items, paymentMethod = 'card', cashierId = 1, promoCode = null, rewardId = null, source = 'customer' } = body;
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) throw new Error('At least one item required.');
 
@@ -408,7 +408,7 @@ app.post('/api/checkout', async (req, res) => {
         for (const item of normalized) { await client.query(`INSERT INTO transactionitem (transactionid,productid,quantity,unitprice) VALUES ($1,$2,$3,$4)`, [tx.transactionid, item.productId, item.quantity, item.unitPrice]); }
 
         let pointsEarned = 0, newBalance = 0;
-        if (userId) {
+        if (userId && source === 'customer') {
           pointsEarned = Math.floor((subtotal - discountAmount) * 10);
           if (pointsEarned > 0) {
             await client.query(`UPDATE user_accounts SET reward_points=reward_points+$1 WHERE user_id=$2`, [pointsEarned, userId]);

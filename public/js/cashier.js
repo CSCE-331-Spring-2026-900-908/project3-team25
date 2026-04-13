@@ -314,6 +314,7 @@ function bindCartActions() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cashierId: 1,
+          source: 'cashier',
           paymentMethod,
           items: cashierOrder.map(item => ({
             id: item.id,
