@@ -980,10 +980,10 @@ async function loadCustomerWeather() {
     return m[Number(code)] || 'Mixed conditions';
   }
   function drinkSuggestion(temp, code) {
-    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — cozy milk teas are perfect! ☔';
-    if (temp >= 85) return 'Hot day — fruit teas and extra ice are a must! ☀️';
-    if (temp >= 72) return 'Nice weather — fruit teas or classic milk teas both work! 🌤';
-    return 'Cool weather — milk teas and richer flavors hit the spot! 🍵';
+    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — cozy milk teas are perfect.';
+    if (temp >= 85) return 'Hot day — fruit teas and extra ice are a must.';
+    if (temp >= 72) return 'Nice weather — fruit teas or classic milk teas both work.';
+    return 'Cool weather — milk teas and richer flavors hit the spot.';
   }
 
   try {
@@ -996,7 +996,7 @@ async function loadCustomerWeather() {
     const feels = cur.apparent_temperature  != null ? Math.round(cur.apparent_temperature)  : null;
     const wind  = cur.wind_speed_10m        != null ? Math.round(cur.wind_speed_10m)        : null;
     const code  = cur.weather_code ?? null;
-    const icon  = cur.is_day ? '☀️' : '🌙';
+    const icon  = '';
     const label = weatherLabel(code);
     const tip   = drinkSuggestion(temp, code);
 
@@ -1005,10 +1005,10 @@ async function loadCustomerWeather() {
     banner.innerHTML = `
       <div class="weather-banner-content">
         <div>
-          <span class="weather-temp">${icon} ${temp}°F</span>
+          <span class="weather-temp">${temp}°F</span>
           <span class="muted" style="margin-left:10px;">${label}</span>
           ${feels !== null ? `<span class="muted" style="margin-left:8px;font-size:0.83rem;">Feels like ${feels}°F</span>` : ''}
-          ${wind  !== null ? `<span class="muted" style="margin-left:8px;font-size:0.83rem;">💨 ${wind} mph</span>` : ''}
+          ${wind  !== null ? `<span class="muted" style="margin-left:8px;font-size:0.83rem;">${wind} mph wind</span>` : ''}
         </div>
         <p class="weather-suggestion" style="margin:0;">${tip}</p>
       </div>`;
