@@ -448,17 +448,92 @@ app.post('/api/assistant', async (req, res) => {
 });
 
 app.get('/api/weather', async (req, res) => {
-  const city = String(req.query.city||'College Station').trim();
+  const city = String(req.query.city || 'College Station').trim();
+
   try {
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
+    );
     const geoData = await geoRes.json();
     const place = geoData.results?.[0];
-    if (!place) return res.status(404).json({ error:'Location not found.' });
-    const fr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`);
-    const fd = await fr.json();
-    res.json({ city:`${place.name}${place.admin1?', '+place.admin1:''}`, temperature:fd.current?.temperature_2m, weatherCode:fd.current?.weather_code, recommendation:(fd.current?.temperature_2m??0)>=80?'Warm weather today. Suggest fruit teas and iced drinks.':'Cooler weather today. Suggest milk teas and warmer flavors.' });
-  } catch(e) { res.status(500).json({ error:'Weather unavailable.' }); }
+
+    if (!place) {
+      return res.status(404).json({ error: 'Location not found.' });
+    }
+
+    const forecastRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
+    );
+    const forecastData = await forecastRes.json();
+    const current = forecastData.current || {};
+
+    const weatherLabel = getWeatherLabel(current.weather_code);
+    const drinkSuggestion = getDrinkSuggestion(
+      current.temperature_2m,
+      current.weather_code
+    );
+
+    res.json({
+      city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
+      temperature: current.temperature_2m ?? null,
+      feelsLike: current.apparent_temperature ?? null,
+      windSpeed: current.wind_speed_10m ?? null,
+      weatherCode: current.weather_code ?? null,
+      weatherLabel,
+      isDay: current.is_day ?? 1,
+      drinkSuggestion
+    });
+  } catch (e) {
+    res.status(500).json({
+      error: 'Weather unavailable.',
+      details: e.message
+    });
+  }
 });
+
+function getWeatherLabel(code) {
+  const map = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Heavy drizzle',
+    61: 'Light rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    71: 'Light snow',
+    73: 'Moderate snow',
+    75: 'Heavy snow',
+    80: 'Rain showers',
+    81: 'Moderate rain showers',
+    82: 'Heavy rain showers',
+    95: 'Thunderstorm'
+  };
+
+  return map[code] || 'Unknown conditions';
+}
+
+function getDrinkSuggestion(temp, code) {
+  const t = Number(temp ?? 0);
+
+  if ([61, 63, 65, 80, 81, 82, 95].includes(code)) {
+    return 'Rainy day — cozy milk teas and warm flavors are a great pick.';
+  }
+
+  if (t >= 85) {
+    return 'Hot day — suggest fruit teas, lighter drinks, and extra ice.';
+  }
+
+  if (t >= 72) {
+    return 'Nice weather — fruit teas and classic milk teas both fit well.';
+  }
+
+  return 'Cooler weather — milk teas and richer flavors are a great pick.';
+}
 
 app.get('/api/translate', async (req, res) => {
   const text = String(req.query.text||'').trim();
