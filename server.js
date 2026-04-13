@@ -261,11 +261,21 @@ app.get('/api/orders/recent', async (req, res) => {
     if (hasDbConfig()) {
       const r = await queryDb(`
         SELECT t.transactionid, t.cashierid,
-               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
+               COALESCE(
+                 c.firstname || ' ' || c.lastname,
+                 m.firstname || ' ' || m.lastname,
+                 'Employee #' || t.cashierid
+               ) AS cashier_name,
+               CASE
+                 WHEN c.cashierid IS NOT NULL THEN 'cashier'
+                 WHEN m.managerid IS NOT NULL THEN 'manager'
+                 ELSE 'staff'
+               END AS staff_role,
                (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS transactiontime,
                t.totalamount, t.paymentmethod, t.status
         FROM transactions t
         LEFT JOIN cashier c ON c.cashierid = t.cashierid
+        LEFT JOIN manager m ON m.managerid = t.cashierid AND c.cashierid IS NULL
         ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
       return res.json({ items: r.rows, source: 'database' });
     }

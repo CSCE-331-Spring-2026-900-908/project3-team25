@@ -245,9 +245,11 @@ function renderProductGrid() {
     const img = getDrinkImg(item.name);
     return `<button class="cashier-product-btn" data-id="${item.id}" style="
       background-image: url('${img}');
-      background-size: 55%;
+      background-size: 60%;
       background-repeat: no-repeat;
-      background-position: center 10%;
+      background-position: center 12%;
+      background-blend-mode: multiply;
+      background-color: white;
       padding-top: 70px;
       position: relative;
     ">

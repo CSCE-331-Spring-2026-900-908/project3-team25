@@ -65,15 +65,21 @@ async function loadOverview() {
     const refreshBtn = document.getElementById('orders-refresh-btn');
     if (refreshBtn) refreshBtn.textContent = `Last updated ${now}`;
 
-    document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
+    document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => {
+      const role = i.staff_role || 'staff';
+      const roleBadge = role === 'manager'
+        ? `<span style="font-size:0.72rem;padding:2px 6px;border-radius:4px;background:rgba(79,70,229,0.1);color:#4f46e5;font-weight:700;margin-left:5px;">MGR</span>`
+        : '';
+      return `
       <tr>
         <td>#${i.transactionid || i.transactionId}</td>
-        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}</td>
+        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}${roleBadge}</td>
         <td><strong>${fmt(i.totalamount || i.totalAmount)}</strong></td>
         <td style="text-transform:capitalize">${i.paymentmethod || i.paymentMethod || '—'}</td>
         <td>${(i.transactiontime||i.transactionTime||'').toString().slice(0,10)}</td>
         <td><span class="badge-ok">${i.status}</span></td>
-      </tr>`).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
 
     // Category donut — distinct colors per category
     const cats  = dash.categories || {};
