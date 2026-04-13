@@ -58,35 +58,48 @@ async function loadOverview() {
         <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'Low stock':'OK'}</span></td>
       </tr>`).join('') || '<tr><td colspan="4" class="muted">No data.</td></tr>';
 
-    // Recent orders
+    // Recent orders — cashier name, time, scrollable
     document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
       <tr>
         <td>#${i.transactionid || i.transactionId}</td>
-        <td>${i.cashierid || i.cashierId}</td>
-        <td>${fmt(i.totalamount || i.totalAmount)}</td>
+        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}</td>
+        <td><strong>${fmt(i.totalamount || i.totalAmount)}</strong></td>
         <td style="text-transform:capitalize">${i.paymentmethod || i.paymentMethod || '—'}</td>
+        <td>${(i.transactiontime||i.transactionTime||'').toString().slice(0,10)}</td>
         <td><span class="badge-ok">${i.status}</span></td>
-      </tr>`).join('') || '<tr><td colspan="5" class="muted">No orders yet.</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
 
-    // Category donut
+    // Category donut — distinct colors per category
     const cats  = dash.categories || {};
     const cKeys = Object.keys(cats);
-    const COLORS = ['#9e3b35','#c05a4a','#d07a5a','#b84d3e','#a04040','#cc6655','#e08060','#d05040'];
+    const CAT_COLORS = { coffee:'#6f4e37', fruit_tea:'#e8503a', milk_tea:'#c9a84c', seasonal:'#3aaa6e', tea:'#5b9ec9', topping:'#9b59b6' };
+    const cColors = cKeys.map(k => CAT_COLORS[k] || '#aaa');
     if (catChartInst) catChartInst.destroy();
     catChartInst = new Chart(document.getElementById('cat-chart'), {
       type: 'doughnut',
-      data: { labels: cKeys.map(k => k.replace(/_/g,' ')), datasets: [{ data: cKeys.map(k => cats[k]), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fffaf7' }] },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{ size:11 }, color:'#3d251e' } } } }
+      data: { labels: cKeys.map(k => k.replace(/_/g,' ')), datasets: [{ data: cKeys.map(k => cats[k]), backgroundColor: cColors, borderWidth: 3, borderColor: '#fffaf7' }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{ size:12 }, color:'#3d251e', padding:14,
+        generateLabels: chart => {
+          const ds = chart.data.datasets[0];
+          return chart.data.labels.map((label,i) => ({ text:`${label}  (${ds.data[i]})`, fillStyle:ds.backgroundColor[i], strokeStyle:'#fffaf7', lineWidth:2, index:i }));
+        }
+      }}}}
     });
 
-    // Payment split donut
+    // Payment split donut — distinct colors
     const splits = pay.splits || [];
     if (payChartInst) payChartInst.destroy();
+    const PAY_COLORS = { card:'#9e3b35', applepay:'#3aaa6e', cash:'#c9a84c' };
     if (splits.length) {
       payChartInst = new Chart(document.getElementById('pay-chart'), {
         type: 'doughnut',
-        data: { labels: splits.map(s => s.method), datasets: [{ data: splits.map(s => s.total), backgroundColor: ['#9e3b35','#c05a4a','#d07a5a'], borderWidth: 2, borderColor: '#fffaf7' }] },
-        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{ size:11 }, color:'#3d251e' } } } }
+        data: { labels: splits.map(s => s.method), datasets: [{ data: splits.map(s => Number(s.total).toFixed(2)), backgroundColor: splits.map(s => PAY_COLORS[s.method]||'#aaa'), borderWidth: 3, borderColor: '#fffaf7' }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{ size:12 }, color:'#3d251e', padding:14,
+          generateLabels: chart => {
+            const ds = chart.data.datasets[0];
+            return chart.data.labels.map((label,i) => ({ text:`${label}  ($${ds.data[i]})`, fillStyle:ds.backgroundColor[i], strokeStyle:'#fffaf7', lineWidth:2, index:i }));
+          }
+        }}}}
       });
     } else {
       document.getElementById('pay-chart').parentElement.innerHTML = '<p class="muted" style="text-align:center;padding:40px 0;">No payment data yet.</p>';
@@ -245,17 +258,18 @@ async function loadFullInventory() {
 
 function renderInvTable() {
   const filter = document.getElementById('inv-filter')?.value || '';
-  const rows = allInventory.filter(i => !filter || i.status === filter);
+  const rows   = allInventory.filter(i => !filter || i.status === filter);
   document.getElementById('full-inv-tbody').innerHTML = rows.map(i => `
     <tr>
       <td><strong>${i.itemName}</strong></td>
       <td>${i.unit}</td>
-      <td style="${i.status==='low'?'color:#dc2626;font-weight:700;':''}">${i.quantityOnHand}</td>
+      <td style="${i.quantityOnHand < 0 ? 'color:#dc2626;font-weight:700;' : i.status==='low' ? 'color:#f97316;font-weight:600;' : ''}">${i.quantityOnHand}</td>
       <td>${i.reorderThreshold}</td>
       <td>$${Number(i.unitCost||0).toFixed(4)}</td>
-      <td>${i.vendor || '—'}</td>
-      <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'Low stock':'OK'}</span></td>
-    </tr>`).join('') || '<tr><td colspan="7" class="muted" style="padding:20px;">No items.</td></tr>';
+      <td>${i.vendor||'—'}</td>
+      <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'⚠ Low':'OK'}</span></td>
+      <td><button class="action-btn" onclick="openEditInvModal(${i.id})">Edit</button></td>
+    </tr>`).join('') || '<tr><td colspan="8" class="muted" style="padding:20px;">No items.</td></tr>';
 }
 window.filterInvTable = renderInvTable;
 
@@ -272,45 +286,60 @@ async function loadEmployees() {
 }
 
 function renderEmployeeTable() {
-  document.getElementById('emp-tbody').innerHTML = allEmployees.map(e => `
-    <tr class="emp-row">
-      <td>
-        <div style="display:flex;align-items:center;">
-          <div class="emp-avatar">${initials(e.firstname||e.firstName, e.lastname||e.lastName)}</div>
-          <div>
-            <div style="font-weight:600;">${e.firstname||e.firstName} ${e.lastname||e.lastName}</div>
-            <div style="font-size:0.78rem;color:var(--muted);">PIN: ${e.pin}</div>
+  document.getElementById('emp-tbody').innerHTML = allEmployees.map(e => {
+    const active   = e.is_active ?? e.isActive ?? true;
+    const first    = e.firstname || e.firstName || '';
+    const last     = e.lastname  || e.lastName  || '';
+    const hours    = Number(e.hoursworked || e.hoursWorked || 0).toFixed(1);
+    const hireDate = (e.hiredate || e.hireDate || '').toString().slice(0,10);
+    const id       = e.cashierid || e.cashierId || e.id;
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="emp-avatar">${initials(first,last)}</div>
+            <div>
+              <div style="font-weight:600;">${first} ${last}</div>
+              <div style="font-size:0.76rem;color:var(--muted);">PIN: ${e.pin||'—'}</div>
+            </div>
           </div>
-        </div>
-      </td>
-      <td>${e.hiredate||e.hireDate||'—'}</td>
-      <td>${Number(e.hoursworked||e.hoursWorked||0).toFixed(1)} hrs</td>
-      <td>
-        <span class="${(e.is_active||e.isActive)?'badge-ok':'badge-low'}">
-          ${(e.is_active||e.isActive)?'Active':'Inactive'}
-        </span>
-      </td>
-      <td>
-        <button class="action-btn" onclick="openEditEmpModal(${e.cashierid||e.cashierId||e.id})">Edit</button>
-        <button class="action-btn danger" onclick="toggleEmpActive(${e.cashierid||e.cashierId||e.id}, ${e.is_active||e.isActive})">
-          ${(e.is_active||e.isActive)?'Deactivate':'Reactivate'}
-        </button>
-      </td>
-    </tr>`).join('') || '<tr><td colspan="5" class="muted" style="padding:20px;">No cashiers found.</td></tr>';
+        </td>
+        <td>${hireDate || '—'}</td>
+        <td>${hours} hrs</td>
+        <td><span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span></td>
+        <td>
+          <button class="action-btn" onclick="openEditEmpModal(${id})">Edit</button>
+          <button class="action-btn danger" onclick="toggleEmpActive(${id},${active})">${active?'Deactivate':'Reactivate'}</button>
+        </td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="5" class="muted" style="padding:20px;">No cashiers found.</td></tr>';
 }
 
 function renderManagerTable() {
-  document.getElementById('mgr-tbody').innerHTML = allManagers.map(m => `
+  document.getElementById('mgr-tbody').innerHTML = allManagers.map(m => {
+    const first  = m.firstname||m.firstName||'';
+    const last   = m.lastname||m.lastName||'';
+    const active = m.is_active ?? m.isActive ?? true;
+    const id     = m.managerid || m.id;
+    return `
     <tr>
       <td>
-        <div style="display:flex;align-items:center;">
-          <div class="emp-avatar" style="background:#4f46e5;">${initials(m.firstname||m.firstName, m.lastname||m.lastName)}</div>
-          <strong>${m.firstname||m.firstName} ${m.lastname||m.lastName}</strong>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="emp-avatar" style="background:#4f46e5;">${((first[0]||'?')+(last[0]||'?')).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600;">${first} ${last}</div>
+            <div style="font-size:0.76rem;color:var(--muted);">PIN: ${m.pin||'—'}</div>
+          </div>
         </div>
       </td>
-      <td>${m.hiredate||m.hireDate||'—'}</td>
-      <td><span class="${(m.is_active||m.isActive)?'badge-ok':'badge-low'}">${(m.is_active||m.isActive)?'Active':'Inactive'}</span></td>
-    </tr>`).join('') || '<tr><td colspan="3" class="muted">No managers found.</td></tr>';
+      <td>${(m.hiredate||m.hireDate||'').toString().slice(0,10)||'—'}</td>
+      <td><span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span></td>
+      <td>
+        <button class="action-btn" onclick="openEditMgrModal(${id})">Edit</button>
+        <button class="action-btn danger" onclick="toggleMgrActive(${id},${active})">${active?'Deactivate':'Reactivate'}</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">No managers found.</td></tr>';
 }
 
 function openAddEmpModal() {
@@ -412,6 +441,114 @@ async function loadBestOfWorst() {
     </tr>`).join('') || '<tr><td colspan="5" class="muted" style="padding:20px;">No data yet.</td></tr>';
 }
 
+// ── Inventory CRUD ────────────────────────────────────────────────────────────
+let invModalId = null;
+
+function openAddInvModal() {
+  invModalId = null;
+  document.getElementById('inv-modal-title').textContent = 'Add Inventory Item';
+  ['inv-name','inv-unit','inv-qty','inv-threshold','inv-cost','inv-vendor'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inv-modal').classList.add('open');
+}
+function openEditInvModal(id) {
+  const item = allInventory.find(i => i.id === id);
+  if (!item) return;
+  invModalId = id;
+  document.getElementById('inv-modal-title').textContent = 'Edit Inventory Item';
+  document.getElementById('inv-name').value      = item.itemName;
+  document.getElementById('inv-unit').value      = item.unit;
+  document.getElementById('inv-qty').value       = item.quantityOnHand;
+  document.getElementById('inv-threshold').value = item.reorderThreshold;
+  document.getElementById('inv-cost').value      = item.unitCost;
+  document.getElementById('inv-vendor').value    = item.vendor || '';
+  document.getElementById('inv-modal').classList.add('open');
+}
+function closeInvModal() { document.getElementById('inv-modal').classList.remove('open'); }
+
+async function saveInventoryItem() {
+  const itemName        = document.getElementById('inv-name').value.trim();
+  const unit            = document.getElementById('inv-unit').value.trim();
+  const quantityOnHand  = parseFloat(document.getElementById('inv-qty').value);
+  const reorderThreshold = parseFloat(document.getElementById('inv-threshold').value);
+  const unitCost        = parseFloat(document.getElementById('inv-cost').value || '0');
+  const vendor          = document.getElementById('inv-vendor').value.trim();
+  if (!itemName || !unit) { alert('Item name and unit are required.'); return; }
+  const method = invModalId ? 'PUT' : 'POST';
+  const url    = invModalId ? `/api/inventory/${invModalId}` : '/api/inventory';
+  const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemName, unit, quantityOnHand, reorderThreshold, unitCost, vendor }) });
+  if (res.ok) { closeInvModal(); loadFullInventory(); }
+  else { const d = await res.json(); alert('Error: ' + (d.error||'Save failed.')); }
+}
+
+window.openAddInvModal  = openAddInvModal;
+window.openEditInvModal = openEditInvModal;
+window.closeInvModal    = closeInvModal;
+window.saveInventoryItem = saveInventoryItem;
+
+// ── Manager CRUD ──────────────────────────────────────────────────────────────
+let mgrModalId = null;
+
+function openAddMgrModal() {
+  mgrModalId = null;
+  document.getElementById('mgr-modal-title').textContent = 'Add Manager';
+  ['mgr-first','mgr-last','mgr-pin'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mgr-hire').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mgr-modal').classList.add('open');
+}
+function openEditMgrModal(id) {
+  const m = allManagers.find(x => (x.managerid||x.id) === id);
+  if (!m) return;
+  mgrModalId = id;
+  document.getElementById('mgr-modal-title').textContent = 'Edit Manager';
+  document.getElementById('mgr-first').value = m.firstname||m.firstName||'';
+  document.getElementById('mgr-last').value  = m.lastname||m.lastName||'';
+  document.getElementById('mgr-hire').value  = (m.hiredate||m.hireDate||'').toString().slice(0,10);
+  document.getElementById('mgr-pin').value   = m.pin||'';
+  document.getElementById('mgr-modal').classList.add('open');
+}
+function closeMgrModal() { document.getElementById('mgr-modal').classList.remove('open'); }
+
+async function saveManager() {
+  const firstName = document.getElementById('mgr-first').value.trim();
+  const lastName  = document.getElementById('mgr-last').value.trim();
+  const hireDate  = document.getElementById('mgr-hire').value;
+  const pin       = document.getElementById('mgr-pin').value.trim();
+  if (!firstName || !lastName || !hireDate) { alert('All fields required.'); return; }
+  const method = mgrModalId ? 'PUT' : 'POST';
+  const url    = mgrModalId ? `/api/managers/${mgrModalId}` : '/api/managers';
+  const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ firstName, lastName, hireDate, pin }) });
+  if (res.ok) { closeMgrModal(); loadEmployees(); }
+  else { const d = await res.json(); alert('Error: ' + (d.error||'Save failed.')); }
+}
+async function toggleMgrActive(id, currentlyActive) {
+  const res = await fetch(`/api/managers/${id}/toggle`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ active: !currentlyActive }) });
+  if (res.ok) loadEmployees(); else alert('Could not update manager.');
+}
+
+window.openAddMgrModal  = openAddMgrModal;
+window.openEditMgrModal = openEditMgrModal;
+window.closeMgrModal    = closeMgrModal;
+window.saveManager      = saveManager;
+window.toggleMgrActive  = toggleMgrActive;
+
+// ── Active Sessions ───────────────────────────────────────────────────────────
+async function loadActiveSessions() {
+  const res  = await fetch('/api/active-sessions');
+  const data = res.ok ? await res.json() : { sessions:[] };
+  const el   = document.getElementById('active-sessions-list');
+  if (!el) return;
+  const sessions = data.sessions || [];
+  el.innerHTML = sessions.length ? sessions.map(s => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
+      <div style="width:10px;height:10px;border-radius:50%;background:#15803d;flex-shrink:0;"></div>
+      <div>
+        <div style="font-weight:600;">${s.name}</div>
+        <div style="font-size:0.78rem;color:var(--muted);">${s.email} · <span style="text-transform:capitalize;">${s.role}</span> · logged in ${new Date(s.loginTime).toLocaleTimeString()}</div>
+      </div>
+    </div>`).join('')
+  : '<p class="muted" style="font-size:0.85rem;">No active sessions detected.</p>';
+}
+
 // ── Load user greeting ────────────────────────────────────────────────────────
 async function loadUser() {
   const res  = await fetch('/api/me');
@@ -425,3 +562,4 @@ async function loadUser() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadUser();
 loadOverview();
+loadActiveSessions();

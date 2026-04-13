@@ -151,6 +151,54 @@
     </div>
   </div>
 
+  <!-- Inventory Modal -->
+  <div class="modal-overlay" id="inv-modal">
+    <div class="modal-box">
+      <h3 id="inv-modal-title">Add Inventory Item</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Item Name</label><input type="text" id="inv-name" placeholder="e.g. Mango Syrup" /></div>
+        <div class="form-group"><label>Unit</label>
+          <select id="inv-unit" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;">
+            <option value="ml">ml</option>
+            <option value="g">g</option>
+            <option value="quantity">quantity</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Quantity On Hand</label><input type="number" id="inv-qty" placeholder="0" min="0" /></div>
+        <div class="form-group"><label>Reorder Threshold</label><input type="number" id="inv-threshold" placeholder="500" min="0" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cost per Unit ($)</label><input type="number" id="inv-cost" step="0.0001" placeholder="0.0065" min="0" /></div>
+        <div class="form-group"><label>Vendor</label><input type="text" id="inv-vendor" placeholder="Supplier name" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeInvModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveInventoryItem()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manager Modal -->
+  <div class="modal-overlay" id="mgr-modal">
+    <div class="modal-box">
+      <h3 id="mgr-modal-title">Add Manager</h3>
+      <div class="form-row">
+        <div class="form-group"><label>First Name</label><input type="text" id="mgr-first" placeholder="First name" /></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="mgr-last" placeholder="Last name" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Hire Date</label><input type="date" id="mgr-hire" /></div>
+        <div class="form-group"><label>PIN</label><input type="text" id="mgr-pin" placeholder="4-digit PIN" maxlength="4" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeMgrModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveManager()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <main id="main-content" class="page-shell">
     <header class="brand-strip" style="margin-bottom:20px;">
       <div class="brand-lockup">
@@ -195,10 +243,12 @@
           </div>
           <div class="mgr-card">
             <h3>🕐 Recent Orders</h3>
-            <table>
-              <thead><tr><th>ID</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
-              <tbody id="orders-tbody"></tbody>
-            </table>
+            <div style="max-height:400px;overflow-y:auto;border-radius:8px;">
+              <table>
+                <thead><tr><th>ID</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Date</th><th>Status</th></tr></thead>
+                <tbody id="orders-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
         <div>
@@ -276,10 +326,11 @@
               <option value="low">Low stock only</option>
               <option value="ok">OK stock only</option>
             </select>
+            <button class="action-btn primary" onclick="openAddInvModal()">+ Add Item</button>
           </div>
         </div>
         <table>
-          <thead><tr><th>Item</th><th>Unit</th><th>On Hand</th><th>Threshold</th><th>Cost/Unit</th><th>Vendor</th><th>Status</th></tr></thead>
+          <thead><tr><th>Item</th><th>Unit</th><th>On Hand</th><th>Threshold</th><th>Cost/Unit</th><th>Vendor</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="full-inv-tbody"></tbody>
         </table>
       </div>
@@ -287,6 +338,16 @@
 
     <!-- EMPLOYEES TAB -->
     <div class="mgr-panel" id="tab-employees">
+
+      <!-- Who is logged in right now -->
+      <div class="mgr-card" style="margin-bottom:18px;">
+        <div class="top-row" style="margin-bottom:12px;">
+          <h3>🟢 Currently Logged In</h3>
+          <button class="action-btn" onclick="loadActiveSessions()">🔄 Refresh</button>
+        </div>
+        <div id="active-sessions-list"><p class="muted" style="font-size:0.85rem;">Loading…</p></div>
+      </div>
+
       <div class="mgr-card">
         <div class="top-row">
           <h3>👥 Cashier Staff</h3>
@@ -297,10 +358,14 @@
           <tbody id="emp-tbody"></tbody>
         </table>
       </div>
+
       <div class="mgr-card">
-        <h3>👔 Manager Accounts</h3>
+        <div class="top-row">
+          <h3>👔 Manager Accounts</h3>
+          <button class="action-btn primary" onclick="openAddMgrModal()">+ Add Manager</button>
+        </div>
         <table>
-          <thead><tr><th>Name</th><th>Hire Date</th><th>Status</th></tr></thead>
+          <thead><tr><th>Name</th><th>Hire Date</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="mgr-tbody"></tbody>
         </table>
       </div>

@@ -248,9 +248,19 @@ app.get('/api/dashboard', async (req, res) => {
 
 app.get('/api/orders/recent', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const limit = Math.min(Number(req.query.limit || 50), 200);
   try {
-    if (hasDbConfig()) { const r = await queryDb(`SELECT transactionid,cashierid,transactiontime,totalamount,paymentmethod,status FROM transactions ORDER BY transactiontime DESC LIMIT 10`); return res.json({ items: r.rows, source: 'database' }); }
-    res.json({ items: [...fallbackTransactions].reverse().slice(0,10), source: 'fallback' });
+    if (hasDbConfig()) {
+      const r = await queryDb(`
+        SELECT t.transactionid, t.cashierid,
+               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
+               t.transactiontime, t.totalamount, t.paymentmethod, t.status
+        FROM transactions t
+        LEFT JOIN cashier c ON c.cashierid = t.cashierid
+        ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
+      return res.json({ items: r.rows, source: 'database' });
+    }
+    res.json({ items: [...fallbackTransactions].reverse().slice(0, limit), source: 'fallback' });
   } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
 });
 
@@ -480,6 +490,94 @@ app.get('/manager.html', (req, res) => {
   res.redirect('/?unauthorized=1');
 });
 
+
+// ─── Inventory CRUD ───────────────────────────────────────────────────────────
+
+app.put('/api/inventory/:id', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
+  try {
+    await queryDb(
+      `UPDATE inventory SET quantityonhand=$1, reorderthreshold=$2, unitcost=$3, vendor=$4 WHERE inventoryid=$5`,
+      [Number(quantityOnHand), Number(reorderThreshold), Number(unitCost), vendor || null, Number(req.params.id)]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/inventory', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { itemName, unit, quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
+  if (!itemName || !unit) return res.status(400).json({ error: 'itemName and unit required.' });
+  try {
+    const r = await queryDb(
+      `INSERT INTO inventory (itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor) VALUES ($1,$2,$3,$4,$5,$6) RETURNING inventoryid`,
+      [itemName, unit, Number(quantityOnHand||0), Number(reorderThreshold||0), Number(unitCost||0), vendor||null]
+    );
+    res.status(201).json({ id: r.rows[0].inventoryid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Manager CRUD ─────────────────────────────────────────────────────────────
+
+app.post('/api/managers', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  if (!firstName || !lastName || !hireDate) return res.status(400).json({ error: 'firstName, lastName, hireDate required.' });
+  try {
+    const r = await queryDb(
+      `INSERT INTO manager (firstname, lastname, hiredate, pin, is_active) VALUES ($1,$2,$3,$4,true) RETURNING managerid`,
+      [firstName, lastName, hireDate, pin || '1234']
+    );
+    res.status(201).json({ id: r.rows[0].managerid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/managers/:id', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  try {
+    await queryDb(`UPDATE manager SET firstname=$1, lastname=$2, hiredate=$3, pin=$4 WHERE managerid=$5`,
+      [firstName, lastName, hireDate, pin || '1234', Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/managers/:id/toggle', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE manager SET is_active=$1 WHERE managerid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Active sessions (who is logged in) ──────────────────────────────────────
+
+const activeSessions = new Map(); // userId -> { name, role, loginTime }
+
+// Track logins
+app.use((req, _res, next) => {
+  if (req.isAuthenticated?.() && req.user?.id) {
+    activeSessions.set(req.user.id, {
+      name: req.user.displayName,
+      role: req.user.role,
+      email: req.user.email,
+      loginTime: activeSessions.get(req.user.id)?.loginTime || new Date().toISOString()
+    });
+  }
+  next();
+});
+
+app.get('/api/active-sessions', (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const sessions = Array.from(activeSessions.entries()).map(([id, s]) => ({ id, ...s }));
+  res.json({ sessions });
+});
 
 // ─── Analytics routes ─────────────────────────────────────────────────────────
 
