@@ -253,7 +253,7 @@ function addIngredientRow(inventoryId = '', amount = '') {
       <option value="">— Select ingredient —</option>
       ${allInventory.map(i => `<option value="${i.id}" ${i.id === inventoryId ? 'selected' : ''}>${i.itemName} (${i.unit})</option>`).join('')}
     </select>
-    <input type="number" class="ing-amount" step="0.0001" min="0" placeholder="Amount"
+    <input type="number" class="ing-amount" step="1" min="0" placeholder="Amount"
            value="${amount}" style="width:110px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.88rem;" />
     <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.1rem;padding:4px;">✕</button>`;
   document.getElementById('ing-rows').appendChild(row);
