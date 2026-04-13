@@ -187,6 +187,7 @@ function renderMenuTable() {
       </td>
       <td>
         <button class="action-btn" onclick="openEditMenuModal(${item.id||item.productid})">Edit</button>
+        <button class="action-btn" onclick="openIngModal(${item.id||item.productid}, '${item.name.replace(/'/g,"\\'")}')">Ingredients</button>
         <button class="action-btn danger" onclick="deleteMenuItem(${item.id||item.productid}, '${item.name.replace(/'/g,"\\'")}')">Remove</button>
       </td>
     </tr>`).join('') || '<tr><td colspan="5" class="muted" style="padding:20px;">No items found.</td></tr>';
@@ -215,6 +216,69 @@ function openEditMenuModal(id) {
 }
 
 function closeMenuModal() { document.getElementById('menu-modal').classList.remove('open'); }
+
+// ─── Ingredients Modal ────────────────────────────────────────────────────────
+let ingProductId = null;
+
+async function openIngModal(productId, productName) {
+  ingProductId = productId;
+  document.getElementById('ing-modal-title').textContent = `Ingredients — ${productName}`;
+  document.getElementById('ing-rows').innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading…</p>';
+  document.getElementById('ing-modal').classList.add('open');
+
+  // Ensure inventory is loaded
+  if (!allInventory.length) await loadFullInventory();
+
+  try {
+    const res  = await fetch(`/api/menu-item/${productId}/ingredients`);
+    const data = await res.json();
+    document.getElementById('ing-rows').innerHTML = '';
+    (data.ingredients || []).forEach(ing => addIngredientRow(ing.inventoryid, ing.amountused));
+    if (!(data.ingredients || []).length) addIngredientRow();
+  } catch(e) {
+    document.getElementById('ing-rows').innerHTML = '<p class="muted" style="font-size:0.85rem;">Failed to load ingredients.</p>';
+  }
+}
+
+function closeIngModal() {
+  document.getElementById('ing-modal').classList.remove('open');
+  ingProductId = null;
+}
+
+function addIngredientRow(inventoryId = '', amount = '') {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <select class="ing-inv-select" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.88rem;">
+      <option value="">— Select ingredient —</option>
+      ${allInventory.map(i => `<option value="${i.id}" ${i.id === inventoryId ? 'selected' : ''}>${i.itemName} (${i.unit})</option>`).join('')}
+    </select>
+    <input type="number" class="ing-amount" step="0.0001" min="0" placeholder="Amount"
+           value="${amount}" style="width:110px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.88rem;" />
+    <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.1rem;padding:4px;">✕</button>`;
+  document.getElementById('ing-rows').appendChild(row);
+}
+
+async function saveIngredients() {
+  if (!ingProductId) return;
+  const rows = document.querySelectorAll('#ing-rows > div');
+  const ingredients = [];
+  for (const row of rows) {
+    const invId  = row.querySelector('.ing-inv-select').value;
+    const amount = parseFloat(row.querySelector('.ing-amount').value);
+    if (!invId || isNaN(amount) || amount <= 0) continue;
+    ingredients.push({ inventoryId: Number(invId), amountUsed: amount });
+  }
+  try {
+    const res = await fetch(`/api/menu-item/${ingProductId}/ingredients`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredients })
+    });
+    if (res.ok) { closeIngModal(); }
+    else { const d = await res.json(); alert('Error: ' + (d.error || 'Save failed.')); }
+  } catch(e) { alert('Save failed.'); }
+}
 
 async function saveMenuItem() {
   const id    = document.getElementById('menu-modal-id').value;

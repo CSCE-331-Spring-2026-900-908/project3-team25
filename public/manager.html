@@ -151,6 +151,20 @@
     </div>
   </div>
 
+  <!-- Ingredients Modal -->
+  <div class="modal-overlay" id="ing-modal">
+    <div class="modal-box" style="max-width:520px;">
+      <h3 id="ing-modal-title">Ingredients</h3>
+      <p style="font-size:0.83rem;color:var(--muted);margin:0 0 12px;">Amount of each inventory item used per serving.</p>
+      <div id="ing-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:300px;overflow-y:auto;"></div>
+      <button class="action-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="action-btn" onclick="closeIngModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveIngredients()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Inventory Modal -->
   <div class="modal-overlay" id="inv-modal">
     <div class="modal-box">

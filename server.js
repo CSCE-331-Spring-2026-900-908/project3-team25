@@ -889,6 +889,45 @@ app.delete('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/menu-item/:id/ingredients', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    const r = await queryDb(
+      `SELECT pi.inventoryid, i.itemname, pi.amountused, i.unit
+       FROM productingredient pi
+       JOIN inventory i ON i.inventoryid = pi.inventoryid
+       WHERE pi.productid = $1
+       ORDER BY i.itemname`,
+      [Number(req.params.id)]
+    );
+    res.json({ ingredients: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/menu-item/:id/ingredients', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { ingredients } = req.body || {};
+  if (!Array.isArray(ingredients)) return res.status(400).json({ error: 'ingredients array required.' });
+  const productId = Number(req.params.id);
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM productingredient WHERE productid = $1`, [productId]);
+    for (const ing of ingredients) {
+      await client.query(
+        `INSERT INTO productingredient (productid, inventoryid, amountused) VALUES ($1, $2, $3)`,
+        [productId, Number(ing.inventoryId), Number(ing.amountUsed)]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch(e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
+  } finally { client.release(); }
+});
+
 // ─── Employee CRUD ────────────────────────────────────────────────────────────
 
 app.get('/api/employees', requireMgrRoute, async (_req, res) => {
