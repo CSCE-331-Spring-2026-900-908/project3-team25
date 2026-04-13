@@ -11,8 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
 const weatherCache = new Map();
-const WEATHER_CACHE_MS = 10 * 60 * 1000; // 10 minutes
-
+const WEATHER_CACHE_MS = 60 * 60 * 1000; // 1 hour
+const COLLEGE_STATION_WEATHER = {
+  city: 'College Station, Texas',
+  latitude: 30.6280,
+  longitude: -96.3344
+};
 const googleCallbackUrl =
   process.env.GOOGLE_CALLBACK_URL ||
   'https://project3-team25-m13k.onrender.com/auth/google/callback';
@@ -463,24 +467,23 @@ app.get('/api/weather', async (req, res) => {
   }
 
   try {
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
-    );
+    let placeName;
+    let latitude;
+    let longitude;
 
-    if (!geoRes.ok) {
-      throw new Error(`Geocoding API failed with status ${geoRes.status}`);
-    }
-
-    const geoData = await geoRes.json();
-    const place = geoData.results?.[0];
-
-    if (!place) {
-      return res.status(404).json({ error: 'Location not found.' });
+    if (cacheKey === 'college station') {
+      placeName = COLLEGE_STATION_WEATHER.city;
+      latitude = COLLEGE_STATION_WEATHER.latitude;
+      longitude = COLLEGE_STATION_WEATHER.longitude;
+    } else {
+      return res.status(400).json({
+        error: 'Only College Station weather is supported right now.'
+      });
     }
 
     const forecastUrl =
-      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}` +
-      `&longitude=${place.longitude}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}` +
+      `&longitude=${longitude}` +
       `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day` +
       `&temperature_unit=fahrenheit` +
       `&wind_speed_unit=mph` +
@@ -493,16 +496,10 @@ app.get('/api/weather', async (req, res) => {
     }
 
     const forecastData = await forecastRes.json();
-    console.log('Open-Meteo forecast response:', JSON.stringify(forecastData, null, 2));
-
     const current = forecastData.current || forecastData.current_weather || null;
 
     if (!current) {
-      return res.status(502).json({
-        error: 'Weather data missing from Open-Meteo response.',
-        city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
-        rawForecast: forecastData
-      });
+      throw new Error('Weather data missing from Open-Meteo response.');
     }
 
     const temperature = current.temperature_2m ?? current.temperature ?? null;
@@ -515,7 +512,7 @@ app.get('/api/weather', async (req, res) => {
     const drinkSuggestion = getDrinkSuggestion(temperature, weatherCode);
 
     const responseData = {
-      city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
+      city: placeName,
       temperature,
       feelsLike,
       windSpeed,
@@ -530,7 +527,7 @@ app.get('/api/weather', async (req, res) => {
       data: responseData
     });
 
-    res.json({
+    return res.json({
       ...responseData,
       source: 'live'
     });
@@ -543,9 +540,10 @@ app.get('/api/weather', async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      error: 'Weather unavailable.',
-      details: e.message
+    return res.status(503).json({
+      error: 'Weather temporarily unavailable.',
+      details: e.message,
+      city: COLLEGE_STATION_WEATHER.city
     });
   }
 });
