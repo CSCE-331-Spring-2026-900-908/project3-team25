@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
 const weatherCache = new Map();
 const WEATHER_CACHE_MS = 60 * 60 * 1000; // 1 hour
+let weatherCallCount = 0;
+let externalWeatherCalls = 0;
 const COLLEGE_STATION_WEATHER = {
   city: 'College Station, Texas',
   latitude: 30.6280,
@@ -455,6 +457,8 @@ app.post('/api/assistant', async (req, res) => {
 
 app.get('/api/weather', async (req, res) => {
   const city = String(req.query.city || 'College Station').trim();
+  weatherCallCount++;
+  console.log(`Weather endpoint hit: ${weatherCallCount}`);
   const cacheKey = city.toLowerCase();
   const now = Date.now();
 
@@ -489,6 +493,8 @@ app.get('/api/weather', async (req, res) => {
       `&wind_speed_unit=mph` +
       `&timezone=auto`;
 
+    externalWeatherCalls++;
+    console.log(`Open-Meteo calls: ${externalWeatherCalls}`);
     const forecastRes = await fetch(forecastUrl);
 
     if (!forecastRes.ok) {
@@ -934,6 +940,13 @@ app.post('/api/employees/:id/toggle', requireMgrRoute, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/weather-stats', (_req, res) => {
+  res.json({
+    totalRequests: weatherCallCount,
+    externalCalls: externalWeatherCalls,
+    cacheSize: weatherCache.size
+  });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
