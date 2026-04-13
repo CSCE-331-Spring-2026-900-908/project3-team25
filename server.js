@@ -454,6 +454,11 @@ app.get('/api/weather', async (req, res) => {
     const geoRes = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
     );
+
+    if (!geoRes.ok) {
+      throw new Error(`Geocoding API failed with status ${geoRes.status}`);
+    }
+
     const geoData = await geoRes.json();
     const place = geoData.results?.[0];
 
@@ -461,26 +466,59 @@ app.get('/api/weather', async (req, res) => {
       return res.status(404).json({ error: 'Location not found.' });
     }
 
-    const forecastRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
-    );
-    const forecastData = await forecastRes.json();
-    const current = forecastData.current || {};
+    const forecastUrl =
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}` +
+      `&longitude=${place.longitude}` +
+      `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day` +
+      `&temperature_unit=fahrenheit` +
+      `&wind_speed_unit=mph` +
+      `&timezone=auto`;
 
-    const weatherLabel = getWeatherLabel(current.weather_code);
-    const drinkSuggestion = getDrinkSuggestion(
-      current.temperature_2m,
-      current.weather_code
-    );
+    const forecastRes = await fetch(forecastUrl);
+
+    if (!forecastRes.ok) {
+      throw new Error(`Forecast API failed with status ${forecastRes.status}`);
+    }
+
+    const forecastData = await forecastRes.json();
+    console.log('Open-Meteo forecast response:', JSON.stringify(forecastData, null, 2));
+
+    const current = forecastData.current || forecastData.current_weather || null;
+
+    if (!current) {
+      return res.status(502).json({
+        error: 'Weather data missing from Open-Meteo response.',
+        city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
+        rawForecast: forecastData
+      });
+    }
+
+    const temperature =
+      current.temperature_2m ?? current.temperature ?? null;
+
+    const feelsLike =
+      current.apparent_temperature ?? null;
+
+    const windSpeed =
+      current.wind_speed_10m ?? current.windspeed ?? null;
+
+    const weatherCode =
+      current.weather_code ?? current.weathercode ?? null;
+
+    const isDay =
+      current.is_day ?? 1;
+
+    const weatherLabel = getWeatherLabel(weatherCode);
+    const drinkSuggestion = getDrinkSuggestion(temperature, weatherCode);
 
     res.json({
       city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
-      temperature: current.temperature_2m ?? null,
-      feelsLike: current.apparent_temperature ?? null,
-      windSpeed: current.wind_speed_10m ?? null,
-      weatherCode: current.weather_code ?? null,
+      temperature,
+      feelsLike,
+      windSpeed,
+      weatherCode,
       weatherLabel,
-      isDay: current.is_day ?? 1,
+      isDay,
       drinkSuggestion
     });
   } catch (e) {
