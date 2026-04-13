@@ -99,12 +99,10 @@
     const btn = getVoiceButton();
     if (!btn) return;
 
-    btn.textContent = voiceEnabled ? "Voice Guide: On" : "Voice Guide: Off";
+    btn.textContent = voiceEnabled ? "🔊" : "🔇";
     btn.setAttribute("aria-pressed", String(voiceEnabled));
-    btn.setAttribute(
-      "aria-label",
-      voiceEnabled ? "Turn voice guide off" : "Turn voice guide on"
-    );
+    btn.setAttribute("aria-label", voiceEnabled ? "Turn voice guide off" : "Turn voice guide on");
+    btn.setAttribute("data-tooltip", voiceEnabled ? "Voice Guide: On" : "Voice Guide: Off");
 
     document.body.classList.toggle("voice-guide-enabled", voiceEnabled);
   }

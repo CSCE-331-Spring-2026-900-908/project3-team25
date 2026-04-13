@@ -10,7 +10,7 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
   </div>
 
   <main id="main-content" class="page-shell">
@@ -23,33 +23,13 @@
           <p class="muted">Team 25</p>
         </div>
       </div>
-      <div id="auth-status" class="portal-auth">
-      </div>
+      <div id="auth-status" class="portal-auth"></div>
     </header>
 
     <p id="portal-access-message" class="muted portal-access-msg"></p>
 
-    <div class="portal-launch-grid">
-      <article class="portal-launch-card">
-        <h2>Customer Kiosk</h2>
-        <a href="/customer.html" class="btn portal-launch-btn">Open Kiosk</a>
-      </article>
-
-      <article class="portal-launch-card">
-        <h2>Cashier POS</h2>
-        <a href="/cashier.html" class="btn portal-launch-btn" id="portal-cashier-link">Cashier POS</a>
-      </article>
-
-      <article class="portal-launch-card">
-        <h2>Menu Board</h2>
-        <a href="/menu-board.html" class="btn portal-launch-btn">Open Board</a>
-      </article>
-
-      <article class="portal-launch-card">
-        <h2>Manager</h2>
-        <a href="/manager.html" class="btn portal-launch-btn" id="portal-manager-link">Manager View</a>
-      </article>
-    </div>
+    <!-- Role-aware dashboard injected by auth.js -->
+    <div id="role-dashboard"></div>
 
   </main>
 

@@ -17,95 +17,63 @@ const googleCallbackUrl =
 
 app.set('trust proxy', 1);
 app.use(express.json());
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || 'dev_only_change_me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production'
-    }
-  })
-);
-
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev_only_change_me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
-const managerEmails = (process.env.MANAGER_EMAILS || '')
-  .split(',')
-  .map(email => email.trim().toLowerCase())
-  .filter(Boolean);
+const managerEmails = (process.env.MANAGER_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 
 function getUserRoleFromEmail(email) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-
-  if (managerEmails.includes(normalizedEmail)) {
-    return 'manager';
-  }
-
-  if (normalizedEmail.endsWith('@tamu.edu')) {
-    return 'cashier';
-  }
-
+  const e = String(email || '').trim().toLowerCase();
+  if (managerEmails.includes(e)) return 'manager';
+  if (e.endsWith('@tamu.edu')) return 'cashier';
   return 'customer';
 }
 
 function requireStaff(req, res, next) {
-  if (
-    req.isAuthenticated &&
-    req.isAuthenticated() &&
-    (req.user?.role === 'cashier' || req.user?.role === 'manager')
-  ) {
-    return next();
-  }
+  if (req.isAuthenticated?.() && (req.user?.role === 'cashier' || req.user?.role === 'manager')) return next();
   return res.redirect('/?unauthorized=1');
 }
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
+async function queryDb(text, params = []) {
+  const pool = getPool();
+  if (!pool) throw new Error('Database not configured.');
+  return pool.query(text, params);
+}
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: googleCallbackUrl
-      },
-      (_accessToken, _refreshToken, profile, done) => {
-        const email = profile.emails?.[0]?.value || '';
-        const user = {
-          id: profile.id,
-          displayName: profile.displayName || 'User',
-          email,
-          role: getUserRoleFromEmail(email)
-        };
-        done(null, user);
+  passport.use(new GoogleStrategy(
+    { clientID: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, callbackURL: googleCallbackUrl },
+    async (_at, _rt, profile, done) => {
+      const email = profile.emails?.[0]?.value || '';
+      const role = getUserRoleFromEmail(email);
+      const user = {
+        id: profile.id,
+        displayName: profile.displayName || 'User',
+        firstName: profile.name?.givenName || profile.displayName?.split(' ')[0] || 'User',
+        email, role
+      };
+      if (hasDbConfig()) {
+        try {
+          await queryDb(
+            `INSERT INTO user_accounts (user_id, email, display_name, role, last_login)
+             VALUES ($1,$2,$3,$4,NOW())
+             ON CONFLICT (user_id) DO UPDATE SET display_name=EXCLUDED.display_name, email=EXCLUDED.email, role=EXCLUDED.role, last_login=NOW()`,
+            [user.id, user.email, user.displayName, user.role]
+          );
+        } catch (err) { console.error('upsert user_accounts:', err.message); }
       }
-    )
-  );
-}
-
-function requireAuth(req, res, next) {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    return next();
-  }
-  return res.redirect('/?authRequired=1');
-}
-
-function requireManager(req, res, next) {
-  if (req.isAuthenticated && req.isAuthenticated() && req.user?.role === 'manager') {
-    return next();
-  }
-  return res.redirect('/?unauthorized=1');
+      done(null, user);
+    }
+  ));
 }
 
 function parseCsv(filePath) {
@@ -113,130 +81,66 @@ function parseCsv(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8').trim();
   if (!raw) return [];
   const [headerLine, ...lines] = raw.split(/\r?\n/);
-  const headers = headerLine.split(',').map((h) => h.trim());
-  return lines.map((line) => {
+  const headers = headerLine.split(',').map(h => h.trim());
+  return lines.map(line => {
     const values = line.split(',');
     const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = (values[index] || '').trim();
-    });
+    headers.forEach((h, i) => { obj[h] = (values[i] || '').trim(); });
     return obj;
   });
 }
 
-const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
-  .filter((item) => item.is_active === 'true' && item.category !== 'topping')
-  .map((item) => ({
-    id: Number(item.productid),
-    name: item.name,
-    category: item.category,
-    price: Number(item.baseprice),
-    popular: [2, 4, 9, 10, 14].includes(Number(item.productid)),
-    description: {
-      milk_tea: 'Creamy tea-based drink with optional toppings and sweetness customization.',
-      tea: 'Refreshing brewed tea with a lighter flavor profile.',
-      fruit_tea: 'Fruity green tea served cold with vibrant flavors.',
-      coffee: 'Coffee-forward milk tea blend for stronger energy and flavor.'
-    }[item.category] || 'Bubble tea menu item.'
-  }));
+const DESCRIPTIONS = {
+  milk_tea: 'Creamy tea-based drink with optional toppings and sweetness customization.',
+  tea: 'Refreshing brewed tea with a lighter flavor profile.',
+  fruit_tea: 'Fruity green tea served cold with vibrant flavors.',
+  coffee: 'Coffee-forward milk tea blend for stronger energy and flavor.'
+};
 
-const csvInventory = parseCsv(path.join(dataDir, 'inventory.csv')).map((item) => ({
-  id: Number(item.inventoryid),
-  itemName: item.itemname,
-  unit: item.unit,
-  quantityOnHand: Number(item.quantityonhand),
-  reorderThreshold: Number(item.reorderthreshold),
-  unitCost: Number(item.unitcost),
-  vendor: item.vendor,
-  status: Number(item.quantityonhand) <= Number(item.reorderthreshold) ? 'low' : 'ok'
+const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
+  .filter(i => i.is_active === 'true' && i.category !== 'topping')
+  .map(i => ({ id: Number(i.productid), name: i.name, category: i.category, price: Number(i.baseprice), popular: [2,4,9,10,14].includes(Number(i.productid)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
+
+const csvInventory = parseCsv(path.join(dataDir, 'inventory.csv')).map(i => ({
+  id: Number(i.inventoryid), itemName: i.itemname, unit: i.unit,
+  quantityOnHand: Number(i.quantityonhand), reorderThreshold: Number(i.reorderthreshold),
+  unitCost: Number(i.unitcost), vendor: i.vendor,
+  status: Number(i.quantityonhand) <= Number(i.reorderthreshold) ? 'low' : 'ok'
 }));
 
 let fallbackTransactions = [];
-let fallbackTransactionItems = [];
-let nextFallbackTransactionItemId = 500001;
-
-function getInitialTransactionId() {
-  const filePath = path.join(dataDir, 'transactions.csv');
-  if (!fs.existsSync(filePath)) return 100001;
-  const lines = fs.readFileSync(filePath, 'utf8').trim().split(/\r?\n/);
+let nextFallbackId = (() => {
+  const fp = path.join(dataDir, 'transactions.csv');
+  if (!fs.existsSync(fp)) return 100001;
+  const lines = fs.readFileSync(fp, 'utf8').trim().split(/\r?\n/);
   if (lines.length < 2) return 100001;
-  const id = Number(lines[lines.length - 1].split(',')[0]);
+  const id = Number(lines[lines.length-1].split(',')[0]);
   return isNaN(id) ? 100001 : id + 1;
-}
-let nextFallbackTransactionId = getInitialTransactionId();
+})();
+let nextItemId = 500001;
 
 function categoryBreakdown(items) {
-  const counts = {};
-  for (const item of items) counts[item.category] = (counts[item.category] || 0) + 1;
-  return counts;
+  const c = {};
+  for (const i of items) c[i.category] = (c[i.category] || 0) + 1;
+  return c;
 }
-
 function lowStock(items) {
-  return [...items]
-    .sort((a, b) => (a.quantityOnHand / (a.reorderThreshold || 1)) - (b.quantityOnHand / (b.reorderThreshold || 1)))
-    .slice(0, 6)
-    .map((item) => ({ ...item, status: item.quantityOnHand <= item.reorderThreshold ? 'low' : 'ok' }));
-}
-
-function ruleBasedAssistant(message) {
-  const text = (message || '').toLowerCase();
-  if (!text.trim()) return 'Ask me about drinks, toppings, sweetness, allergens, or how to use this kiosk.';
-  if (text.includes('popular') || text.includes('best')) return 'Our most popular items right now are Brown Sugar Milk Tea, Matcha Milk Tea, Strawberry Green Tea, and Mango Green Tea.';
-  if (text.includes('sweet') || text.includes('sugar')) return 'Customers can choose 0%, 25%, 50%, 75%, or 100% sweetness. Fruit teas usually work well at 50% or 75% sweetness.';
-  if (text.includes('topping') || text.includes('boba')) return 'The starter build supports extra boba. You can expand later to pudding, jelly, foam, or seasonal toppings.';
-  if (text.includes('milk') || text.includes('dairy')) return 'Most milk teas contain dairy in the base recipe. Tea and fruit tea options are the easiest starting point for customers avoiding dairy.';
-  if (text.includes('manager')) return 'The manager dashboard shows menu counts, sales metrics, and inventory alerts using either the database or CSV fallback.';
-  return 'I can help with menu suggestions, sweetness levels, popular drinks, toppings, dietary hints, and kiosk guidance.';
-}
-
-async function queryDb(text, params = []) {
-  const pool = getPool();
-  if (!pool) throw new Error('Database configuration is missing.');
-  return pool.query(text, params);
+  return [...items].sort((a,b) => (a.quantityOnHand/(a.reorderThreshold||1)) - (b.quantityOnHand/(b.reorderThreshold||1))).slice(0,6)
+    .map(i => ({ ...i, status: i.quantityOnHand <= i.reorderThreshold ? 'low' : 'ok' }));
 }
 
 async function getMenuItems() {
   if (hasDbConfig()) {
-    const result = await queryDb(`
-      SELECT productid AS id, name, category, baseprice AS price, is_active
-      FROM product
-      WHERE is_active = true
-      ORDER BY category, name
-    `);
-    return result.rows.map((item) => ({
-      id: Number(item.id),
-      name: item.name,
-      category: item.category,
-      price: Number(item.price),
-      popular: [2, 4, 9, 10, 14].includes(Number(item.id)),
-      description: {
-        milk_tea: 'Creamy tea-based drink with optional toppings and sweetness customization.',
-        tea: 'Refreshing brewed tea with a lighter flavor profile.',
-        fruit_tea: 'Fruity green tea served cold with vibrant flavors.',
-        coffee: 'Coffee-forward milk tea blend for stronger energy and flavor.'
-      }[item.category] || 'Bubble tea menu item.'
-    }));
+    const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price FROM product WHERE is_active=true ORDER BY category,name`);
+    return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), popular: [2,4,9,10,14].includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
   }
   return csvMenu;
 }
 
 async function getInventoryItems() {
   if (hasDbConfig()) {
-    const result = await queryDb(`
-      SELECT inventoryid AS id, itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor
-      FROM inventory
-      ORDER BY itemname
-    `);
-    return result.rows.map((item) => ({
-      id: Number(item.id),
-      itemName: item.itemname,
-      unit: item.unit,
-      quantityOnHand: Number(item.quantityonhand),
-      reorderThreshold: Number(item.reorderthreshold),
-      unitCost: Number(item.unitcost),
-      vendor: item.vendor,
-      status: Number(item.quantityonhand) <= Number(item.reorderthreshold) ? 'low' : 'ok'
-    }));
+    const r = await queryDb(`SELECT inventoryid AS id, itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor FROM inventory ORDER BY itemname`);
+    return r.rows.map(i => ({ id: Number(i.id), itemName: i.itemname, unit: i.unit, quantityOnHand: Number(i.quantityonhand), reorderThreshold: Number(i.reorderthreshold), unitCost: Number(i.unitcost), vendor: i.vendor, status: Number(i.quantityonhand) <= Number(i.reorderthreshold) ? 'low' : 'ok' }));
   }
   return csvInventory;
 }
@@ -244,304 +148,312 @@ async function getInventoryItems() {
 async function getDashboardData() {
   const menuItems = await getMenuItems();
   const inventoryItems = await getInventoryItems();
-  let salesMetrics = {
-    totalOrders: fallbackTransactions.length,
-    totalRevenue: fallbackTransactions.reduce((sum, tx) => sum + Number(tx.totalAmount || 0), 0),
-    completedOrders: fallbackTransactions.filter((tx) => tx.status === 'completed').length
-  };
-
+  let salesMetrics = { totalOrders: fallbackTransactions.length, totalRevenue: fallbackTransactions.reduce((s,t)=>s+Number(t.totalAmount||0),0), completedOrders: fallbackTransactions.filter(t=>t.status==='completed').length };
   if (hasDbConfig()) {
-    const txStats = await queryDb(`
-      SELECT COUNT(*)::int AS total_orders,
-             COALESCE(SUM(totalamount), 0)::numeric AS total_revenue,
-             COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_orders
-      FROM transactions
-    `);
-    salesMetrics = {
-      totalOrders: txStats.rows[0].total_orders,
-      totalRevenue: Number(txStats.rows[0].total_revenue),
-      completedOrders: txStats.rows[0].completed_orders
-    };
+    const r = await queryDb(`SELECT COUNT(*)::int AS total_orders, COALESCE(SUM(totalamount),0)::numeric AS total_revenue, COUNT(*) FILTER (WHERE status='completed')::int AS completed_orders FROM transactions`);
+    salesMetrics = { totalOrders: r.rows[0].total_orders, totalRevenue: Number(r.rows[0].total_revenue), completedOrders: r.rows[0].completed_orders };
   }
-
-  const avgPrice = menuItems.length
-    ? menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length
-    : 0;
-
+  const avgPrice = menuItems.length ? menuItems.reduce((s,i)=>s+i.price,0)/menuItems.length : 0;
   return {
-    metrics: {
-      activeMenuItems: menuItems.length,
-      inventoryItems: inventoryItems.length,
-      lowStockItems: lowStock(inventoryItems).length,
-      averageMenuPrice: Number(avgPrice.toFixed(2)),
-      totalOrders: salesMetrics.totalOrders,
-      totalRevenue: Number(salesMetrics.totalRevenue.toFixed(2)),
-      completedOrders: salesMetrics.completedOrders
-    },
-    lowStock: lowStock(inventoryItems),
-    categories: categoryBreakdown(menuItems),
-    announcements: [
-      hasDbConfig()
-        ? 'Database mode is active. Checkout can insert transactions into PostgreSQL.'
-        : 'CSV fallback mode is active. Add DB environment variables to enable real PostgreSQL checkout.',
-      'Portal page is the centralized launch point for all interfaces.',
-      'Cashier and customer pages use separate layouts for the assignment requirements.'
-    ]
+    metrics: { activeMenuItems: menuItems.length, inventoryItems: inventoryItems.length, lowStockItems: lowStock(inventoryItems).length, averageMenuPrice: Number(avgPrice.toFixed(2)), ...salesMetrics },
+    lowStock: lowStock(inventoryItems), categories: categoryBreakdown(menuItems),
+    announcements: [hasDbConfig() ? 'Database mode active.' : 'CSV fallback mode active.', 'Portal is the centralized launch point.', 'Cashier and customer pages have separate layouts.']
   };
 }
 
-async function createCheckout({ items, paymentMethod = 'card', cashierId = 1 }) {
-  const safeItems = Array.isArray(items) ? items : [];
-  if (!safeItems.length) throw new Error('At least one item is required for checkout.');
-
-  const menuItems = await getMenuItems();
-  const menuMap = new Map(menuItems.map((item) => [Number(item.id), item]));
-
-  // Add toppings to the map so add-ons like Extra Boba (id 16) pass validation
-  if (hasDbConfig()) {
-    const toppingResult = await queryDb(
-      `SELECT productid AS id, name, baseprice AS price FROM product WHERE is_active = true AND category = 'topping'`
-    );
-    for (const t of toppingResult.rows) {
-      menuMap.set(Number(t.id), { id: Number(t.id), name: t.name, price: Number(t.price) });
-    }
-  } else {
-    parseCsv(path.join(dataDir, 'product.csv'))
-      .filter((r) => r.is_active === 'true' && r.category === 'topping')
-      .forEach((r) => menuMap.set(Number(r.productid), { id: Number(r.productid), name: r.name, price: Number(r.baseprice) }));
-  }
-
-  const normalized = safeItems.map((item) => {
-    const menu = menuMap.get(Number(item.id));
-    if (!menu) throw new Error(`Menu item ${item.id} was not found.`);
-    const quantity = Math.max(1, Number(item.quantity || 1));
-    return {
-      productId: menu.id,
-      name: menu.name,
-      unitPrice: Number(item.unitPrice || menu.price),
-      quantity,
-      lineTotal: Number((Number(item.unitPrice || menu.price) * quantity).toFixed(2)),
-      selections: item.selections || {}
-    };
-  });
-
-  const totalAmount = normalized.reduce((sum, item) => sum + item.lineTotal, 0);
-
-  if (hasDbConfig()) {
-    const pool = getPool();
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const txResult = await client.query(
-        `INSERT INTO transactions (cashierid, transactiontime, totalamount, paymentmethod, status)
-         VALUES ($1, NOW(), $2, $3, 'completed')
-         RETURNING transactionid, transactiontime, totalamount, paymentmethod, status`,
-        [cashierId, totalAmount, String(paymentMethod).toLowerCase()]
-      );
-      const txRow = txResult.rows[0];
-
-      for (const item of normalized) {
-        await client.query(
-          `INSERT INTO transactionitem (transactionid, productid, quantity, unitprice)
-           VALUES ($1, $2, $3, $4)`,
-          [txRow.transactionid, item.productId, item.quantity, item.unitPrice]
-        );
-      }
-
-      await client.query('COMMIT');
-      return {
-        source: 'database',
-        transactionId: txRow.transactionid,
-        transactionTime: txRow.transactiontime,
-        totalAmount: Number(txRow.totalamount),
-        paymentMethod: txRow.paymentmethod,
-        status: txRow.status,
-        items: normalized
-      };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  const transactionId = nextFallbackTransactionId++;
-  const transactionTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
-  const transaction = {
-    transactionId,
-    cashierId,
-    transactionTime,
-    totalAmount,
-    paymentMethod: String(paymentMethod).toLowerCase(),
-    status: 'completed'
-  };
-  fallbackTransactions.push(transaction);
-  normalized.forEach((item) => {
-    fallbackTransactionItems.push({
-      transactionItemId: nextFallbackTransactionItemId++,
-      transactionId,
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice
-    });
-  });
-
-  // Persist to CSV so transaction IDs survive server restarts
-  const txLine = `\n${transactionId},${cashierId},${transactionTime},${totalAmount.toFixed(2)},${transaction.paymentMethod},completed`;
-  fs.appendFileSync(path.join(dataDir, 'transactions.csv'), txLine);
-
-  return { source: 'fallback', ...transaction, items: normalized };
+// SPIN prizes
+const SPIN_PRIZES = [
+  { label:'50% Off One Drink', type:'percent_off', value:50, weight:20 },
+  { label:'Free Topping', type:'free_topping', value:0, weight:30 },
+  { label:'$1 Off Your Order', type:'flat_off', value:1, weight:25 },
+  { label:'Free Small Drink', type:'free_drink', value:0, weight:10 },
+  { label:'Buy One Get One', type:'percent_off', value:50, weight:5 },
+  { label:'25% Off Order', type:'percent_off', value:25, weight:10 }
+];
+function randomPrize() {
+  const total = SPIN_PRIZES.reduce((s,p)=>s+p.weight,0);
+  let r = Math.random()*total;
+  for (const p of SPIN_PRIZES) { r -= p.weight; if (r<=0) return p; }
+  return SPIN_PRIZES[0];
 }
+function genCode() { return 'RBT-'+Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+const FALLBACK_CATALOG = [
+  { reward_id:1, label:'Free Small Drink', description:'Any small drink free', points_cost:500, reward_type:'free_drink', reward_value:0 },
+  { reward_id:2, label:'50% Off One Drink', description:'Half off one drink', points_cost:300, reward_type:'percent_off', reward_value:50 },
+  { reward_id:3, label:'Free Topping', description:'Any topping free', points_cost:150, reward_type:'free_topping', reward_value:0 },
+  { reward_id:4, label:'$1 Off Your Order', description:'$1 discount', points_cost:100, reward_type:'flat_off', reward_value:1 }
+];
+
+function ruleBasedAssistant(message) {
+  const t = (message||'').toLowerCase();
+  if (!t.trim()) return 'Ask me about drinks, toppings, sweetness, allergens, rewards, or how to use this kiosk.';
+  if (t.includes('popular')||t.includes('best')) return 'Our top sellers: Brown Sugar Milk Tea, Matcha Milk Tea, Strawberry Green Tea, Mango Green Tea.';
+  if (t.includes('sweet')||t.includes('sugar')) return 'Choose 0%, 25%, 50%, 75%, or 100% sweetness. Fruit teas are great at 50–75%.';
+  if (t.includes('topping')||t.includes('boba')) return 'We offer extra boba as a topping add-on.';
+  if (t.includes('milk')||t.includes('dairy')) return 'Most milk teas contain dairy. Tea and fruit tea are dairy-friendlier.';
+  if (t.includes('reward')||t.includes('point')) return 'Earn 10 points per dollar spent. Redeem for free drinks, discounts, and toppings!';
+  if (t.includes('spin')||t.includes('promo')) return 'Spin the wheel once per day for free drinks, discounts, and more!';
+  return 'I can help with menu suggestions, sweetness, popular drinks, toppings, rewards, and kiosk guidance.';
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 
 app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(500).send(
-      'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Render environment variables.'
-    );
+    return res.status(500).send('Google OAuth not configured.');
   }
-  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
 });
 
-app.get(
-  '/auth/google/callback',
+app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
-    res.redirect('/');
+    const role = req.user?.role;
+    if (role === 'manager') return res.redirect('/');
+    if (role === 'cashier') return res.redirect('/cashier.html');
+    return res.redirect('/customer.html');
   }
 );
 
 app.post('/auth/logout', (req, res, next) => {
-  req.logout((error) => {
-    if (error) return next(error);
-    req.session.destroy(() => {
-      res.json({ ok: true });
-    });
-  });
+  req.logout(err => { if (err) return next(err); req.session.destroy(() => res.json({ ok: true })); });
 });
 
-app.get('/api/me', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    return res.json({
-      authenticated: true,
-      user: {
-        displayName: req.user.displayName,
-        email: req.user.email,
-        role: req.user.role
-      }
-    });
+app.get('/api/me', async (req, res) => {
+  if (!req.isAuthenticated?.()) return res.json({ authenticated: false, user: null });
+  let rewardPoints = 0;
+  if (hasDbConfig() && req.user?.id) {
+    try { const r = await queryDb(`SELECT reward_points FROM user_accounts WHERE user_id=$1`, [req.user.id]); rewardPoints = r.rows[0]?.reward_points ?? 0; } catch(_) {}
   }
-
-  return res.json({
-    authenticated: false,
-    user: null
-  });
+  res.json({ authenticated: true, user: { id: req.user.id, displayName: req.user.displayName, firstName: req.user.firstName || req.user.displayName?.split(' ')[0] || 'User', email: req.user.email, role: req.user.role, rewardPoints } });
 });
 
 app.get('/api/menu', async (_req, res) => {
-  try {
-    const items = await getMenuItems();
-    res.json({ items, categories: categoryBreakdown(items), source: hasDbConfig() ? 'database' : 'csv' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load menu.', details: error.message });
-  }
+  try { const items = await getMenuItems(); res.json({ items, categories: categoryBreakdown(items), source: hasDbConfig()?'database':'csv' }); }
+  catch(e) { res.status(500).json({ error: 'Failed to load menu.', details: e.message }); }
 });
 
-app.get('/api/inventory', requireAuth, async (_req, res) => {
-  try {
-    const items = await getInventoryItems();
-    res.json({ items, lowStock: lowStock(items), source: hasDbConfig() ? 'database' : 'csv' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load inventory.', details: error.message });
-  }
+app.get('/api/inventory', async (req, res) => {
+  if (!req.isAuthenticated?.()) return res.status(401).json({ error: 'Auth required.' });
+  try { const items = await getInventoryItems(); res.json({ items, lowStock: lowStock(items), source: hasDbConfig()?'database':'csv' }); }
+  catch(e) { res.status(500).json({ error: 'Failed to load inventory.', details: e.message }); }
 });
 
-app.get('/api/dashboard', requireManager, async (_req, res) => {
-  try {
-    res.json(await getDashboardData());
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load dashboard.', details: error.message });
-  }
+app.get('/api/dashboard', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  try { res.json(await getDashboardData()); }
+  catch(e) { res.status(500).json({ error: 'Failed to load dashboard.', details: e.message }); }
 });
 
-app.get('/api/orders/recent', requireManager, async (_req, res) => {
+app.get('/api/orders/recent', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const limit = Math.min(Number(req.query.limit || 50), 200);
   try {
     if (hasDbConfig()) {
-      const result = await queryDb(`
-        SELECT transactionid, cashierid, transactiontime, totalamount, paymentmethod, status
-        FROM transactions
-        ORDER BY transactiontime DESC
-        LIMIT 10
-      `);
-      return res.json({ items: result.rows, source: 'database' });
+      const r = await queryDb(`
+        SELECT t.transactionid, t.cashierid,
+               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
+               (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS transactiontime,
+               t.totalamount, t.paymentmethod, t.status
+        FROM transactions t
+        LEFT JOIN cashier c ON c.cashierid = t.cashierid
+        ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
+      return res.json({ items: r.rows, source: 'database' });
     }
-    return res.json({ items: [...fallbackTransactions].reverse().slice(0, 10), source: 'fallback' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load recent orders.', details: error.message });
-  }
+    res.json({ items: [...fallbackTransactions].reverse().slice(0, limit), source: 'fallback' });
+  } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
 });
 
+// REWARDS
+app.get('/api/rewards', async (req, res) => {
+  try {
+    let catalog = FALLBACK_CATALOG, userPoints = 0, history = [];
+    if (hasDbConfig()) {
+      const cr = await queryDb(`SELECT * FROM rewards_catalog WHERE is_active=true ORDER BY points_cost`);
+      catalog = cr.rows;
+      if (req.isAuthenticated?.() && req.user?.id) {
+        const ur = await queryDb(`SELECT reward_points FROM user_accounts WHERE user_id=$1`, [req.user.id]);
+        userPoints = ur.rows[0]?.reward_points ?? 0;
+        const hr = await queryDb(`SELECT rr.redeemed_at, rc.label, rr.discount_amount, rr.status FROM reward_redemptions rr JOIN rewards_catalog rc ON rr.reward_id=rc.reward_id WHERE rr.user_id=$1 ORDER BY rr.redeemed_at DESC LIMIT 10`, [req.user.id]);
+        history = hr.rows;
+      }
+    }
+    res.json({ catalog, userPoints, history });
+  } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
+});
+
+// SPIN STATUS
+app.get('/api/spin/status', async (req, res) => {
+  if (!req.isAuthenticated?.()) return res.json({ canSpin: false, reason: 'Login required.' });
+  if (!hasDbConfig()) return res.json({ canSpin: true });
+  try {
+    const r = await queryDb(`SELECT spun_at FROM spin_log WHERE user_id=$1 AND spun_at > NOW()-INTERVAL '24 hours' ORDER BY spun_at DESC LIMIT 1`, [req.user.id]);
+    if (r.rows.length > 0) {
+      const next = new Date(r.rows[0].spun_at); next.setHours(next.getHours()+24);
+      return res.json({ canSpin: false, nextSpinAt: next.toISOString(), reason: 'Already spun today. Come back tomorrow!' });
+    }
+    res.json({ canSpin: true });
+  } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
+});
+
+// SPIN
+app.post('/api/spin', async (req, res) => {
+  if (!req.isAuthenticated?.()) return res.status(401).json({ error: 'Login required.' });
+  const prize = randomPrize();
+  const code = genCode();
+  if (!hasDbConfig()) return res.json({ prize, code, message: 'CSV mode – code not persisted.' });
+  try {
+    const check = await queryDb(`SELECT spun_at FROM spin_log WHERE user_id=$1 AND spun_at > NOW()-INTERVAL '24 hours' LIMIT 1`, [req.user.id]);
+    if (check.rows.length > 0) return res.status(429).json({ error: 'Already spun today!' });
+    const exp = new Date(); exp.setDate(exp.getDate()+7);
+    await queryDb(`INSERT INTO promo_codes (user_id, code, promo_type, promo_value, label, expires_at) VALUES ($1,$2,$3,$4,$5,$6)`, [req.user.id, code, prize.type, prize.value, prize.label, exp.toISOString()]);
+    await queryDb(`INSERT INTO spin_log (user_id, prize) VALUES ($1,$2)`, [req.user.id, prize.label]);
+    res.json({ prize, code, expiresAt: exp.toISOString() });
+  } catch(e) { res.status(500).json({ error: 'Spin failed.', details: e.message }); }
+});
+
+// PROMOS
+app.get('/api/promos', async (req, res) => {
+  if (!req.isAuthenticated?.()) return res.json({ codes: [] });
+  if (!hasDbConfig()) return res.json({ codes: [] });
+  try {
+    const r = await queryDb(`SELECT code, label, promo_type, promo_value, expires_at FROM promo_codes WHERE user_id=$1 AND is_used=false AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY created_at DESC`, [req.user.id]);
+    res.json({ codes: r.rows });
+  } catch(e) { res.status(500).json({ error: 'Failed.' }); }
+});
+
+app.get('/api/promos/validate/:code', async (req, res) => {
+  if (!hasDbConfig()) return res.json({ valid: false, reason: 'CSV mode' });
+  try {
+    const r = await queryDb(`SELECT * FROM promo_codes WHERE code=$1 AND is_used=false AND (expires_at IS NULL OR expires_at > NOW())`, [req.params.code.toUpperCase()]);
+    const promo = r.rows[0];
+    if (!promo) return res.json({ valid: false, reason: 'Code not found or expired.' });
+    res.json({ valid: true, promo });
+  } catch(e) { res.status(500).json({ error: 'Failed.' }); }
+});
+
+// CHECKOUT
 app.post('/api/checkout', async (req, res) => {
   try {
-    const result = await createCheckout(req.body || {});
-    res.status(201).json(result);
-  } catch (error) {
-    res.status(400).json({ error: 'Checkout failed.', details: error.message });
-  }
+    const userId = req.isAuthenticated?.() ? req.user?.id : null;
+    const body = req.body || {};
+    const { items, paymentMethod = 'card', cashierId = 1, promoCode = null, rewardId = null } = body;
+    const safeItems = Array.isArray(items) ? items : [];
+    if (!safeItems.length) throw new Error('At least one item required.');
+
+    const menuItems = await getMenuItems();
+    const menuMap = new Map(menuItems.map(i => [Number(i.id), i]));
+    if (hasDbConfig()) {
+      const tr = await queryDb(`SELECT productid AS id, name, baseprice AS price FROM product WHERE is_active=true AND category='topping'`);
+      for (const t of tr.rows) menuMap.set(Number(t.id), { id: Number(t.id), name: t.name, price: Number(t.price) });
+    } else {
+      parseCsv(path.join(dataDir,'product.csv')).filter(r=>r.is_active==='true'&&r.category==='topping').forEach(r=>menuMap.set(Number(r.productid),{id:Number(r.productid),name:r.name,price:Number(r.baseprice)}));
+    }
+
+    const normalized = safeItems.map(item => {
+      const menu = menuMap.get(Number(item.id));
+      if (!menu) throw new Error(`Menu item ${item.id} not found.`);
+      const qty = Math.max(1, Number(item.quantity||1));
+      return { productId: menu.id, name: menu.name, unitPrice: Number(item.unitPrice||menu.price), quantity: qty, lineTotal: Number((Number(item.unitPrice||menu.price)*qty).toFixed(2)), selections: item.selections||{} };
+    });
+
+    let subtotal = normalized.reduce((s,i)=>s+i.lineTotal,0);
+    let discountAmount = 0, discountLabel = '';
+
+    // Apply promo
+    if (promoCode && hasDbConfig()) {
+      const pr = await queryDb(`SELECT * FROM promo_codes WHERE code=$1 AND is_used=false AND (expires_at IS NULL OR expires_at > NOW())`, [promoCode.toUpperCase()]);
+      const promo = pr.rows[0];
+      if (promo) {
+        if (promo.promo_type==='percent_off') discountAmount = Number(((subtotal*Number(promo.promo_value))/100).toFixed(2));
+        else if (promo.promo_type==='flat_off') discountAmount = Math.min(subtotal, Number(promo.promo_value)||0);
+        else if (promo.promo_type==='free_drink') discountAmount = Math.min(...normalized.map(i=>i.unitPrice));
+        else if (promo.promo_type==='free_topping') discountAmount = 0.75;
+        discountLabel = promo.label;
+      }
+    }
+
+    // Apply reward
+    if (rewardId && hasDbConfig() && userId) {
+      const rwr = await queryDb(`SELECT rc.*, ua.reward_points FROM rewards_catalog rc, user_accounts ua WHERE rc.reward_id=$1 AND ua.user_id=$2 AND rc.is_active=true`, [rewardId, userId]);
+      const reward = rwr.rows[0];
+      if (reward && Number(reward.reward_points)>=Number(reward.points_cost)) {
+        if (reward.reward_type==='percent_off') discountAmount = Number(((subtotal*Number(reward.reward_value))/100).toFixed(2));
+        else if (reward.reward_type==='free_drink') discountAmount = Math.min(...normalized.map(i=>i.unitPrice));
+        else if (reward.reward_type==='free_topping') discountAmount = 0.75;
+        else if (reward.reward_type==='flat_off') discountAmount = Number(reward.reward_value);
+        discountLabel = reward.label;
+      }
+    }
+
+    discountAmount = Math.min(discountAmount, subtotal);
+    const totalAmount = subtotal - discountAmount;
+
+    if (hasDbConfig()) {
+      const pool = getPool();
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const txr = await client.query(`INSERT INTO transactions (cashierid,transactiontime,totalamount,paymentmethod,status) VALUES ($1,NOW(),$2,$3,'completed') RETURNING transactionid,transactiontime,totalamount,paymentmethod,status`, [cashierId, totalAmount, String(paymentMethod).toLowerCase()]);
+        const tx = txr.rows[0];
+        for (const item of normalized) { await client.query(`INSERT INTO transactionitem (transactionid,productid,quantity,unitprice) VALUES ($1,$2,$3,$4)`, [tx.transactionid, item.productId, item.quantity, item.unitPrice]); }
+
+        let pointsEarned = 0, newBalance = 0;
+        if (userId) {
+          pointsEarned = Math.floor((subtotal - discountAmount) * 10);
+          if (pointsEarned > 0) {
+            await client.query(`UPDATE user_accounts SET reward_points=reward_points+$1 WHERE user_id=$2`, [pointsEarned, userId]);
+            await client.query(`INSERT INTO points_ledger (user_id,delta,reason,transaction_id) VALUES ($1,$2,$3,$4)`, [userId, pointsEarned, `Order #${tx.transactionid}`, tx.transactionid]);
+          }
+          if (promoCode) await client.query(`UPDATE promo_codes SET is_used=true WHERE code=$1`, [promoCode.toUpperCase()]);
+          if (rewardId) {
+            const rwr2 = await client.query(`SELECT points_cost, label FROM rewards_catalog WHERE reward_id=$1`, [rewardId]);
+            const rw = rwr2.rows[0];
+            if (rw) {
+              await client.query(`UPDATE user_accounts SET reward_points=reward_points-$1 WHERE user_id=$2`, [rw.points_cost, userId]);
+              await client.query(`INSERT INTO points_ledger (user_id,delta,reason,transaction_id) VALUES ($1,$2,$3,$4)`, [userId, -rw.points_cost, `Redeemed: ${rw.label}`, tx.transactionid]);
+              await client.query(`INSERT INTO reward_redemptions (user_id,reward_id,transaction_id,discount_amount,status) VALUES ($1,$2,$3,$4,'applied')`, [userId, rewardId, tx.transactionid, discountAmount]);
+            }
+          }
+          const balr = await client.query(`SELECT reward_points FROM user_accounts WHERE user_id=$1`, [userId]);
+          newBalance = balr.rows[0]?.reward_points ?? 0;
+        }
+        await client.query('COMMIT');
+        return res.status(201).json({ source:'database', transactionId:tx.transactionid, transactionTime:tx.transactiontime, subtotal:Number(subtotal.toFixed(2)), discountAmount:Number(discountAmount.toFixed(2)), discountLabel, totalAmount:Number(tx.totalamount), paymentMethod:tx.paymentmethod, status:tx.status, pointsEarned, newPointBalance:newBalance, items:normalized });
+      } catch(err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
+    }
+
+    // CSV fallback
+    const transactionId = nextFallbackId++;
+    const transactionTime = new Date().toISOString().replace('T',' ').slice(0,19);
+    const transaction = { transactionId, cashierId, transactionTime, totalAmount, paymentMethod: String(paymentMethod).toLowerCase(), status:'completed' };
+    fallbackTransactions.push(transaction);
+    normalized.forEach(item => { fallbackTransactionItems.push({ transactionItemId: nextItemId++, transactionId, productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice }); });
+    fs.appendFileSync(path.join(dataDir,'transactions.csv'), `\n${transactionId},${cashierId},${transactionTime},${totalAmount.toFixed(2)},${transaction.paymentMethod},completed`);
+    res.status(201).json({ source:'fallback', ...transaction, subtotal:Number(subtotal.toFixed(2)), discountAmount:Number(discountAmount.toFixed(2)), discountLabel, pointsEarned: Math.floor((subtotal-discountAmount)*10), items:normalized });
+  } catch(e) { res.status(400).json({ error:'Checkout failed.', details:e.message }); }
 });
 
 app.post('/api/assistant', async (req, res) => {
   const { message } = req.body || {};
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-
-  if (!apiKey) {
-    return res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message) });
-  }
-
+  if (!apiKey) return res.json({ source:'local-fallback', reply: ruleBasedAssistant(message) });
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a concise bubble tea kiosk assistant. Help users with ordering, menu choices, customization, allergens, and store guidance.'
-          },
-          {
-            role: 'user',
-            content: String(message || '')
-          }
-        ],
-        temperature: 0.5,
-        max_tokens: 180
-      })
-    });
-
-    if (!response.ok) throw new Error(`OpenAI request failed with ${response.status}`);
-
+    const response = await fetch('https://api.openai.com/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model: process.env.OPENAI_MODEL||'gpt-4o-mini', messages:[{role:'system',content:'You are a concise bubble tea kiosk assistant. Help users with ordering, menu choices, customization, allergens, rewards, promos, and store guidance.'},{role:'user',content:String(message||'')}], temperature:0.5, max_tokens:180 }) });
+    if (!response.ok) throw new Error(`OpenAI ${response.status}`);
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content?.trim() || ruleBasedAssistant(message);
-    res.json({ source: 'openai', reply });
-  } catch (error) {
-    res.json({
-      source: 'local-fallback',
-      reply: ruleBasedAssistant(message),
-      error: error.message
-    });
-  }
+    res.json({ source:'openai', reply: data.choices?.[0]?.message?.content?.trim() || ruleBasedAssistant(message) });
+  } catch(e) { res.json({ source:'local-fallback', reply: ruleBasedAssistant(message) }); }
 });
 
 app.get('/api/weather', async (req, res) => {
   const city = String(req.query.city || 'College Station').trim();
 
   try {
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
+    );
     const geoData = await geoRes.json();
     const place = geoData.results?.[0];
 
@@ -549,96 +461,423 @@ app.get('/api/weather', async (req, res) => {
       return res.status(404).json({ error: 'Location not found.' });
     }
 
-    const forecastRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`);
+    const forecastRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
+    );
     const forecastData = await forecastRes.json();
+    const current = forecastData.current || {};
+
+    const weatherLabel = getWeatherLabel(current.weather_code);
+    const drinkSuggestion = getDrinkSuggestion(
+      current.temperature_2m,
+      current.weather_code
+    );
 
     res.json({
       city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
-      temperature: forecastData.current?.temperature_2m,
-      weatherCode: forecastData.current?.weather_code,
-      recommendation:
-        (forecastData.current?.temperature_2m ?? 0) >= 80
-          ? 'Warm weather today. Suggest fruit teas and iced drinks.'
-          : 'Cooler weather today. Suggest milk teas and warmer flavors.'
+      temperature: current.temperature_2m ?? null,
+      feelsLike: current.apparent_temperature ?? null,
+      windSpeed: current.wind_speed_10m ?? null,
+      weatherCode: current.weather_code ?? null,
+      weatherLabel,
+      isDay: current.is_day ?? 1,
+      drinkSuggestion
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Weather service unavailable.', details: error.message });
+  } catch (e) {
+    res.status(500).json({
+      error: 'Weather unavailable.',
+      details: e.message
+    });
   }
 });
 
+function getWeatherLabel(code) {
+  const map = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+
+    45: 'Fog',
+    48: 'Depositing rime fog',
+
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    56: 'Light freezing drizzle',
+    57: 'Dense freezing drizzle',
+
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    66: 'Light freezing rain',
+    67: 'Heavy freezing rain',
+
+    71: 'Slight snow',
+    73: 'Moderate snow',
+    75: 'Heavy snow',
+    77: 'Snow grains',
+
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with slight hail',
+    99: 'Thunderstorm with heavy hail'
+  };
+
+  return map[Number(code)] || `Unknown conditions (${code})`;
+}
+
+function getDrinkSuggestion(temp, code) {
+  const t = Number(temp ?? 0);
+
+  if ([61, 63, 65, 80, 81, 82, 95].includes(code)) {
+    return 'Rainy day — cozy milk teas and warm flavors are a great pick.';
+  }
+
+  if (t >= 85) {
+    return 'Hot day — suggest fruit teas, lighter drinks, and extra ice.';
+  }
+
+  if (t >= 72) {
+    return 'Nice weather — fruit teas and classic milk teas both fit well.';
+  }
+
+  return 'Cooler weather — milk teas and richer flavors are a great pick.';
+}
+
 app.get('/api/translate', async (req, res) => {
-  const text = String(req.query.text || '').trim();
-  const target = String(req.query.target || 'es').trim();
-
-  if (!text) {
-    return res.status(400).json({ error: 'Text is required.' });
-  }
-
+  const text = String(req.query.text||'').trim();
+  const target = String(req.query.target||'es').trim();
+  if (!text) return res.status(400).json({ error:'Text required.' });
   try {
-    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${encodeURIComponent(target)}`);
-    const data = await response.json();
-    const translatedText = data.responseData?.translatedText;
-
-    if (!translatedText) {
-      return res.status(502).json({ error: 'Translation failed.' });
-    }
-
-    res.json({ translatedText, target });
-  } catch (error) {
-    res.status(500).json({ error: 'Translation service unavailable.', details: error.message });
-  }
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${encodeURIComponent(target)}`);
+    const d = await r.json();
+    const tt = d.responseData?.translatedText;
+    if (!tt) return res.status(502).json({ error:'Translation failed.' });
+    res.json({ translatedText:tt, target });
+  } catch(e) { res.status(500).json({ error:'Translation unavailable.' }); }
 });
 
 app.post('/api/auth/mock-login', (req, res) => {
   const { email, role } = req.body || {};
-  const safeRole = ['manager', 'cashier', 'customer'].includes(role) ? role : 'customer';
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const allowed =
-    !normalizedEmail ||
-    normalizedEmail === 'reveille.bubbletea@gmail.com' ||
-    normalizedEmail.endsWith('@tamu.edu');
+  const safeRole = ['manager','cashier','customer'].includes(role) ? role : 'customer';
+  const ne = String(email||'').trim().toLowerCase();
+  const allowed = !ne || ne==='reveille.bubbletea@gmail.com' || ne.endsWith('@tamu.edu');
+  if (!allowed) return res.status(403).json({ ok:false, message:'Only TAMU addresses or project email accepted.' });
+  res.json({ ok:true, role:safeRole, email:ne||'guest@demo.local' });
+});
 
-  if (!allowed) {
-    return res.status(403).json({
-      ok: false,
-      message: 'Starter build only accepts the required project email or a TAMU address for demo login.'
+app.get('/api/auth/config', (_req, res) => res.json({ googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID), requiredEmail:'reveille.bubbletea@gmail.com', googleCallbackUrl }));
+app.get('/api/health', (_req, res) => res.json({ ok:true, dbConfigured:hasDbConfig() }));
+
+app.get('/cashier.html', requireStaff, (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
+app.get('/manager.html', (req, res) => {
+  if (req.isAuthenticated?.() && req.user?.role==='manager') return res.sendFile(path.join(__dirname,'public','manager.html'));
+  res.redirect('/?unauthorized=1');
+});
+
+
+// ─── Inventory CRUD ───────────────────────────────────────────────────────────
+
+app.put('/api/inventory/:id', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
+  try {
+    await queryDb(
+      `UPDATE inventory SET quantityonhand=$1, reorderthreshold=$2, unitcost=$3, vendor=$4 WHERE inventoryid=$5`,
+      [Number(quantityOnHand), Number(reorderThreshold), Number(unitCost), vendor || null, Number(req.params.id)]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/inventory', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { itemName, unit, quantityOnHand, reorderThreshold, unitCost, vendor } = req.body || {};
+  if (!itemName || !unit) return res.status(400).json({ error: 'itemName and unit required.' });
+  try {
+    const r = await queryDb(
+      `INSERT INTO inventory (itemname, unit, quantityonhand, reorderthreshold, unitcost, vendor) VALUES ($1,$2,$3,$4,$5,$6) RETURNING inventoryid`,
+      [itemName, unit, Number(quantityOnHand||0), Number(reorderThreshold||0), Number(unitCost||0), vendor||null]
+    );
+    res.status(201).json({ id: r.rows[0].inventoryid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Manager CRUD ─────────────────────────────────────────────────────────────
+
+app.post('/api/managers', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  if (!firstName || !lastName || !hireDate) return res.status(400).json({ error: 'firstName, lastName, hireDate required.' });
+  try {
+    const r = await queryDb(
+      `INSERT INTO manager (firstname, lastname, hiredate, pin, is_active) VALUES ($1,$2,$3,$4,true) RETURNING managerid`,
+      [firstName, lastName, hireDate, pin || '1234']
+    );
+    res.status(201).json({ id: r.rows[0].managerid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/managers/:id', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  try {
+    await queryDb(`UPDATE manager SET firstname=$1, lastname=$2, hiredate=$3, pin=$4 WHERE managerid=$5`,
+      [firstName, lastName, hireDate, pin || '1234', Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/managers/:id/toggle', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE manager SET is_active=$1 WHERE managerid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Active sessions (who is logged in) ──────────────────────────────────────
+
+const activeSessions = new Map(); // userId -> { name, role, loginTime }
+
+// Track logins
+app.use((req, _res, next) => {
+  if (req.isAuthenticated?.() && req.user?.id) {
+    activeSessions.set(req.user.id, {
+      name: req.user.displayName,
+      role: req.user.role,
+      email: req.user.email,
+      loginTime: activeSessions.get(req.user.id)?.loginTime || new Date().toISOString()
     });
   }
-
-  res.json({
-    ok: true,
-    role: safeRole,
-    email: normalizedEmail || 'guest@demo.local',
-    note: 'This is a starter mock-auth flow. Replace with Google OAuth before final submission.'
-  });
+  next();
 });
 
-app.get('/api/auth/config', (_req, res) =>
-  res.json({
-    googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
-    requiredEmail: 'reveille.bubbletea@gmail.com',
-    googleCallbackUrl
-  })
-);
-
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, dbConfigured: hasDbConfig() });
+app.get('/api/active-sessions', (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const sessions = Array.from(activeSessions.entries()).map(([id, s]) => ({ id, ...s }));
+  res.json({ sessions });
 });
 
-app.get('/cashier.html', requireStaff, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cashier.html'));
+// ─── Analytics routes ─────────────────────────────────────────────────────────
+
+function requireMgrRoute(req, res, next) {
+  if (req.isAuthenticated?.() && req.user?.role === 'manager') return next();
+  return res.status(403).json({ error: 'Manager only.' });
+}
+
+app.get('/api/analytics/hourly', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
+             COUNT(*) AS orders, COALESCE(SUM(totalamount),0) AS revenue
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY 1`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/manager.html', requireManager, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'manager.html'));
+app.get('/api/analytics/weekly', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT date_trunc('week', transactiontime)::date AS week_start,
+             COUNT(*) AS orders, COALESCE(SUM(totalamount),0) AS revenue
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY 1 DESC LIMIT 12`);
+    res.json({ rows: r.rows.reverse() });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+app.get('/api/analytics/peak-days', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT transactiontime::date AS day,
+             COALESCE(SUM(totalamount),0) AS revenue, COUNT(*) AS orders
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY revenue DESC LIMIT 10`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/payment-split', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ splits: [] });
+  try {
+    const r = await queryDb(`
+      SELECT paymentmethod AS method, COUNT(*) AS cnt, COALESCE(SUM(totalamount),0) AS total
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY total DESC`);
+    res.json({ splits: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
+      day_tx AS (
+        SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
+               totalamount, paymentmethod
+        FROM transactions
+        WHERE status='completed'
+          AND DATE(transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') = CURRENT_DATE AT TIME ZONE 'America/Chicago'
+      )
+      SELECT h.hour_of_day,
+             COALESCE(COUNT(d.totalamount),0) AS orders,
+             COALESCE(SUM(d.totalamount),0) AS revenue,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='cash' THEN d.totalamount ELSE 0 END),0) AS cash_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='card' THEN d.totalamount ELSE 0 END),0) AS card_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='applepay' THEN d.totalamount ELSE 0 END),0) AS applepay_total
+      FROM hours h LEFT JOIN day_tx d ON d.hour_of_day=h.hour_of_day
+      GROUP BY h.hour_of_day ORDER BY h.hour_of_day`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      WITH daily AS (
+        SELECT date_trunc('week',t.transactiontime)::date AS week_start,
+               t.transactiontime::date AS day,
+               SUM(t.totalamount) AS day_revenue,
+               COALESCE(SUM(ti.quantity),0) AS items_sold
+        FROM transactions t
+        LEFT JOIN transactionitem ti ON ti.transactionid=t.transactionid
+        WHERE t.status='completed'
+        GROUP BY 1,2
+      ),
+      ranked AS (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY day_revenue ASC) AS rn_low,
+                  ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY items_sold DESC) AS rn_high
+        FROM daily
+      )
+      SELECT week_start,
+             MAX(CASE WHEN rn_low=1 THEN day END) AS worst_revenue_day,
+             MAX(CASE WHEN rn_low=1 THEN day_revenue END) AS worst_day_revenue,
+             MAX(CASE WHEN rn_high=1 THEN day END) AS best_items_day,
+             MAX(CASE WHEN rn_high=1 THEN items_sold END) AS best_day_items_sold
+      FROM ranked GROUP BY week_start ORDER BY week_start DESC LIMIT 12`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Menu CRUD ────────────────────────────────────────────────────────────────
+
+app.get('/api/menu-all', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price, is_active FROM product ORDER BY category, name`);
+      return res.json({ items: r.rows.map(i => ({ ...i, id: Number(i.id), price: Number(i.price) })) });
+    }
+    const items = parseCsv(path.join(dataDir,'product.csv')).map(i => ({ id:Number(i.productid), name:i.name, category:i.category, price:Number(i.baseprice), is_active:i.is_active==='true' }));
+    res.json({ items });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/menu-item', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required for menu edits.' });
+  const { name, category, basePrice } = req.body || {};
+  if (!name || !category || isNaN(Number(basePrice))) return res.status(400).json({ error: 'name, category, basePrice required.' });
+  try {
+    const r = await queryDb(`INSERT INTO product (name, category, baseprice, is_active) VALUES ($1,$2,$3,true) RETURNING productid AS id`, [name, category, Number(basePrice)]);
+    res.status(201).json({ id: r.rows[0].id });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { name, category, basePrice } = req.body || {};
+  try {
+    await queryDb(`UPDATE product SET name=$1, category=$2, baseprice=$3 WHERE productid=$4`, [name, category, Number(basePrice), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/menu-item/:id/toggle', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE product SET is_active=$1 WHERE productid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE product SET is_active=false WHERE productid=$1`, [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Employee CRUD ────────────────────────────────────────────────────────────
+
+app.get('/api/employees', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT cashierid, firstname, lastname, hiredate, hoursworked, is_active, pin FROM cashier ORDER BY lastname, firstname`);
+      return res.json({ cashiers: r.rows });
+    }
+    const cashiers = parseCsv(path.join(dataDir,'cashier.csv')).map(r => ({ cashierid:r.cashierid, firstname:r.firstname, lastname:r.lastname, hiredate:r.hiredate, hoursworked:r.hoursworked, is_active:r.is_active==='true', pin:r.pin }));
+    res.json({ cashiers });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/managers', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT managerid, firstname, lastname, hiredate, is_active FROM manager ORDER BY lastname, firstname`);
+      return res.json({ managers: r.rows });
+    }
+    const managers = parseCsv(path.join(dataDir,'manager.csv')).map(r => ({ managerid:r.managerid, firstname:r.firstname, lastname:r.lastname, hiredate:r.hiredate, is_active:r.is_active==='true' }));
+    res.json({ managers });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/employees', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  if (!firstName || !lastName || !hireDate) return res.status(400).json({ error: 'firstName, lastName, hireDate required.' });
+  try {
+    const r = await queryDb(`INSERT INTO cashier (firstname, lastname, hiredate, pin, hoursworked, is_active) VALUES ($1,$2,$3,$4,0,true) RETURNING cashierid`, [firstName, lastName, hireDate, pin || '1234']);
+    res.status(201).json({ id: r.rows[0].cashierid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/employees/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  try {
+    await queryDb(`UPDATE cashier SET firstname=$1, lastname=$2, hiredate=$3, pin=$4 WHERE cashierid=$5`, [firstName, lastName, hireDate, pin || '1234', Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/employees/:id/toggle', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE cashier SET is_active=$1 WHERE cashierid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Project 3 Team 25 app running on port ${PORT}`);
-});
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
+app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));

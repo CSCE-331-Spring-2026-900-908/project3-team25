@@ -50,6 +50,7 @@ async function initCashier() {
   bindModButtons();
   bindCartActions();
   bindHelpers();
+  loadCashierWeather();
 
   // Close modify overlay when clicking the backdrop
   document.getElementById('cashier-modify-overlay').addEventListener('click', e => {
@@ -378,6 +379,36 @@ function bindHelpers() {
       out.textContent = e.message;
     }
   });
+}
+
+async function loadCashierWeather() {
+  const wrap = document.getElementById('cashier-weather-card');
+  if (!wrap) return;
+
+  wrap.innerHTML = '<p class="muted">Loading weather…</p>';
+
+  try {
+    const res = await fetch('/api/weather?city=College%20Station');
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Weather failed.');
+
+    wrap.innerHTML = `
+      <div class="weather-mini">
+        <div class="weather-main">
+          <strong>${data.city}</strong>
+          <span>${data.weatherLabel}</span>
+        </div>
+        <div class="weather-temp">${Math.round(data.temperature)}°F</div>
+        <p class="muted">
+          Feels like: ${Math.round(data.feelsLike ?? data.temperature)}°F · Wind: ${Math.round(data.windSpeed ?? 0)} mph
+        </p>
+        <p class="weather-suggestion">${data.drinkSuggestion}</p>
+      </div>
+    `;
+  } catch (err) {
+    wrap.innerHTML = `<p class="muted">${err.message}</p>`;
+  }
 }
 
 //  START 
