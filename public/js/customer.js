@@ -12,6 +12,7 @@ let appliedRewardLabel  = '';
 let appliedPromoCode    = null;
 let appliedPromoLabel   = '';
 let discountAmount      = 0;
+let spinPrizeDetails    = null; // { type, value } stored from spin result for deferred discount calc
 
 // Drink modal state
 let modalItem   = null;
@@ -400,6 +401,11 @@ async function loadCheckoutRewardsPanel() {
       }
     }
 
+    // If a spin prize was applied but discount not yet calculated (CSV mode or first review visit)
+    if (appliedPromoCode && spinPrizeDetails && discountAmount === 0) {
+      calcRewardDiscount(spinPrizeDetails.type, Number(spinPrizeDetails.value || 0));
+    }
+
     renderAppliedDiscount();
     renderTotals();
   } catch(e) {
@@ -504,6 +510,7 @@ function clearDiscount() {
   appliedPromoCode   = null;
   appliedPromoLabel  = '';
   discountAmount     = 0;
+  spinPrizeDetails   = null;
   const fb = document.getElementById('promo-feedback');
   if (fb) fb.textContent = '';
   renderAppliedDiscount();
@@ -557,7 +564,7 @@ async function openRewardsModal() {
         appliedPromoLabel  = '';
         // Calculate discount immediately using type/value from data attrs
         calcRewardDiscount(btn.dataset.type, Number(btn.dataset.value || 0));
-        showToast(`${btn.dataset.label} applied! −$${discountAmount.toFixed(2)} 🎉`);
+        showToast(`${btn.dataset.label} applied — −$${discountAmount.toFixed(2)}`);
         closeRewardsModal();
         renderAppliedDiscount();
         renderTotals();
@@ -599,10 +606,13 @@ const SPIN_SEGMENTS = [
   { label: '25% Off\nOrder',      color: '#cc6655' }
 ];
 
-let spinAngle     = 0;
-let spinning      = false;
-let canSpin       = false;
-let spinResult    = null;
+let spinAngle          = 0;
+let spinning           = false;
+let canSpin            = false;
+let spinResult         = null;
+let spinAnimDone       = false;
+let spinApiDone        = false;
+let hasSpunThisSession = false;
 
 function drawWheel() {
   const canvas  = document.getElementById('spin-canvas');
@@ -659,18 +669,28 @@ async function openSpinModal() {
   overlay.classList.add('open');
   drawWheel();
 
-  const btn     = document.getElementById('spin-btn');
-  const msgEl   = document.getElementById('spin-status-msg');
-  const result  = document.getElementById('spin-result');
+  const btn   = document.getElementById('spin-btn');
+  const msgEl = document.getElementById('spin-status-msg');
+  const result = document.getElementById('spin-result');
   result.classList.remove('show');
 
   if (!currentUser) {
     btn.disabled = true;
+    btn.textContent = 'SPIN!';
     msgEl.textContent = 'Sign in with your TAMU Google account to spin!';
     return;
   }
 
+  // Already spun this session — no need to re-check server
+  if (hasSpunThisSession) {
+    btn.disabled = true;
+    btn.textContent = 'Spun!';
+    msgEl.textContent = 'Already spun today. Come back tomorrow!';
+    return;
+  }
+
   btn.disabled = true;
+  btn.textContent = 'SPIN!';
   msgEl.textContent = 'Checking eligibility…';
   try {
     const res  = await fetch('/api/spin/status');
@@ -681,6 +701,7 @@ async function openSpinModal() {
       msgEl.textContent = 'Spin once per day for a chance to win prizes!';
     } else {
       btn.disabled = true;
+      btn.textContent = 'Spun!';
       msgEl.textContent = data.reason || 'Come back tomorrow!';
     }
   } catch(_) {
@@ -694,10 +715,56 @@ function closeSpinModal() {
   document.getElementById('spin-modal-overlay').classList.remove('open');
 }
 
+// Called when both animation and API have resolved
+function tryFinishSpin() {
+  if (!spinAnimDone || !spinApiDone) return;
+
+  spinning = false;
+  const result  = document.getElementById('spin-result');
+  const prizeEl = document.getElementById('spin-prize-label');
+  const codeEl  = document.getElementById('spin-promo-code');
+
+  if (spinResult) {
+    // Snap wheel to the correct prize segment so visual matches the prize
+    const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
+    const segIdx = SPIN_SEGMENTS.findIndex(
+      s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
+    );
+    if (segIdx >= 0) {
+      // Pointer is at 12 o'clock (−π/2 in canvas coords)
+      const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
+      const n = Math.round((spinAngle - base) / (2 * Math.PI));
+      spinAngle = base + n * 2 * Math.PI;
+      drawWheel();
+    }
+
+    prizeEl.textContent = `You won: ${spinResult.prize?.label || 'a prize'}!`;
+    codeEl.textContent  = spinResult.code ? `Code: ${spinResult.code}` : '';
+    result.classList.add('show');
+
+    if (spinResult.code) {
+      appliedPromoCode  = spinResult.code;
+      appliedPromoLabel = spinResult.prize?.label || 'Promo';
+      spinPrizeDetails  = spinResult.prize || null;
+      discountAmount    = 0;
+    }
+    showToast(`You won: ${spinResult.prize?.label}!`);
+  }
+
+  const btn = document.getElementById('spin-btn');
+  btn.textContent = 'Spun!';
+  canSpin = false;
+  hasSpunThisSession = true;
+}
+
 async function executeSpin() {
   if (!canSpin || spinning) return;
   spinning = true;
-  const btn  = document.getElementById('spin-btn');
+  spinAnimDone = false;
+  spinApiDone  = false;
+  spinResult   = null;
+
+  const btn = document.getElementById('spin-btn');
   btn.disabled = true;
   btn.textContent = 'Spinning…';
 
@@ -714,8 +781,13 @@ async function executeSpin() {
     const t = Math.min((now - startTime) / duration, 1);
     spinAngle = startAngle + (targetAngle - startAngle) * easeOut(t);
     drawWheel();
-    if (t < 1) { requestAnimationFrame(animate); }
-    else { finishSpin(); }
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinAnimDone = true;
+      if (!spinApiDone) btn.textContent = 'Processing…';
+      tryFinishSpin();
+    }
   }
   requestAnimationFrame(animate);
 
@@ -726,29 +798,8 @@ async function executeSpin() {
   } catch(_) {
     spinResult = { prize: { label: 'Free Topping', type: 'free_topping', value: 0 }, code: 'RBT-DEMO' };
   }
-}
-
-function finishSpin() {
-  spinning = false;
-  const result   = document.getElementById('spin-result');
-  const prizeEl  = document.getElementById('spin-prize-label');
-  const codeEl   = document.getElementById('spin-promo-code');
-
-  if (spinResult) {
-    prizeEl.textContent = `🎉 You won: ${spinResult.prize?.label || 'a prize'}!`;
-    codeEl.textContent  = spinResult.code ? `Code: ${spinResult.code}` : '';
-    result.classList.add('show');
-    if (spinResult.code) {
-      appliedPromoCode  = spinResult.code;
-      appliedPromoLabel = spinResult.prize?.label || 'Promo';
-      discountAmount    = 0;
-    }
-    showToast(`You won: ${spinResult.prize?.label}! 🎉`);
-  }
-
-  const btn = document.getElementById('spin-btn');
-  btn.textContent = 'Spun!';
-  canSpin = false;
+  spinApiDone = true;
+  tryFinishSpin();
 }
 
 document.getElementById('spin-btn').addEventListener('click', executeSpin);

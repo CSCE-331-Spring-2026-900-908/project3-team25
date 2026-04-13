@@ -1393,7 +1393,7 @@ body.voice-guide-enabled
 
 /* ── Rewards Bar (top of kiosk) ───────────────────────────────── */
 .rewards-topbar {
-  background: linear-gradient(90deg, var(--accent) 0%, #c05a4a 100%);
+  background: var(--accent);
   color: white;
   padding: 10px 20px;
   border-radius: 10px;
@@ -1662,24 +1662,14 @@ body.voice-guide-enabled
 .dashboard-card {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 28px 22px;
+  border-radius: 10px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   text-align: center;
-  cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.15s;
-  text-decoration: none;
-  color: var(--ink);
 }
-.dashboard-card:hover {
-  box-shadow: 0 8px 28px rgba(0,0,0,0.10);
-  transform: translateY(-3px);
-}
-.dashboard-card .dc-icon {
-  font-size: 2.4rem;
-  margin-bottom: 10px;
-}
-.dashboard-card h3 { margin: 0 0 4px; font-size: 1.05rem; }
-.dashboard-card p { margin: 0; font-size: 0.83rem; color: var(--muted); }
+.dashboard-card h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .dashboard-greeting {
   font-size: 1.5rem;
   font-weight: 800;

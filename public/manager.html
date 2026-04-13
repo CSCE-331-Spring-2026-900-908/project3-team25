@@ -221,12 +221,12 @@
 
     <!-- Tab bar -->
     <div class="mgr-tabs">
-      <button class="mgr-tab active" data-tab="overview">📊 Overview</button>
-      <button class="mgr-tab" data-tab="sales">📈 Sales Charts</button>
-      <button class="mgr-tab" data-tab="menu">🧋 Menu Editor</button>
-      <button class="mgr-tab" data-tab="inventory">📦 Inventory</button>
-      <button class="mgr-tab" data-tab="employees">👥 Employees</button>
-      <button class="mgr-tab" data-tab="reports">🗒️ Reports</button>
+      <button class="mgr-tab active" data-tab="overview">Overview</button>
+      <button class="mgr-tab" data-tab="sales">Sales Charts</button>
+      <button class="mgr-tab" data-tab="menu">Menu Editor</button>
+      <button class="mgr-tab" data-tab="inventory">Inventory</button>
+      <button class="mgr-tab" data-tab="employees">Employees</button>
+      <button class="mgr-tab" data-tab="reports">Reports</button>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -234,7 +234,7 @@
       <div class="two-col">
         <div>
           <div class="mgr-card">
-            <h3>⚠️ Low Stock Watchlist</h3>
+            <h3>Low Stock Watchlist</h3>
             <table>
               <thead><tr><th>Item</th><th>On Hand</th><th>Threshold</th><th>Status</th></tr></thead>
               <tbody id="inv-tbody"></tbody>
@@ -242,8 +242,8 @@
           </div>
           <div class="mgr-card">
             <div class="top-row" style="margin-bottom:12px;">
-              <h3 style="margin:0;">🕐 Recent Orders</h3>
-              <button class="action-btn" id="orders-refresh-btn" onclick="loadOverview()">🔄 Refresh</button>
+              <h3 style="margin:0;">Recent Orders</h3>
+              <button class="action-btn" id="orders-refresh-btn" onclick="loadOverview()">Refresh</button>
             </div>
             <div style="max-height:400px;overflow-y:auto;border-radius:8px;">
               <table>
@@ -255,11 +255,11 @@
         </div>
         <div>
           <div class="mgr-card">
-            <h3>📋 Menu Category Breakdown</h3>
+            <h3>Menu Category Breakdown</h3>
             <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
           </div>
           <div class="mgr-card">
-            <h3>💳 Payment Method Split</h3>
+            <h3>Payment Method Split</h3>
             <div class="chart-wrap"><canvas id="pay-chart"></canvas></div>
           </div>
         </div>
@@ -270,20 +270,20 @@
     <div class="mgr-panel" id="tab-sales">
       <div class="mgr-card">
         <div class="top-row">
-          <h3>📈 Revenue by Hour of Day</h3>
+          <h3>Revenue by Hour of Day</h3>
           <span class="muted" style="font-size:0.82rem;">All-time average</span>
         </div>
         <div class="chart-wrap" style="height:300px;"><canvas id="hourly-chart"></canvas></div>
       </div>
       <div class="mgr-card">
         <div class="top-row">
-          <h3>📅 Weekly Revenue</h3>
+          <h3>Weekly Revenue</h3>
           <span class="muted" style="font-size:0.82rem;">Last 12 weeks</span>
         </div>
         <div class="chart-wrap" style="height:300px;"><canvas id="weekly-chart"></canvas></div>
       </div>
       <div class="mgr-card">
-        <h3>🏆 Top 10 Revenue Days</h3>
+        <h3>Top 10 Revenue Days</h3>
         <table>
           <thead><tr><th>Date</th><th>Revenue</th><th>Orders</th></tr></thead>
           <tbody id="peak-tbody"></tbody>
@@ -295,7 +295,7 @@
     <div class="mgr-panel" id="tab-menu">
       <div class="mgr-card">
         <div class="top-row">
-          <h3>🧋 Menu Items</h3>
+          <h3>Menu Items</h3>
           <button class="action-btn primary" onclick="openAddMenuModal()">+ Add Item</button>
         </div>
         <div class="search-bar">
@@ -321,7 +321,7 @@
     <div class="mgr-panel" id="tab-inventory">
       <div class="mgr-card">
         <div class="top-row">
-          <h3>📦 All Inventory</h3>
+          <h3>All Inventory</h3>
           <div style="display:flex;gap:8px;">
             <select id="inv-filter" onchange="filterInvTable()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.85rem;">
               <option value="">All items</option>
@@ -344,15 +344,15 @@
       <!-- Who is logged in right now -->
       <div class="mgr-card" style="margin-bottom:18px;">
         <div class="top-row" style="margin-bottom:12px;">
-          <h3>🟢 Currently Logged In</h3>
-          <button class="action-btn" onclick="loadActiveSessions()">🔄 Refresh</button>
+          <h3>Currently Logged In</h3>
+          <button class="action-btn" onclick="loadActiveSessions()">Refresh</button>
         </div>
         <div id="active-sessions-list"><p class="muted" style="font-size:0.85rem;">Loading…</p></div>
       </div>
 
       <div class="mgr-card">
         <div class="top-row">
-          <h3>👥 Cashier Staff</h3>
+          <h3>Cashier Staff</h3>
           <button class="action-btn primary" onclick="openAddEmpModal()">+ Add Cashier</button>
         </div>
         <table>
@@ -363,7 +363,7 @@
 
       <div class="mgr-card">
         <div class="top-row">
-          <h3>👔 Manager Accounts</h3>
+          <h3>Manager Accounts</h3>
           <button class="action-btn primary" onclick="openAddMgrModal()">+ Add Manager</button>
         </div>
         <table>
@@ -377,8 +377,8 @@
     <div class="mgr-panel" id="tab-reports">
       <div class="mgr-card">
         <div class="top-row">
-          <h3>🗒️ X-Report — Today's Hourly Breakdown</h3>
-          <button class="action-btn primary" onclick="loadXReport()">🔄 Refresh</button>
+          <h3>X-Report — Today's Hourly Breakdown</h3>
+          <button class="action-btn primary" onclick="loadXReport()">Refresh</button>
         </div>
         <div class="xreport-grid" id="xreport-summary"></div>
         <table>
@@ -387,7 +387,7 @@
         </table>
       </div>
       <div class="mgr-card">
-        <h3>🏅 Best of the Worst — Weekly Extremes</h3>
+        <h3>Weekly Extremes</h3>
         <table>
           <thead><tr><th>Week Start</th><th>Worst Revenue Day</th><th>Worst Day $</th><th>Best Items Day</th><th>Items Sold</th></tr></thead>
           <tbody id="bow-tbody"></tbody>

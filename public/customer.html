@@ -78,7 +78,7 @@
   <div class="rewards-modal-overlay" id="rewards-modal-overlay" role="dialog" aria-modal="true" aria-label="Rewards">
     <div class="rewards-modal">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <h3>⭐ Your Rewards</h3>
+        <h3>Your Rewards</h3>
         <button type="button" id="rewards-modal-close" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);">✕</button>
       </div>
       <div class="pts-display" id="rewards-pts-display">0 pts</div>
@@ -90,7 +90,7 @@
       <div id="rewards-history-list"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
 
       <div style="margin-top:20px;display:flex;gap:10px;">
-        <button type="button" id="open-spin-btn" class="btn" style="flex:1;background:linear-gradient(90deg,var(--accent),#d07a5a);">🎡 Spin the Wheel</button>
+        <button type="button" id="open-spin-btn" class="btn" style="flex:1;">Spin the Wheel</button>
         <button type="button" id="rewards-modal-close2" class="btn ghost" style="flex:1;">Close</button>
       </div>
     </div>
@@ -99,8 +99,8 @@
   <!-- ── Spin Wheel Modal ───────────────────────────────── -->
   <div class="spin-modal-overlay" id="spin-modal-overlay" role="dialog" aria-modal="true" aria-label="Spin the wheel">
     <div class="spin-modal">
-      <h3>🎡 Spin &amp; Win!</h3>
-      <p id="spin-status-msg">Spin once per day for a chance to win prizes!</p>
+      <h3>Spin &amp; Win</h3>
+      <p id="spin-status-msg"></p>
       <div class="spin-wheel-wrap">
         <div class="spin-pointer">▼</div>
         <canvas id="spin-canvas" width="260" height="260"></canvas>
@@ -109,7 +109,6 @@
       <div class="spin-result" id="spin-result">
         <div id="spin-prize-label"></div>
         <div class="spin-code" id="spin-promo-code"></div>
-        <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Code auto-applied at checkout · expires in 7 days</div>
       </div>
       <div style="margin-top:18px;">
         <button type="button" id="spin-modal-close" class="btn ghost" style="width:100%;">Close</button>
@@ -189,8 +188,8 @@
             <div class="pts-value" id="topbar-pts">0</div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button type="button" class="btn-rewards" id="open-rewards-btn">⭐ Rewards</button>
-            <button type="button" class="btn-rewards" id="open-spin-topbar-btn">🎡 Spin</button>
+            <button type="button" class="btn-rewards" id="open-rewards-btn">Rewards</button>
+            <button type="button" class="btn-rewards" id="open-spin-topbar-btn">Spin</button>
           </div>
         </div>
 
@@ -291,7 +290,7 @@
     <!-- CONFIRMATION SCREEN -->
     <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
       <div class="order-shell confirmation-shell">
-        <h2 style="margin-bottom:8px;">Order placed! 🎉</h2>
+        <h2 style="margin-bottom:8px;">Order placed!</h2>
         <p class="muted" id="confirmation-message" style="margin-top:0;">Your order has been received.</p>
 
         <div class="summary-box" style="max-width:420px;margin:24px auto 0;">

@@ -61,7 +61,7 @@ async function loadOverview() {
     // Recent orders — show refresh time
     const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
     const refreshBtn = document.getElementById('orders-refresh-btn');
-    if (refreshBtn) refreshBtn.textContent = `🔄 Last updated ${now}`;
+    if (refreshBtn) refreshBtn.textContent = `Last updated ${now}`;
 
     document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
       <tr>
