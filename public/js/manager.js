@@ -148,9 +148,9 @@ async function loadSalesCharts() {
     });
 
     // Peak days table
-    document.getElementById('peak-tbody').innerHTML = (peak.rows || []).map((r,i) => `
+    document.getElementById('peak-tbody').innerHTML = (peak.rows || []).map(r => `
       <tr>
-        <td>${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${r.day||r.transactiontime||'—'}</td>
+        <td>${r.day||r.transactiontime||'—'}</td>
         <td><strong>${fmt(r.revenue)}</strong></td>
         <td>${fmtN(r.orders)}</td>
       </tr>`).join('') || '<tr><td colspan="3" class="muted">No data yet.</td></tr>';
