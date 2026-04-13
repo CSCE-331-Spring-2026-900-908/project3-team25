@@ -398,10 +398,10 @@ async function loadCashierWeather() {
     return m[Number(code)] || 'Mixed conditions';
   }
   function drinkSuggestion(temp, code) {
-    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — recommend cozy milk teas ☔';
-    if (temp >= 85) return 'Hot day — push fruit teas and extra ice ☀️';
-    if (temp >= 72) return 'Nice weather — fruit teas or milk teas work great 🌤';
-    return 'Cool weather — milk teas and warm flavors are popular 🍵';
+    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — recommend cozy milk teas.';
+    if (temp >= 85) return 'Hot day — push fruit teas and extra ice.';
+    if (temp >= 72) return 'Nice weather — fruit teas or milk teas work great.';
+    return 'Cool weather — milk teas and warm flavors are popular.';
   }
 
   try {
@@ -414,17 +414,16 @@ async function loadCashierWeather() {
     const feels = cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : null;
     const wind  = cur.wind_speed_10m       != null ? Math.round(cur.wind_speed_10m)       : null;
     const code  = cur.weather_code ?? null;
-    const icon  = cur.is_day ? '☀️' : '🌙';
 
     if (temp === null) throw new Error('No data');
 
     wrap.innerHTML = `
       <div style="display:grid;gap:6px;">
-        <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);">${icon} ${temp}°F</div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);">${temp}°F</div>
         <div style="font-size:0.85rem;color:var(--muted);">
           ${weatherLabel(code)}
           ${feels !== null ? ` · Feels like ${feels}°F` : ''}
-          ${wind  !== null ? ` · 💨 ${wind} mph` : ''}
+          ${wind  !== null ? ` · ${wind} mph wind` : ''}
         </div>
         <div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-top:4px;">${drinkSuggestion(temp, code)}</div>
       </div>`;
