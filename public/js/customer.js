@@ -973,24 +973,29 @@ async function loadCustomerWeather() {
     const res = await fetch('/api/weather?city=College%20Station');
     const data = await res.json();
 
-    if (!res.ok) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+    if (!res.ok || data.error) {
+      banner.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
       return;
     }
+
+    const temp   = data.temperature != null ? Math.round(data.temperature) : '—';
+    const feels  = data.feelsLike   != null ? Math.round(data.feelsLike)   : null;
+    const wind   = data.windSpeed   != null ? Math.round(data.windSpeed)   : null;
+    const icon   = data.isDay ? '☀️' : '🌙';
 
     banner.innerHTML = `
       <div class="weather-banner-content">
         <div>
-          <strong>${data.city}</strong> · ${data.weatherLabel}
+          <span class="weather-temp">${icon} ${temp}°F</span>
+          <span class="muted" style="margin-left:10px;">${data.weatherLabel || ''}</span>
+          ${feels ? `<span class="muted" style="margin-left:8px;font-size:0.85rem;">Feels like ${feels}°F</span>` : ''}
+          ${wind  ? `<span class="muted" style="margin-left:8px;font-size:0.85rem;">💨 ${wind} mph</span>`        : ''}
         </div>
-        <div>
-          ${Math.round(data.temperature)}°F · ${data.drinkSuggestion}
-        </div>
-      </div>
-    `;
+        <p class="weather-suggestion" style="margin:0;">${data.drinkSuggestion || ''}</p>
+      </div>`;
   } catch (_) {
-      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
-    }
+    banner.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+  }
 }
 
 async function init() {
