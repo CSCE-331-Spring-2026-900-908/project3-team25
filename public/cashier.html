@@ -6,25 +6,108 @@
   <title>Cashier POS | Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    /* PIN Overlay */
+    .pin-overlay {
+      position: fixed; inset: 0; background: var(--bg);
+      z-index: 3000; display: flex; align-items: center; justify-content: center;
+    }
+    .pin-overlay.hidden { display: none; }
+    .pin-box {
+      background: white; border: 1px solid var(--line); border-radius: 20px;
+      padding: 40px 36px; max-width: 380px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.12); text-align: center;
+    }
+    .pin-box .brand-badge { margin: 0 auto 16px; width: 60px; height: 60px; font-size: 1.4rem; }
+    .pin-box h2 { margin: 0 0 6px; font-size: 1.4rem; color: var(--accent-dark); }
+    .pin-box p.sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 24px; }
+    .pin-input-wrap { position: relative; margin-bottom: 14px; }
+    .pin-input-wrap input {
+      width: 100%; padding: 14px; text-align: center; font-size: 1.6rem;
+      letter-spacing: 0.35em; border: 2px solid var(--line); border-radius: 10px;
+      font-weight: 700; box-sizing: border-box;
+    }
+    .pin-input-wrap input:focus { outline: none; border-color: var(--accent); }
+    .pin-error { color: var(--accent); font-size: 0.85rem; min-height: 20px; margin-bottom: 10px; }
+    .pin-btn {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: 10px; font: inherit; font-size: 1rem;
+      font-weight: 700; cursor: pointer; margin-bottom: 14px;
+    }
+    .pin-btn:hover { filter: brightness(1.06); }
+    .pin-request-link { font-size: 0.83rem; color: var(--muted); cursor: pointer; text-decoration: underline; }
+    .request-access-form { margin-top: 16px; text-align: left; }
+    .request-access-form input {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+      border-radius: 8px; font: inherit; font-size: 0.9rem; margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .request-access-form .req-btn {
+      width: 100%; padding: 11px; background: var(--accent-dark); color: white;
+      border: none; border-radius: 8px; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    #request-msg { font-size: 0.82rem; margin-top: 6px; min-height: 18px; }
+    /* Lang select in topbar */
+    .cashier-lang-wrap { display: flex; align-items: center; gap: 8px; }
+    .cashier-lang-wrap select {
+      padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+      font: inherit; font-size: 0.82rem; background: white; cursor: pointer;
+    }
+    .logout-btn {
+      padding: 7px 14px; border: 1px solid var(--line); background: white;
+      border-radius: 8px; font: inherit; font-size: 0.82rem; cursor: pointer;
+      color: var(--accent-dark); font-weight: 600;
+    }
+    .logout-btn:hover { background: var(--bg); }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
+  </div>
+
+  <!-- PIN Overlay -->
+  <div class="pin-overlay" id="pin-overlay">
+    <div class="pin-box">
+      <div class="brand-badge" style="background:var(--accent);color:white;display:grid;place-items:center;border-radius:12px;">RB</div>
+      <h2>Reveille Bubble Tea</h2>
+      <p class="sub">Enter your staff PIN to begin</p>
+      <div class="pin-input-wrap">
+        <input type="password" id="pin-input" maxlength="8" placeholder="••••" autocomplete="off" />
+      </div>
+      <div class="pin-error" id="pin-error"></div>
+      <button class="pin-btn" id="pin-submit-btn">Sign In</button>
+      <div class="pin-request-link" id="pin-request-link">New here? Request access from a manager</div>
+      <div class="request-access-form hidden" id="request-access-form">
+        <input type="text"  id="request-name"  placeholder="Your full name" />
+        <input type="email" id="request-email" placeholder="Your TAMU email" />
+        <button class="req-btn" id="request-submit-btn">Submit Request</button>
+        <div id="request-msg"></div>
+      </div>
+    </div>
   </div>
 
   <div class="cashier-modify-overlay hidden" id="cashier-modify-overlay">
-    <div class="modify-card" id="cashier-modify-card">
-      <!-- injected by cashier.js -->
-    </div>
+    <div class="modify-card" id="cashier-modify-card"></div>
   </div>
 
   <main id="main-content" class="page-shell">
 
     <header class="cashier-topbar">
-      <span class="cashier-user-info">Logged in as: <strong id="cashier-user-name">—</strong></span>
+      <span class="cashier-user-info" data-ct="loggedIn">Logged in as:</span>
+      <strong id="cashier-user-name" style="margin-left:6px;color:var(--accent-dark);">—</strong>
       <div class="cashier-topbar-right">
-        <span class="cashier-user-info">Cashier POS</span>
+        <div class="cashier-lang-wrap">
+          <span class="muted" style="font-size:0.8rem;">Language</span>
+          <select id="cashier-lang-select">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh">中文</option>
+          </select>
+        </div>
+        <span class="cashier-user-info" data-ct="cashierPOS">Cashier POS</span>
+        <button class="logout-btn" id="cashier-logout-btn">Sign Out</button>
       </div>
     </header>
 
@@ -32,12 +115,11 @@
 
       <section class="cashier-cart-panel">
         <div class="cashier-cart-header">
-          <h2>Current Order</h2>
+          <h2 data-ct="currentOrder">Current Order</h2>
           <span class="badge" id="cashier-item-count">0 items</span>
         </div>
-
         <div class="cashier-cart-scroll">
-          <p class="cashier-cart-empty" id="cashier-cart-empty">No drinks added yet.</p>
+          <p class="cashier-cart-empty" id="cashier-cart-empty" data-ct="noItems">No drinks added yet.</p>
           <table class="cashier-cart-table" id="cashier-cart-table" style="display:none;">
             <thead>
               <tr>
@@ -52,87 +134,79 @@
             <tbody id="cashier-cart-body"></tbody>
           </table>
         </div>
-
         <div class="cashier-cart-footer">
-          <div class="summary-box" style="margin:0; padding:12px 14px; gap:7px;">
-            <div class="summary-row"><span>Subtotal</span><strong id="cashier-subtotal">$0.00</strong></div>
-            <div class="summary-row"><span>Tax (8.25%)</span><strong id="cashier-tax">$0.00</strong></div>
-            <div class="summary-row total"><span>Total</span><strong id="cashier-total">$0.00</strong></div>
+          <div class="summary-box" style="margin:0;padding:12px 14px;gap:7px;">
+            <div class="summary-row"><span data-ct="subtotal">Subtotal</span><strong id="cashier-subtotal">$0.00</strong></div>
+            <div class="summary-row"><span data-ct="tax">Tax (8.25%)</span><strong id="cashier-tax">$0.00</strong></div>
+            <div class="summary-row total"><span data-ct="total">Total</span><strong id="cashier-total">$0.00</strong></div>
           </div>
-
           <div class="cashier-pay-select">
-            <label for="cashier-payment-method">Payment</label>
+            <label for="cashier-payment-method" data-ct="payment">Payment</label>
             <select id="cashier-payment-method">
               <option value="card">Card</option>
               <option value="applepay">Apple Pay</option>
               <option value="cash">Cash</option>
             </select>
           </div>
-
           <div class="cashier-cart-actions">
-            <button class="btn cashier-checkout-btn" id="cashier-pay-btn">Checkout</button>
-            <button class="btn ghost" id="cashier-remove-btn">Remove Item</button>
-            <button class="btn ghost" id="cashier-clear-btn">Clear All</button>
+            <button class="btn cashier-checkout-btn" id="cashier-pay-btn" data-ct="checkout">Checkout</button>
+            <button class="btn ghost" id="cashier-remove-btn" data-ct="removeItem">Remove Item</button>
+            <button class="btn ghost" id="cashier-clear-btn" data-ct="clearAll">Clear All</button>
           </div>
-
           <p class="cashier-checkout-status" id="cashier-checkout-result"></p>
         </div>
       </section>
 
-      <nav class="cashier-cat-col" id="cashier-cat-col" aria-label="Menu categories">
-        <!-- injected by cashier.js -->
-      </nav>
+      <nav class="cashier-cat-col" id="cashier-cat-col" aria-label="Menu categories"></nav>
 
       <div class="cashier-product-area">
-        <div class="cashier-product-grid" id="cashier-product-grid">
-          <!-- injected by cashier.js -->
-        </div>
+        <div class="cashier-product-grid" id="cashier-product-grid"></div>
       </div>
 
     </div>
 
     <div class="cashier-bottom-bar">
-      <span class="cashier-mod-label">Modify selected:</span>
-      <button class="btn ghost mod-btn" id="mod-half-sweet">Half Sweet</button>
-      <button class="btn ghost mod-btn" id="mod-2x-sweet">2x Sweet</button>
-      <button class="btn ghost mod-btn" id="mod-half-ice">Half Ice</button>
-      <button class="btn ghost mod-btn" id="mod-no-ice">No Ice</button>
-      <button class="btn ghost mod-btn" id="mod-extra-boba">Extra Boba (+$0.75)</button>
+      <span class="cashier-mod-label" data-ct="modifySelected">Modify selected:</span>
+      <button class="btn ghost mod-btn" id="mod-half-sweet" data-ct="halfSweet">Half Sweet</button>
+      <button class="btn ghost mod-btn" id="mod-2x-sweet"  data-ct="twoXSweet">2x Sweet</button>
+      <button class="btn ghost mod-btn" id="mod-half-ice"  data-ct="halfIce">Half Ice</button>
+      <button class="btn ghost mod-btn" id="mod-no-ice"    data-ct="noIce">No Ice</button>
+      <button class="btn ghost mod-btn" id="mod-extra-boba" data-ct="extraBoba">Extra Boba (+$0.75)</button>
       <div class="mod-sep"></div>
-      <button class="btn mod-primary-btn" id="mod-modify-btn">Modify ▸</button>
+      <button class="btn mod-primary-btn" id="mod-modify-btn" data-ct="modify">Modify ▸</button>
     </div>
 
     <section class="helper-grid">
       <article class="helper-card">
-        <h3>Customer Translation</h3>
+        <h3 data-ct="custTranslation">Customer Translation</h3>
         <div class="button-row">
           <input id="cashier-translate-text" value="Would you like extra boba?" aria-label="Translate text" />
-          <select id="cashier-translate-target" aria-label="Translate target language">
+          <select id="cashier-translate-target" aria-label="Target language">
             <option value="es">Spanish</option>
             <option value="ar">Arabic</option>
             <option value="zh">Chinese</option>
+            <option value="vi">Vietnamese</option>
+            <option value="ko">Korean</option>
           </select>
         </div>
         <div class="button-row" style="margin-top:10px;">
-          <button class="btn" id="cashier-translate-btn">Translate</button>
+          <button class="btn" id="cashier-translate-btn" data-ct="translate">Translate</button>
         </div>
         <p id="cashier-translate-result" class="muted">Translation result appears here.</p>
       </article>
 
       <article class="helper-card">
-        <h3>Assistant Shortcut</h3>
+        <h3 data-ct="assistantShortcut">Assistant Shortcut</h3>
         <div class="button-row">
           <input id="cashier-assistant-input" placeholder="What is popular?" aria-label="Ask assistant" />
-          <button class="btn" id="cashier-assistant-btn">Ask</button>
+          <button class="btn" id="cashier-assistant-btn" data-ct="ask">Ask</button>
         </div>
         <p id="cashier-assistant-result" class="muted">Assistant reply appears here.</p>
       </article>
 
       <article class="helper-card">
-        <h3>Weather Suggestion</h3>
-        <div id="cashier-weather-card">
-          <p class="muted">Loading weather…</p>
-        </div>
+        <h3 data-ct="weatherSuggestion">Weather Suggestion</h3>
+        <div id="cashier-weather-card"><p class="muted">Loading weather…</p></div>
       </article>
     </section>
 

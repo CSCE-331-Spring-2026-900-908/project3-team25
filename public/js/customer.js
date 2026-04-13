@@ -142,10 +142,10 @@ const TRANSLATIONS = {
     weatherThunderstorm: 'Thunderstorm',
     weatherThunderstormHail: 'Thunderstorm + hail',
     weatherMixedConditions: 'Mixed conditions',
-    rainyDaySuggestion: 'Rainy day — cozy milk teas are perfect.',
-    hotDaySuggestion: 'Hot day — fruit teas and extra ice are a must.',
-    niceWeatherSuggestion: 'Nice weather — fruit teas or classic milk teas both work.',
-    coolWeatherSuggestion: 'Cool weather — milk teas and richer flavors hit the spot.',
+    rainyDaySuggestion: 'Rainy outside. Warm up with a Brown Sugar or Matcha Milk Tea.',
+    hotDaySuggestion: 'Really warm out. Strawberry or Peach Green Tea over ice is refreshing.',
+    niceWeatherSuggestion: 'Warm and sunny. Fruit teas are popular, especially Mango Green Tea.',
+    coolWeatherSuggestion: 'Getting cool outside. Brown Sugar Milk Tea or Thai Tea will warm you up.',
     feelsLike: 'Feels like',
     windMph: 'mph wind',
     promoCodePlaceholder: 'Promo code (e.g. RBT-ABC123)',
@@ -1495,10 +1495,13 @@ async function loadCustomerWeather() {
   }
 
   function drinkSuggestion(temp, code) {
-    if ([61, 63, 65, 80, 81, 82, 95].includes(Number(code))) return t('rainyDaySuggestion');
-    if (temp >= 85) return t('hotDaySuggestion');
-    if (temp >= 72) return t('niceWeatherSuggestion');
-    return t('coolWeatherSuggestion');
+    if ([61, 63, 65, 80, 81, 82, 95].includes(Number(code))) return 'Rainy outside. Warm up with a Brown Sugar or Matcha Milk Tea.';
+    if (temp >= 95) return 'Scorching hot! A Lychee or Mango Green Tea with extra ice is the move.';
+    if (temp >= 85) return 'Really warm out. Strawberry or Peach Green Tea over ice is refreshing.';
+    if (temp >= 75) return 'Warm and sunny. Fruit teas are flying today, especially Mango Green Tea.';
+    if (temp >= 65) return 'Mild and comfortable. Classic Milk Tea or Taro Milk Tea are great picks.';
+    if (temp >= 50) return 'Getting cool outside. Brown Sugar Milk Tea or Thai Tea will warm you up.';
+    return 'Cold out there. Rich milk teas like Matcha or Brown Sugar are perfect today.';
   }
 
   try {

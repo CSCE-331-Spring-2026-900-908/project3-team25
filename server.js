@@ -987,6 +987,132 @@ app.get('/api/weather-stats', (_req, res) => {
   });
 });
 
+// ─── PIN-based cashier session ────────────────────────────────────────────────
+
+// POST /api/cashier/pin-login  { pin }
+app.post('/api/cashier/pin-login', async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { pin } = req.body || {};
+  if (!pin) return res.status(400).json({ error: 'PIN required.' });
+  try {
+    // Check cashier table
+    const cr = await queryDb(`SELECT cashierid, firstname, lastname, is_active FROM cashier WHERE pin=$1`, [String(pin)]);
+    if (cr.rows.length > 0) {
+      const c = cr.rows[0];
+      if (!c.is_active) return res.status(403).json({ error: 'This account is inactive. Contact a manager.' });
+      // Log the session
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'cashier','login')`, [c.cashierid]).catch(() => {});
+      return res.json({ ok: true, role: 'cashier', cashierId: c.cashierid, name: `${c.firstname} ${c.lastname}` });
+    }
+    // Check manager table
+    const mr = await queryDb(`SELECT managerid, firstname, lastname, is_active FROM manager WHERE pin=$1`, [String(pin)]);
+    if (mr.rows.length > 0) {
+      const m = mr.rows[0];
+      if (!m.is_active) return res.status(403).json({ error: 'This account is inactive.' });
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'manager','login')`, [m.managerid]).catch(() => {});
+      return res.json({ ok: true, role: 'manager', cashierId: m.managerid, name: `${m.firstname} ${m.lastname}` });
+    }
+    return res.status(401).json({ error: 'Invalid PIN. Try again or ask a manager.' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/cashier/pin-logout  { cashierId, staffType }
+app.post('/api/cashier/pin-logout', async (req, res) => {
+  if (!hasDbConfig()) return res.json({ ok: true });
+  const { cashierId, staffType = 'cashier' } = req.body || {};
+  await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,$2,'logout')`, [cashierId, staffType]).catch(() => {});
+  res.json({ ok: true });
+});
+
+// POST /api/staff-requests  — new user requests access
+app.post('/api/staff-requests', async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { name, email, requestedRole = 'cashier' } = req.body || {};
+  if (!name || !email) return res.status(400).json({ error: 'Name and email required.' });
+  try {
+    await queryDb(
+      `INSERT INTO staff_requests (name, email, requested_role, status, created_at)
+       VALUES ($1,$2,$3,'pending',NOW())
+       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, status='pending', created_at=NOW()`,
+      [name, email, requestedRole]
+    );
+    res.status(201).json({ ok: true, message: 'Request submitted. A manager will approve your access.' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/staff-requests  — manager sees pending requests
+app.get('/api/staff-requests', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ requests: [] });
+  try {
+    const r = await queryDb(`SELECT * FROM staff_requests WHERE status='pending' ORDER BY created_at DESC`);
+    res.json({ requests: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/staff-requests/:id/approve  — manager approves, creates cashier/manager record
+app.post('/api/staff-requests/:id/approve', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { assignRole = 'cashier', pin } = req.body || {};
+  if (!pin) return res.status(400).json({ error: 'PIN required for new account.' });
+  try {
+    const rr = await queryDb(`SELECT * FROM staff_requests WHERE request_id=$1`, [Number(req.params.id)]);
+    const request = rr.rows[0];
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    const today = new Date().toISOString().slice(0,10);
+    let newId;
+    if (assignRole === 'manager') {
+      const nameParts = request.name.trim().split(' ');
+      const mr = await queryDb(
+        `INSERT INTO manager (firstname, lastname, hiredate, pin, is_active) VALUES ($1,$2,$3,$4,true) RETURNING managerid`,
+        [nameParts[0]||request.name, nameParts.slice(1).join(' ')||'', today, pin]
+      );
+      newId = mr.rows[0].managerid;
+    } else {
+      const nameParts = request.name.trim().split(' ');
+      const cr = await queryDb(
+        `INSERT INTO cashier (firstname, lastname, hiredate, pin, hoursworked, is_active) VALUES ($1,$2,$3,$4,0,true) RETURNING cashierid`,
+        [nameParts[0]||request.name, nameParts.slice(1).join(' ')||'', today, pin]
+      );
+      newId = cr.rows[0].cashierid;
+    }
+    await queryDb(`UPDATE staff_requests SET status='approved' WHERE request_id=$1`, [Number(req.params.id)]);
+    res.json({ ok: true, newId, assignRole });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/staff-requests/:id/deny
+app.post('/api/staff-requests/:id/deny', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ ok: true });
+  try {
+    await queryDb(`UPDATE staff_requests SET status='denied' WHERE request_id=$1`, [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/staff-log  — last 20 login/logout events
+app.get('/api/staff-log', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ log: [] });
+  try {
+    const r = await queryDb(`
+      SELECT sl.log_id, sl.staff_id, sl.staff_type, sl.action,
+             sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago' AS logged_at,
+             CASE sl.staff_type
+               WHEN 'cashier' THEN c.firstname || ' ' || c.lastname
+               WHEN 'manager' THEN m.firstname || ' ' || m.lastname
+               ELSE 'Unknown'
+             END AS staff_name
+      FROM staff_login_log sl
+      LEFT JOIN cashier c ON sl.staff_type='cashier' AND c.cashierid=sl.staff_id
+      LEFT JOIN manager m ON sl.staff_type='manager' AND m.managerid=sl.staff_id
+      ORDER BY sl.logged_at DESC LIMIT 20`);
+    res.json({ log: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
 app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));

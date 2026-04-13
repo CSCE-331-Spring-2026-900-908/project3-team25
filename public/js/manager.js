@@ -22,6 +22,8 @@ document.querySelectorAll('.mgr-tab').forEach(btn => {
     if (btn.dataset.tab === 'inventory') loadFullInventory();
     if (btn.dataset.tab === 'employees') loadEmployees();
     if (btn.dataset.tab === 'reports')   { loadXReport(); loadBestOfWorst(); }
+    if (btn.dataset.tab === 'requests')  loadStaffRequests();
+    if (btn.dataset.tab === 'loginlog')  loadLoginLog();
   });
 });
 
@@ -625,6 +627,95 @@ async function loadUser() {
     const el = document.getElementById('mgr-user-name');
     if (el) el.textContent = `${data.user.firstName || data.user.displayName} · Manager`;
   }
+}
+
+// ── Staff Requests ────────────────────────────────────────────────────────────
+async function loadStaffRequests() {
+  const el = document.getElementById('staff-requests-list');
+  if (!el) return;
+  el.innerHTML = '<p class="muted">Loading…</p>';
+  try {
+    const res  = await fetch('/api/staff-requests');
+    const data = res.ok ? await res.json() : { requests: [] };
+    const reqs = data.requests || [];
+    if (!reqs.length) { el.innerHTML = '<p class="muted">No pending requests.</p>'; return; }
+    el.innerHTML = reqs.map(r => `
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="font-weight:600;">${r.name}</div>
+          <div style="font-size:0.82rem;color:var(--muted);">${r.email} · Requested: ${r.requested_role} · ${new Date(r.created_at).toLocaleDateString()}</div>
+        </div>
+        <select id="req-role-${r.request_id}" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.85rem;">
+          <option value="cashier">Cashier</option>
+          <option value="manager">Manager</option>
+        </select>
+        <input type="text" id="req-pin-${r.request_id}" placeholder="Assign PIN" maxlength="8"
+          style="width:110px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.85rem;" />
+        <button class="action-btn primary" onclick="approveRequest(${r.request_id})">Approve</button>
+        <button class="action-btn danger"  onclick="denyRequest(${r.request_id})">Deny</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; }
+}
+
+async function approveRequest(id) {
+  const role = document.getElementById(`req-role-${id}`)?.value || 'cashier';
+  const pin  = document.getElementById(`req-pin-${id}`)?.value.trim();
+  if (!pin) { alert('Please assign a PIN before approving.'); return; }
+  const res = await fetch(`/api/staff-requests/${id}/approve`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ assignRole: role, pin })
+  });
+  if (res.ok) { loadStaffRequests(); loadEmployees(); }
+  else { const d = await res.json(); alert('Error: ' + (d.error||'Approve failed.')); }
+}
+
+async function denyRequest(id) {
+  if (!confirm('Deny this access request?')) return;
+  const res = await fetch(`/api/staff-requests/${id}/deny`, { method: 'POST' });
+  if (res.ok) loadStaffRequests();
+}
+
+window.approveRequest = approveRequest;
+window.denyRequest    = denyRequest;
+
+// ── Login Log ─────────────────────────────────────────────────────────────────
+async function loadLoginLog() {
+  const el = document.getElementById('login-log-list');
+  if (!el) return;
+  el.innerHTML = '<p class="muted">Loading…</p>';
+  try {
+    const res  = await fetch('/api/staff-log');
+    const data = res.ok ? await res.json() : { log: [] };
+    const log  = data.log || [];
+    if (!log.length) { el.innerHTML = '<p class="muted">No login activity yet.</p>'; return; }
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Staff</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Role</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Action</th>
+            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${log.map(row => `
+            <tr>
+              <td style="padding:10px 10px;border-bottom:1px solid var(--line);font-weight:600;">${row.staff_name||'Unknown'}</td>
+              <td style="padding:10px 10px;border-bottom:1px solid var(--line);text-transform:capitalize;">${row.staff_type}</td>
+              <td style="padding:10px 10px;border-bottom:1px solid var(--line);">
+                <span style="padding:3px 8px;border-radius:6px;font-size:0.78rem;font-weight:700;
+                  background:${row.action==='login'?'rgba(21,128,61,0.1)':'rgba(220,38,38,0.08)'};
+                  color:${row.action==='login'?'#15803d':'#dc2626'};">
+                  ${row.action}
+                </span>
+              </td>
+              <td style="padding:10px 10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:0.82rem;">
+                ${new Date(row.logged_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
