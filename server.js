@@ -248,20 +248,9 @@ app.get('/api/dashboard', async (req, res) => {
 
 app.get('/api/orders/recent', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
-  const limit = Math.min(Number(req.query.limit || 50), 200);
   try {
-    if (hasDbConfig()) {
-      const r = await queryDb(`
-        SELECT t.transactionid, t.cashierid,
-               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
-               t.transactiontime, t.totalamount, t.paymentmethod, t.status
-        FROM transactions t
-        LEFT JOIN cashier c ON c.cashierid = t.cashierid
-        ORDER BY t.transactiontime DESC
-        LIMIT $1`, [limit]);
-      return res.json({ items: r.rows, source: 'database' });
-    }
-    res.json({ items: [...fallbackTransactions].reverse().slice(0, limit), source: 'fallback' });
+    if (hasDbConfig()) { const r = await queryDb(`SELECT transactionid,cashierid,transactiontime,totalamount,paymentmethod,status FROM transactions ORDER BY transactiontime DESC LIMIT 10`); return res.json({ items: r.rows, source: 'database' }); }
+    res.json({ items: [...fallbackTransactions].reverse().slice(0,10), source: 'fallback' });
   } catch(e) { res.status(500).json({ error: 'Failed.', details: e.message }); }
 });
 
