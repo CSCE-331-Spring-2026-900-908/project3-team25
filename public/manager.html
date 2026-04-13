@@ -6,80 +6,328 @@
   <title>Manager Dashboard | Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Manager-only styles ── */
+    .mgr-tabs { display:flex; gap:4px; margin-bottom:24px; flex-wrap:wrap; }
+    .mgr-tab  { padding:10px 20px; border:1px solid var(--line); border-radius:8px; background:white;
+                cursor:pointer; font:inherit; font-size:0.9rem; font-weight:600; color:var(--muted);
+                transition:all 0.15s; }
+    .mgr-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .mgr-tab:hover:not(.active) { background:var(--bg); color:var(--ink); }
+
+    .mgr-panel { display:none; }
+    .mgr-panel.active { display:block; }
+
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+    .stat-card { background:white; border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
+    .stat-card .sv { font-size:1.8rem; font-weight:800; color:var(--accent); margin:0 0 2px; }
+    .stat-card .sl { font-size:0.8rem; color:var(--muted); margin:0; }
+    .stat-card.green .sv { color:#15803d; }
+    .stat-card.blue  .sv { color:#1d4ed8; }
+
+    .mgr-card { background:white; border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px; }
+    .mgr-card h3 { margin:0 0 14px; font-size:1.05rem; }
+
+    .chart-wrap { position:relative; height:260px; }
+
+    table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+    th { text-align:left; padding:8px 10px; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); border-bottom:2px solid var(--line); }
+    td { padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:var(--bg); }
+
+    .badge-low  { background:rgba(220,38,38,0.1); color:#dc2626; padding:3px 8px; border-radius:6px; font-size:0.78rem; font-weight:700; }
+    .badge-ok   { background:rgba(21,128,61,0.1); color:#15803d; padding:3px 8px; border-radius:6px; font-size:0.78rem; font-weight:700; }
+    .badge-role { background:rgba(158,59,53,0.1); color:var(--accent-dark); padding:3px 8px; border-radius:6px; font-size:0.78rem; font-weight:700; }
+
+    .emp-avatar { width:34px; height:34px; border-radius:50%; background:var(--accent); color:white;
+                  display:inline-grid; place-items:center; font-weight:700; font-size:0.85rem; margin-right:8px; }
+    .emp-row td:first-child { display:flex; align-items:center; }
+
+    .action-btn { padding:6px 12px; border-radius:6px; border:1px solid var(--line); background:white;
+                  cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--accent-dark); margin-right:4px; }
+    .action-btn:hover { background:var(--bg); }
+    .action-btn.danger { color:#dc2626; border-color:rgba(220,38,38,0.3); }
+    .action-btn.danger:hover { background:rgba(220,38,38,0.06); }
+    .action-btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
+    .action-btn.primary:hover { filter:brightness(1.06); }
+
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    .form-row.single { grid-template-columns:1fr; }
+    .form-group label { display:block; font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-bottom:4px; }
+    .form-group input, .form-group select {
+      width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px;
+      font:inherit; font-size:0.9rem; background:white; box-sizing:border-box;
+    }
+    .form-group input:focus, .form-group select:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:transparent; }
+
+    .modal-overlay { position:fixed; inset:0; background:rgba(61,37,30,0.45); backdrop-filter:blur(4px);
+                     z-index:2000; display:flex; align-items:center; justify-content:center; padding:16px;
+                     opacity:0; pointer-events:none; transition:opacity 0.2s; }
+    .modal-overlay.open { opacity:1; pointer-events:all; }
+    .modal-box { background:#fffaf7; border-radius:16px; max-width:480px; width:100%; padding:28px;
+                 box-shadow:0 20px 60px rgba(0,0,0,0.18); transform:translateY(16px); transition:transform 0.2s; }
+    .modal-overlay.open .modal-box { transform:translateY(0); }
+    .modal-box h3 { margin:0 0 18px; font-size:1.2rem; }
+    .modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @media(max-width:700px){ .two-col { grid-template-columns:1fr; } .form-row { grid-template-columns:1fr; } }
+
+    .search-bar { display:flex; gap:10px; margin-bottom:14px; }
+    .search-bar input { flex:1; padding:9px 12px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:0.88rem; }
+    .top-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+    .top-row h3 { margin:0; font-size:1.05rem; }
+
+    .clock-dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .clock-dot.in  { background:#15803d; }
+    .clock-dot.out { background:#9ca3af; }
+
+    .xreport-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:16px; }
+    .xr-cell { background:var(--bg); border-radius:10px; padding:10px 12px; text-align:center; }
+    .xr-cell .xv { font-size:1.1rem; font-weight:700; color:var(--accent); }
+    .xr-cell .xl { font-size:0.75rem; color:var(--muted); }
+
+    .toggle-active { display:inline-flex; align-items:center; gap:6px; }
+    .toggle-switch { width:36px; height:20px; background:#d1d5db; border-radius:999px; position:relative; cursor:pointer; border:none; transition:background 0.2s; }
+    .toggle-switch.on { background:#15803d; }
+    .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:white; border-radius:50%; transition:transform 0.2s; }
+    .toggle-switch.on::after { transform:translateX(16px); }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
-  <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+  <div class="accessibility-toolbar">
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
+  </div>
+
+  <!-- Employee Modal -->
+  <div class="modal-overlay" id="emp-modal">
+    <div class="modal-box">
+      <h3 id="emp-modal-title">Add Employee</h3>
+      <input type="hidden" id="emp-modal-id" />
+      <div class="form-row">
+        <div class="form-group"><label>First Name</label><input type="text" id="emp-first" placeholder="First name" /></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="emp-last" placeholder="Last name" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Hire Date</label><input type="date" id="emp-hire" /></div>
+        <div class="form-group"><label>PIN</label><input type="text" id="emp-pin" placeholder="4-digit PIN" maxlength="4" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeEmpModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveEmployee()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu Item Modal -->
+  <div class="modal-overlay" id="menu-modal">
+    <div class="modal-box">
+      <h3 id="menu-modal-title">Add Menu Item</h3>
+      <input type="hidden" id="menu-modal-id" />
+      <div class="form-row single">
+        <div class="form-group"><label>Item Name</label><input type="text" id="menu-name" placeholder="e.g. Mango Green Tea" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="menu-category">
+            <option value="coffee">Coffee</option>
+            <option value="fruit_tea">Fruit Tea</option>
+            <option value="milk_tea">Milk Tea</option>
+            <option value="seasonal">Seasonal</option>
+            <option value="tea">Tea</option>
+            <option value="topping">Topping</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Base Price ($)</label><input type="number" id="menu-price" step="0.01" min="0" placeholder="5.99" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeMenuModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveMenuItem()">Save</button>
+      </div>
+    </div>
   </div>
 
   <main id="main-content" class="page-shell">
-    <header class="brand-strip">
+    <header class="brand-strip" style="margin-bottom:20px;">
       <div class="brand-lockup">
         <div class="brand-badge">RB</div>
-        <div>
-          <h1>Manager Dashboard</h1>
-        </div>
+        <div><h1 style="margin:0;font-size:1.4rem;">Manager Dashboard</h1></div>
       </div>
-      <div class="cashier-topbar-right">
-        <span class="cashier-user-info">Manager Dashboard</span>
-        <a href="/" class="btn ghost cashier-portal-link">Portal</a>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="mgr-user-name" class="muted" style="font-size:0.85rem;"></span>
+        <a href="/" class="btn ghost" style="font-size:0.82rem;padding:7px 12px;">Portal</a>
       </div>
     </header>
 
-    <section class="metric-grid" id="metric-grid">
-      <article class="metric"><div class="value">--</div><small>Loading...</small></article>
-    </section>
+    <!-- Stat row -->
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card"><div class="sv" id="s-items">--</div><p class="sl">Active Menu Items</p></div>
+      <div class="stat-card"><div class="sv" id="s-inv">--</div><p class="sl">Inventory Ingredients</p></div>
+      <div class="stat-card"><div class="sv" id="s-low">--</div><p class="sl">Low Stock Alerts</p></div>
+      <div class="stat-card green"><div class="sv" id="s-rev">--</div><p class="sl">Total Revenue</p></div>
+      <div class="stat-card blue"><div class="sv" id="s-orders">--</div><p class="sl">Total Orders</p></div>
+    </div>
 
-    <section class="portal-grid">
-      <section class="summary-stack">
-        <article class="portal-card">
-          <h2 style="margin-top:0;">Low stock watchlist</h2>
-          <div class="table-wrap">
+    <!-- Tab bar -->
+    <div class="mgr-tabs">
+      <button class="mgr-tab active" data-tab="overview">📊 Overview</button>
+      <button class="mgr-tab" data-tab="sales">📈 Sales Charts</button>
+      <button class="mgr-tab" data-tab="menu">🧋 Menu Editor</button>
+      <button class="mgr-tab" data-tab="inventory">📦 Inventory</button>
+      <button class="mgr-tab" data-tab="employees">👥 Employees</button>
+      <button class="mgr-tab" data-tab="reports">🗒️ Reports</button>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div class="mgr-panel active" id="tab-overview">
+      <div class="two-col">
+        <div>
+          <div class="mgr-card">
+            <h3>⚠️ Low Stock Watchlist</h3>
             <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>On hand</th>
-                  <th>Threshold</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="inventory-table-body"></tbody>
+              <thead><tr><th>Item</th><th>On Hand</th><th>Threshold</th><th>Status</th></tr></thead>
+              <tbody id="inv-tbody"></tbody>
             </table>
           </div>
-        </article>
-
-        <article class="portal-card">
-          <h2 style="margin-top:0;">Recent orders</h2>
-          <div class="table-wrap">
+          <div class="mgr-card">
+            <h3>🕐 Recent Orders</h3>
             <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Cashier</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="recent-orders-body"></tbody>
+              <thead><tr><th>ID</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
+              <tbody id="orders-tbody"></tbody>
             </table>
           </div>
-        </article>
+        </div>
+        <div>
+          <div class="mgr-card">
+            <h3>📋 Menu Category Breakdown</h3>
+            <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+          </div>
+          <div class="mgr-card">
+            <h3>💳 Payment Method Split</h3>
+            <div class="chart-wrap"><canvas id="pay-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <article class="portal-card">
-          <h2 style="margin-top:0;">Notes</h2>
-          <ul id="announcements" class="notice-list"></ul>
-        </article>
-      </section>
+    <!-- SALES CHARTS TAB -->
+    <div class="mgr-panel" id="tab-sales">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>📈 Revenue by Hour of Day</h3>
+          <span class="muted" style="font-size:0.82rem;">All-time average</span>
+        </div>
+        <div class="chart-wrap" style="height:300px;"><canvas id="hourly-chart"></canvas></div>
+      </div>
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>📅 Weekly Revenue</h3>
+          <span class="muted" style="font-size:0.82rem;">Last 12 weeks</span>
+        </div>
+        <div class="chart-wrap" style="height:300px;"><canvas id="weekly-chart"></canvas></div>
+      </div>
+      <div class="mgr-card">
+        <h3>🏆 Top 10 Revenue Days</h3>
+        <table>
+          <thead><tr><th>Date</th><th>Revenue</th><th>Orders</th></tr></thead>
+          <tbody id="peak-tbody"></tbody>
+        </table>
+      </div>
+    </div>
 
-      <aside class="summary-stack">
-        <article class="promo-card">
-          <h3 style="margin-top:0;">Menu category breakdown</h3>
-          <section class="metric-grid" id="category-grid"></section>
-        </article>
-      </aside>
-    </section>
+    <!-- MENU EDITOR TAB -->
+    <div class="mgr-panel" id="tab-menu">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>🧋 Menu Items</h3>
+          <button class="action-btn primary" onclick="openAddMenuModal()">+ Add Item</button>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="menu-search" placeholder="Search menu items…" oninput="filterMenuTable()" />
+          <select id="menu-filter-cat" onchange="filterMenuTable()" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.88rem;">
+            <option value="">All categories</option>
+            <option value="coffee">Coffee</option>
+            <option value="fruit_tea">Fruit Tea</option>
+            <option value="milk_tea">Milk Tea</option>
+            <option value="seasonal">Seasonal</option>
+            <option value="tea">Tea</option>
+            <option value="topping">Topping</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody id="menu-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVENTORY TAB -->
+    <div class="mgr-panel" id="tab-inventory">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>📦 All Inventory</h3>
+          <div style="display:flex;gap:8px;">
+            <select id="inv-filter" onchange="filterInvTable()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.85rem;">
+              <option value="">All items</option>
+              <option value="low">Low stock only</option>
+              <option value="ok">OK stock only</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Item</th><th>Unit</th><th>On Hand</th><th>Threshold</th><th>Cost/Unit</th><th>Vendor</th><th>Status</th></tr></thead>
+          <tbody id="full-inv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES TAB -->
+    <div class="mgr-panel" id="tab-employees">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>👥 Cashier Staff</h3>
+          <button class="action-btn primary" onclick="openAddEmpModal()">+ Add Cashier</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Hire Date</th><th>Hours Worked</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="emp-tbody"></tbody>
+        </table>
+      </div>
+      <div class="mgr-card">
+        <h3>👔 Manager Accounts</h3>
+        <table>
+          <thead><tr><th>Name</th><th>Hire Date</th><th>Status</th></tr></thead>
+          <tbody id="mgr-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REPORTS TAB -->
+    <div class="mgr-panel" id="tab-reports">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>🗒️ X-Report — Today's Hourly Breakdown</h3>
+          <button class="action-btn primary" onclick="loadXReport()">🔄 Refresh</button>
+        </div>
+        <div class="xreport-grid" id="xreport-summary"></div>
+        <table>
+          <thead><tr><th>Hour</th><th>Orders</th><th>Revenue</th><th>Card</th><th>Cash</th><th>Apple Pay</th></tr></thead>
+          <tbody id="xreport-tbody"></tbody>
+        </table>
+      </div>
+      <div class="mgr-card">
+        <h3>🏅 Best of the Worst — Weekly Extremes</h3>
+        <table>
+          <thead><tr><th>Week Start</th><th>Worst Revenue Day</th><th>Worst Day $</th><th>Best Items Day</th><th>Items Sold</th></tr></thead>
+          <tbody id="bow-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 
   <script src="/js/manager.js"></script>

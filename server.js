@@ -480,7 +480,213 @@ app.get('/manager.html', (req, res) => {
   res.redirect('/?unauthorized=1');
 });
 
+
+// ─── Analytics routes ─────────────────────────────────────────────────────────
+
+function requireMgrRoute(req, res, next) {
+  if (req.isAuthenticated?.() && req.user?.role === 'manager') return next();
+  return res.status(403).json({ error: 'Manager only.' });
+}
+
+app.get('/api/analytics/hourly', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
+             COUNT(*) AS orders, COALESCE(SUM(totalamount),0) AS revenue
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY 1`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/weekly', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT date_trunc('week', transactiontime)::date AS week_start,
+             COUNT(*) AS orders, COALESCE(SUM(totalamount),0) AS revenue
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY 1 DESC LIMIT 12`);
+    res.json({ rows: r.rows.reverse() });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/peak-days', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      SELECT transactiontime::date AS day,
+             COALESCE(SUM(totalamount),0) AS revenue, COUNT(*) AS orders
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY revenue DESC LIMIT 10`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/payment-split', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ splits: [] });
+  try {
+    const r = await queryDb(`
+      SELECT paymentmethod AS method, COUNT(*) AS cnt, COALESCE(SUM(totalamount),0) AS total
+      FROM transactions WHERE status='completed'
+      GROUP BY 1 ORDER BY total DESC`);
+    res.json({ splits: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
+      day_tx AS (
+        SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
+               totalamount, paymentmethod
+        FROM transactions
+        WHERE status='completed' AND DATE(transactiontime)=CURRENT_DATE
+      )
+      SELECT h.hour_of_day,
+             COALESCE(COUNT(d.totalamount),0) AS orders,
+             COALESCE(SUM(d.totalamount),0) AS revenue,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='cash' THEN d.totalamount ELSE 0 END),0) AS cash_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='card' THEN d.totalamount ELSE 0 END),0) AS card_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='applepay' THEN d.totalamount ELSE 0 END),0) AS applepay_total
+      FROM hours h LEFT JOIN day_tx d ON d.hour_of_day=h.hour_of_day
+      GROUP BY h.hour_of_day ORDER BY h.hour_of_day`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [] });
+  try {
+    const r = await queryDb(`
+      WITH daily AS (
+        SELECT date_trunc('week',t.transactiontime)::date AS week_start,
+               t.transactiontime::date AS day,
+               SUM(t.totalamount) AS day_revenue,
+               COALESCE(SUM(ti.quantity),0) AS items_sold
+        FROM transactions t
+        LEFT JOIN transactionitem ti ON ti.transactionid=t.transactionid
+        WHERE t.status='completed'
+        GROUP BY 1,2
+      ),
+      ranked AS (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY day_revenue ASC) AS rn_low,
+                  ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY items_sold DESC) AS rn_high
+        FROM daily
+      )
+      SELECT week_start,
+             MAX(CASE WHEN rn_low=1 THEN day END) AS worst_revenue_day,
+             MAX(CASE WHEN rn_low=1 THEN day_revenue END) AS worst_day_revenue,
+             MAX(CASE WHEN rn_high=1 THEN day END) AS best_items_day,
+             MAX(CASE WHEN rn_high=1 THEN items_sold END) AS best_day_items_sold
+      FROM ranked GROUP BY week_start ORDER BY week_start DESC LIMIT 12`);
+    res.json({ rows: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Menu CRUD ────────────────────────────────────────────────────────────────
+
+app.get('/api/menu-all', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price, is_active FROM product ORDER BY category, name`);
+      return res.json({ items: r.rows.map(i => ({ ...i, id: Number(i.id), price: Number(i.price) })) });
+    }
+    const items = parseCsv(path.join(dataDir,'product.csv')).map(i => ({ id:Number(i.productid), name:i.name, category:i.category, price:Number(i.baseprice), is_active:i.is_active==='true' }));
+    res.json({ items });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/menu-item', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required for menu edits.' });
+  const { name, category, basePrice } = req.body || {};
+  if (!name || !category || isNaN(Number(basePrice))) return res.status(400).json({ error: 'name, category, basePrice required.' });
+  try {
+    const r = await queryDb(`INSERT INTO product (name, category, baseprice, is_active) VALUES ($1,$2,$3,true) RETURNING productid AS id`, [name, category, Number(basePrice)]);
+    res.status(201).json({ id: r.rows[0].id });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { name, category, basePrice } = req.body || {};
+  try {
+    await queryDb(`UPDATE product SET name=$1, category=$2, baseprice=$3 WHERE productid=$4`, [name, category, Number(basePrice), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/menu-item/:id/toggle', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE product SET is_active=$1 WHERE productid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE product SET is_active=false WHERE productid=$1`, [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Employee CRUD ────────────────────────────────────────────────────────────
+
+app.get('/api/employees', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT cashierid, firstname, lastname, hiredate, hoursworked, is_active, pin FROM cashier ORDER BY lastname, firstname`);
+      return res.json({ cashiers: r.rows });
+    }
+    const cashiers = parseCsv(path.join(dataDir,'cashier.csv')).map(r => ({ cashierid:r.cashierid, firstname:r.firstname, lastname:r.lastname, hiredate:r.hiredate, hoursworked:r.hoursworked, is_active:r.is_active==='true', pin:r.pin }));
+    res.json({ cashiers });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/managers', requireMgrRoute, async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT managerid, firstname, lastname, hiredate, is_active FROM manager ORDER BY lastname, firstname`);
+      return res.json({ managers: r.rows });
+    }
+    const managers = parseCsv(path.join(dataDir,'manager.csv')).map(r => ({ managerid:r.managerid, firstname:r.firstname, lastname:r.lastname, hiredate:r.hiredate, is_active:r.is_active==='true' }));
+    res.json({ managers });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/employees', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  if (!firstName || !lastName || !hireDate) return res.status(400).json({ error: 'firstName, lastName, hireDate required.' });
+  try {
+    const r = await queryDb(`INSERT INTO cashier (firstname, lastname, hiredate, pin, hoursworked, is_active) VALUES ($1,$2,$3,$4,0,true) RETURNING cashierid`, [firstName, lastName, hireDate, pin || '1234']);
+    res.status(201).json({ id: r.rows[0].cashierid });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/employees/:id', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { firstName, lastName, hireDate, pin } = req.body || {};
+  try {
+    await queryDb(`UPDATE cashier SET firstname=$1, lastname=$2, hiredate=$3, pin=$4 WHERE cashierid=$5`, [firstName, lastName, hireDate, pin || '1234', Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/employees/:id/toggle', requireMgrRoute, async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  try {
+    await queryDb(`UPDATE cashier SET is_active=$1 WHERE cashierid=$2`, [Boolean(req.body.active), Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
-
 app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));

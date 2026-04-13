@@ -330,6 +330,8 @@ function renderTotals() {
 }
 
 // ─── Rewards panel on review screen ──────────────────────────────────────────
+let rewardsCatalogCache = [];
+
 async function loadCheckoutRewardsPanel() {
   const panel = document.getElementById('checkout-rewards-panel');
   if (!panel) return;
@@ -337,56 +339,111 @@ async function loadCheckoutRewardsPanel() {
   if (!currentUser) { panel.style.display = 'none'; return; }
   panel.style.display = '';
 
-  const [rwRes, promoRes] = await Promise.all([
-    fetch('/api/rewards'),
-    fetch('/api/promos')
-  ]);
-  const rwData    = await rwRes.json();
-  const promoData = await promoRes.json();
+  try {
+    const [rwRes, promoRes] = await Promise.all([
+      fetch('/api/rewards'),
+      fetch('/api/promos')
+    ]);
+    const rwData    = await rwRes.json();
+    const promoData = await promoRes.json();
 
-  // Update topbar pts
-  updateTopbarPts(rwData.userPoints ?? currentUser.rewardPoints ?? 0);
+    const userPts = rwData.userPoints ?? currentUser.rewardPoints ?? 0;
+    updateTopbarPts(userPts);
+    rewardsCatalogCache = rwData.catalog || [];
 
-  // Reward selector
-  const wrap = document.getElementById('reward-select-wrap');
-  const catalog = (rwData.catalog || []).filter(r => r.points_cost <= (rwData.userPoints ?? 0));
+    const wrap = document.getElementById('reward-select-wrap');
 
-  if (catalog.length > 0 && !appliedRewardId) {
-    wrap.innerHTML = `
-      <label style="display:block;font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;">
-        Apply a Reward (${rwData.userPoints ?? 0} pts)
-      </label>
-      <select id="reward-select" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;margin-bottom:6px;">
-        <option value="">— Select a reward —</option>
-        ${catalog.map(r => `<option value="${r.reward_id}" data-cost="${r.points_cost}" data-label="${r.label}">${r.label} (${r.points_cost} pts)</option>`).join('')}
-      </select>
-      <button type="button" class="btn-apply" id="apply-reward-btn" style="margin-bottom:6px;">Apply Reward</button>
-    `;
-    document.getElementById('apply-reward-btn').addEventListener('click', applySelectedReward);
-  } else if (!appliedRewardId) {
-    wrap.innerHTML = `<p class="muted" style="font-size:0.83rem;margin:0 0 6px;">Not enough points for any reward yet. Keep ordering!</p>`;
+    // If a reward is already applied, don't re-render the selector
+    if (appliedRewardId) {
+      wrap.innerHTML = '';
+      renderAppliedDiscount();
+      renderTotals();
+      return;
+    }
+
+    const affordable = rewardsCatalogCache.filter(r => r.points_cost <= userPts);
+
+    if (affordable.length > 0) {
+      wrap.innerHTML = `
+        <label style="display:block;font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;">
+          Apply a Reward (${userPts} pts available)
+        </label>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <select id="reward-select" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;">
+            <option value="">— Select a reward —</option>
+            ${affordable.map(r => `<option value="${r.reward_id}" data-label="${r.label}" data-type="${r.reward_type}" data-value="${r.reward_value}">${r.label} (${r.points_cost} pts)</option>`).join('')}
+          </select>
+          <button type="button" class="btn-apply" id="apply-reward-btn">Apply</button>
+        </div>`;
+      document.getElementById('apply-reward-btn').addEventListener('click', applySelectedReward);
+
+      // Auto-apply best affordable reward if only one exists
+      if (affordable.length === 1 && !appliedPromoCode) {
+        const sel = document.getElementById('reward-select');
+        sel.value = affordable[0].reward_id;
+        applySelectedReward();
+      }
+    } else {
+      wrap.innerHTML = `<p class="muted" style="font-size:0.83rem;margin:0 0 6px;">
+        ${userPts > 0 ? `You have ${userPts} pts — keep ordering to unlock rewards!` : 'Earn 10 pts per dollar — start ordering to earn rewards!'}
+      </p>`;
+    }
+
+    // Auto-fill promo input if user has a code from spin wheel
+    if (promoData.codes?.length > 0 && !appliedPromoCode) {
+      const input = document.getElementById('promo-code-input');
+      if (input) {
+        input.placeholder = `You have a code: ${promoData.codes[0].code}`;
+        // Auto-apply the newest code
+        input.value = promoData.codes[0].code;
+        await applyPromoCode();
+      }
+    }
+
+    renderAppliedDiscount();
+    renderTotals();
+  } catch(e) {
+    console.error('Rewards panel failed:', e);
   }
-
-  // Pre-fill promo code if user has active ones
-  if (promoData.codes?.length > 0 && !appliedPromoCode) {
-    const promoHint = document.getElementById('promo-code-input');
-    if (promoHint) promoHint.placeholder = `e.g. ${promoData.codes[0].code}`;
-  }
-
-  renderAppliedDiscount();
 }
 
 function applySelectedReward() {
   const sel = document.getElementById('reward-select');
   if (!sel || !sel.value) return;
-  const opt    = sel.options[sel.selectedIndex];
+  const opt = sel.options[sel.selectedIndex];
+
   appliedRewardId    = Number(sel.value);
   appliedRewardLabel = opt.dataset.label || 'Reward';
   appliedPromoCode   = null;
   appliedPromoLabel  = '';
-  recalcDiscount();
+
+  // Calculate discount immediately from reward data attributes
+  calcRewardDiscount(opt.dataset.type, Number(opt.dataset.value || 0));
   renderAppliedDiscount();
   renderTotals();
+
+  // Hide the selector since reward is now applied
+  const wrap = document.getElementById('reward-select-wrap');
+  if (wrap) wrap.innerHTML = '';
+}
+
+function calcRewardDiscount(type, value) {
+  const subtotal = calcSubtotal();
+  if (!subtotal) { discountAmount = 0; return; }
+  if (type === 'percent_off') {
+    discountAmount = Number(((subtotal * value) / 100).toFixed(2));
+  } else if (type === 'free_drink') {
+    // Cheapest drink in cart
+    discountAmount = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
+    discountAmount = Number(discountAmount.toFixed(2));
+  } else if (type === 'free_topping') {
+    discountAmount = 0.75;
+  } else if (type === 'flat_off') {
+    discountAmount = Math.min(subtotal, value);
+  } else {
+    discountAmount = 0;
+  }
+  discountAmount = Math.min(discountAmount, subtotal);
 }
 
 async function applyPromoCode() {
@@ -395,44 +452,35 @@ async function applyPromoCode() {
   const code  = (input?.value || '').trim().toUpperCase();
   if (!code) return;
 
-  fb.textContent = 'Checking…';
+  if (fb) { fb.style.color = 'var(--muted)'; fb.textContent = 'Checking…'; }
+
   try {
     const res  = await fetch(`/api/promos/validate/${code}`);
     const data = await res.json();
     if (!data.valid) {
-      fb.style.color = 'var(--accent)';
-      fb.textContent = data.reason || 'Invalid or expired code.';
+      if (fb) { fb.style.color = 'var(--accent)'; fb.textContent = data.reason || 'Invalid or expired code.'; }
       return;
     }
     const promo = data.promo;
-    appliedPromoCode  = code;
-    appliedPromoLabel = promo.label;
-    appliedRewardId   = null;
+    appliedPromoCode   = code;
+    appliedPromoLabel  = promo.label;
+    appliedRewardId    = null;
     appliedRewardLabel = '';
-    // Calculate discount
-    const subtotal = calcSubtotal();
-    if (promo.promo_type === 'percent_off') discountAmount = Number(((subtotal * Number(promo.promo_value)) / 100).toFixed(2));
-    else if (promo.promo_type === 'flat_off') discountAmount = Math.min(subtotal, Number(promo.promo_value));
-    else if (promo.promo_type === 'free_drink') discountAmount = Math.min(...customerOrder.map(i=>i.unitPrice));
-    else if (promo.promo_type === 'free_topping') discountAmount = 0.75;
 
-    fb.style.color = '#15803d';
-    fb.textContent = `✓ "${promo.label}" applied!`;
+    // Calculate discount immediately
+    const subtotal = calcSubtotal();
+    if (promo.promo_type === 'percent_off')  discountAmount = Number(((subtotal * Number(promo.promo_value)) / 100).toFixed(2));
+    else if (promo.promo_type === 'flat_off') discountAmount = Math.min(subtotal, Number(promo.promo_value));
+    else if (promo.promo_type === 'free_drink') discountAmount = customerOrder.length ? Math.min(...customerOrder.map(i=>i.unitPrice)) : 0;
+    else if (promo.promo_type === 'free_topping') discountAmount = 0.75;
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    if (fb) { fb.style.color = '#15803d'; fb.textContent = `✓ "${promo.label}" applied! −$${discountAmount.toFixed(2)}`; }
     renderAppliedDiscount();
     renderTotals();
   } catch(_) {
-    fb.style.color = 'var(--accent)';
-    fb.textContent = 'Could not validate code.';
+    if (fb) { fb.style.color = 'var(--accent)'; fb.textContent = 'Could not validate code.'; }
   }
-}
-
-function recalcDiscount() {
-  if (!appliedRewardId) { discountAmount = 0; return; }
-  // Will be computed server-side at checkout; show estimated discount
-  const subtotal = calcSubtotal();
-  discountAmount = subtotal * 0.5; // rough estimate for 50% off – server authoritative
-  // We just show a visual indicator; real discount comes back from /api/checkout
-  discountAmount = 0; // reset – let server calculate to avoid double-counting
 }
 
 function renderAppliedDiscount() {
@@ -490,7 +538,12 @@ async function openRewardsModal() {
             <div class="rw-name">${r.label}</div>
             <div class="rw-cost">${r.points_cost} pts needed${!canRedeem ? ` · need ${r.points_cost - pts} more` : ''}</div>
           </div>
-          <button class="btn-redeem" data-id="${r.reward_id}" data-label="${r.label}" data-cost="${r.points_cost}" ${!canRedeem ? 'disabled' : ''}>
+          <button class="btn-redeem" 
+                  data-id="${r.reward_id}" 
+                  data-label="${r.label}" 
+                  data-type="${r.reward_type}"
+                  data-value="${r.reward_value || 0}"
+                  ${!canRedeem ? 'disabled' : ''}>
             ${canRedeem ? 'Redeem' : 'Locked'}
           </button>
         </div>`;
@@ -502,8 +555,9 @@ async function openRewardsModal() {
         appliedRewardLabel = btn.dataset.label;
         appliedPromoCode   = null;
         appliedPromoLabel  = '';
-        discountAmount     = 0;
-        showToast(`${btn.dataset.label} applied at checkout!`);
+        // Calculate discount immediately using type/value from data attrs
+        calcRewardDiscount(btn.dataset.type, Number(btn.dataset.value || 0));
+        showToast(`${btn.dataset.label} applied! −$${discountAmount.toFixed(2)} 🎉`);
         closeRewardsModal();
         renderAppliedDiscount();
         renderTotals();
