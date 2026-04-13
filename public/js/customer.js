@@ -973,7 +973,10 @@ async function loadCustomerWeather() {
     const res = await fetch('/api/weather?city=College%20Station');
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error || 'Weather failed.');
+    if (!res.ok) {
+      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+      return;
+    }
 
     banner.innerHTML = `
       <div class="weather-banner-content">
@@ -985,9 +988,9 @@ async function loadCustomerWeather() {
         </div>
       </div>
     `;
-  } catch (err) {
-    banner.innerHTML = `<p class="muted">${err.message}</p>`;
-  }
+  } catch (_) {
+      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+    }
 }
 
 async function init() {

@@ -391,7 +391,16 @@ async function loadCashierWeather() {
     const res = await fetch('/api/weather?city=College%20Station');
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error || 'Weather failed.');
+    if (!res.ok) {
+      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+      return;
+    }
+
+    const temp = data.temperature != null ? Math.round(data.temperature) : '—';
+    const feels = data.feelsLike != null
+      ? Math.round(data.feelsLike)
+      : (data.temperature != null ? Math.round(data.temperature) : '—');
+    const wind = data.windSpeed != null ? Math.round(data.windSpeed) : '—';
 
     wrap.innerHTML = `
       <div class="weather-mini">
@@ -399,16 +408,16 @@ async function loadCashierWeather() {
           <strong>${data.city}</strong>
           <span>${data.weatherLabel}</span>
         </div>
-        <div class="weather-temp">${Math.round(data.temperature)}°F</div>
+        <div class="weather-temp">${temp}°F</div>
         <p class="muted">
-          Feels like: ${Math.round(data.feelsLike ?? data.temperature)}°F · Wind: ${Math.round(data.windSpeed ?? 0)} mph
+          Feels like: ${feels}°F · Wind: ${wind} mph
         </p>
         <p class="weather-suggestion">${data.drinkSuggestion}</p>
       </div>
     `;
-  } catch (err) {
-    wrap.innerHTML = `<p class="muted">${err.message}</p>`;
-  }
+  } catch (_) {
+      wrap.innerHTML = `<p class="muted">Weather temporarily unavailable.</p>`;
+    }
 }
 
 //  START 
