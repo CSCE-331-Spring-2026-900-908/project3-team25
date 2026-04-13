@@ -10,46 +10,156 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false">Voice Guide: Off</button>
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
   </div>
 
-  <div class="edit-modal-overlay hidden" id="edit-modal-overlay">
-    <div class="edit-modal">
-      <h3 id="edit-modal-title">Edit item</h3>
-      <div>
-        <label for="edit-sweetness">Sweetness</label>
-        <select id="edit-sweetness">
-          <option>No Sugar</option>
-          <option>Half Sugar</option>
-          <option>Regular Sugar</option>
-        </select>
+  <!-- ── Drink Detail Modal ─────────────────────────────── -->
+  <div class="drink-modal-overlay" id="drink-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-drink-name">
+    <div class="drink-modal">
+      <img id="modal-drink-img" class="drink-modal-img" src="/boba/Sonny-Boba.png" alt="" />
+      <div class="drink-modal-body">
+        <div class="drink-modal-header">
+          <h3 id="modal-drink-name">Drink Name</h3>
+          <span class="drink-modal-price" id="modal-drink-price">$0.00</span>
+        </div>
+        <p class="drink-modal-desc" id="modal-drink-desc"></p>
+
+        <div class="drink-modal-options">
+          <div>
+            <label for="modal-sweetness">Sweetness</label>
+            <select id="modal-sweetness">
+              <option>No Sugar</option>
+              <option>Quarter Sugar</option>
+              <option selected>Regular Sugar</option>
+              <option>Extra Sweet</option>
+            </select>
+          </div>
+          <div>
+            <label for="modal-ice">Ice Level</label>
+            <select id="modal-ice">
+              <option>No Ice</option>
+              <option>Light Ice</option>
+              <option selected>Regular Ice</option>
+              <option>Extra Ice</option>
+            </select>
+          </div>
+          <div>
+            <label for="modal-size">Size</label>
+            <select id="modal-size">
+              <option value="Regular">Regular</option>
+              <option value="Large">Large (+$1.00)</option>
+            </select>
+          </div>
+          <div>
+            <label for="modal-topping">Topping</label>
+            <select id="modal-topping">
+              <option value="None">None</option>
+              <option value="Extra Boba">Extra Boba (+$0.75)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="drink-modal-qty">
+          <button id="modal-qty-minus" type="button" aria-label="Decrease quantity">−</button>
+          <span id="modal-qty-display">1</span>
+          <button id="modal-qty-plus" type="button" aria-label="Increase quantity">+</button>
+          <span class="muted" style="font-size:0.85rem;margin-left:4px;">qty</span>
+        </div>
+
+        <div class="drink-modal-footer">
+          <button class="btn-cancel" id="modal-cancel-btn" type="button">Cancel</button>
+          <button class="btn-add" id="modal-add-btn" type="button">Add to Order — $0.00</button>
+        </div>
       </div>
-      <div>
-        <label for="edit-ice">Ice level</label>
-        <select id="edit-ice">
-          <option>None</option>
-          <option>Light</option>
-          <option>Regular</option>
-          <option>Extra</option>
-        </select>
+    </div>
+  </div>
+
+  <!-- ── Rewards Modal ──────────────────────────────────── -->
+  <div class="rewards-modal-overlay" id="rewards-modal-overlay" role="dialog" aria-modal="true" aria-label="Rewards">
+    <div class="rewards-modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <h3>⭐ Your Rewards</h3>
+        <button type="button" id="rewards-modal-close" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);">✕</button>
       </div>
-      <div>
-        <label for="edit-size">Size</label>
-        <select id="edit-size">
-          <option>Regular</option>
-          <option>Large</option>
-        </select>
+      <div class="pts-display" id="rewards-pts-display">0 pts</div>
+
+      <div id="rewards-catalog-list"></div>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:18px 0;" />
+      <h4 style="margin:0 0 10px;">Redemption History</h4>
+      <div id="rewards-history-list"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
+
+      <div style="margin-top:20px;display:flex;gap:10px;">
+        <button type="button" id="open-spin-btn" class="btn" style="flex:1;background:linear-gradient(90deg,var(--accent),#d07a5a);">🎡 Spin the Wheel</button>
+        <button type="button" id="rewards-modal-close2" class="btn ghost" style="flex:1;">Close</button>
       </div>
-      <div>
-        <label for="edit-topping">Topping</label>
-        <select id="edit-topping">
-          <option>None</option>
-          <option>Extra Boba</option>
-        </select>
+    </div>
+  </div>
+
+  <!-- ── Spin Wheel Modal ───────────────────────────────── -->
+  <div class="spin-modal-overlay" id="spin-modal-overlay" role="dialog" aria-modal="true" aria-label="Spin the wheel">
+    <div class="spin-modal">
+      <h3>🎡 Spin &amp; Win!</h3>
+      <p id="spin-status-msg">Spin once per day for a chance to win prizes!</p>
+      <div class="spin-wheel-wrap">
+        <div class="spin-pointer">▼</div>
+        <canvas id="spin-canvas" width="260" height="260"></canvas>
       </div>
-      <div class="edit-modal-actions">
-        <button class="btn ghost" id="edit-modal-cancel" type="button">Cancel</button>
-        <button class="btn" id="edit-modal-save" type="button">Save</button>
+      <button type="button" id="spin-btn" class="btn-spin">SPIN!</button>
+      <div class="spin-result" id="spin-result">
+        <div id="spin-prize-label"></div>
+        <div class="spin-code" id="spin-promo-code"></div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Code auto-applied at checkout · expires in 7 days</div>
+      </div>
+      <div style="margin-top:18px;">
+        <button type="button" id="spin-modal-close" class="btn ghost" style="width:100%;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Edit Modal ────────────────────────────────────── -->
+  <div class="drink-modal-overlay hidden" id="edit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="drink-modal">
+      <div class="drink-modal-body" style="padding-top:28px;">
+        <h3 id="edit-modal-title" style="margin:0 0 20px;">Edit item</h3>
+        <div class="drink-modal-options">
+          <div>
+            <label for="edit-sweetness">Sweetness</label>
+            <select id="edit-sweetness">
+              <option>No Sugar</option>
+              <option>Quarter Sugar</option>
+              <option>Regular Sugar</option>
+              <option>Extra Sweet</option>
+            </select>
+          </div>
+          <div>
+            <label for="edit-ice">Ice Level</label>
+            <select id="edit-ice">
+              <option>No Ice</option>
+              <option>Light Ice</option>
+              <option>Regular Ice</option>
+              <option>Extra Ice</option>
+            </select>
+          </div>
+          <div>
+            <label for="edit-size">Size</label>
+            <select id="edit-size">
+              <option value="Regular">Regular</option>
+              <option value="Large">Large (+$1.00)</option>
+            </select>
+          </div>
+          <div>
+            <label for="edit-topping">Topping</label>
+            <select id="edit-topping">
+              <option value="None">None</option>
+              <option value="Extra Boba">Extra Boba (+$0.75)</option>
+            </select>
+          </div>
+        </div>
+        <div class="drink-modal-footer" style="margin-top:20px;">
+          <button class="btn-cancel" id="edit-modal-cancel" type="button">Cancel</button>
+          <button class="btn-add" id="edit-modal-save" type="button">Save Changes</button>
+        </div>
       </div>
     </div>
   </div>
@@ -57,64 +167,40 @@
   <main id="main-content" class="restaurant-shell">
     <header class="cashier-topbar">
       <div class="brand-mark">
-        <div class="brand-badge">RE</div>
+        <div class="brand-badge" style="width:44px;height:44px;font-size:1rem;">RB</div>
         <div>
-          <h1 style="font-size:1.1rem; margin:0;">Reveille Bubble Tea</h1>
-          <p class="muted" style="margin:2px 0 0;">Kiosk</p>
+          <h1 style="font-size:1.05rem;margin:0;">Reveille Bubble Tea</h1>
+          <p class="muted" style="margin:2px 0 0;font-size:0.8rem;">Kiosk</p>
         </div>
       </div>
       <div class="cashier-topbar-right">
-        <span class="cashier-user-info">Customer Kiosk</span>
-        <a href="/" class="btn ghost cashier-portal-link">Portal</a>
+        <span id="kiosk-user-greeting" class="cashier-user-info" style="font-size:0.85rem;"></span>
+        <a href="/" class="btn ghost cashier-portal-link" style="font-size:0.82rem;padding:7px 12px;">Portal</a>
       </div>
     </header>
 
-
+    <!-- MENU SCREEN -->
     <section id="screen-menu" class="kiosk-screen active-screen" aria-label="Drink menu">
       <section class="category-shell">
-        <div class="mini-top" style="margin-bottom:16px;">
+
+        <!-- Rewards bar (shown when logged in) -->
+        <div id="rewards-topbar" class="rewards-topbar" style="display:none;">
           <div>
-            <h2 style="margin:0;">Choose your drink</h2>
+            <div class="pts-label">Your Reward Points</div>
+            <div class="pts-value" id="topbar-pts">0</div>
           </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-rewards" id="open-rewards-btn">⭐ Rewards</button>
+            <button type="button" class="btn-rewards" id="open-spin-topbar-btn">🎡 Spin</button>
+          </div>
+        </div>
+
+        <div class="mini-top" style="margin-bottom:16px;">
+          <h2 style="margin:0;">Choose your drink</h2>
           <span class="badge" id="customer-item-count">0 items</span>
         </div>
 
         <div class="tab-row" id="customer-tabs" style="margin-bottom:18px;"></div>
-
-        <div class="option-grid kiosk-customize-row" style="margin-bottom:20px;">
-          <div>
-            <label for="sweetness">Sweetness</label>
-            <select id="sweetness">
-              <option>No Sugar</option>
-              <option>Half Sugar</option>
-              <option selected>Regular Sugar</option>
-            </select>
-          </div>
-          <div>
-            <label for="ice-level">Ice level</label>
-            <select id="ice-level">
-              <option>None</option>
-              <option>Light</option>
-              <option selected>Regular</option>
-              <option>Extra</option>
-            </select>
-          </div>
-          <div>
-            <label for="size">Size</label>
-            <select id="size">
-              <option>Regular</option>
-              <option>Large</option>
-            </select>
-          </div>
-          <div>
-            <label for="topping">Topping</label>
-            <select id="topping">
-              <option>None</option>
-              <option>Extra Boba</option>
-            </select>
-          </div>
-        </div>
-
         <div id="customer-menu" class="menu-grid"></div>
 
         <div class="kiosk-footer-actions" style="margin-top:24px;">
@@ -127,12 +213,11 @@
       </section>
     </section>
 
+    <!-- REVIEW SCREEN -->
     <section id="screen-review" class="kiosk-screen hidden-screen" aria-label="Review order">
       <div class="order-shell">
         <div class="mini-top">
-          <div>
-            <h2 style="margin:0;">Review your order</h2>
-          </div>
+          <h2 style="margin:0;">Review your order</h2>
           <span class="badge" id="review-item-count">0 items</span>
         </div>
 
@@ -140,9 +225,25 @@
           <p class="cart-note">No items added yet.</p>
         </div>
 
+        <!-- Rewards / promo redemption panel -->
+        <div id="checkout-rewards-panel" style="display:none;margin:16px 0;">
+          <div style="font-weight:700;margin-bottom:8px;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Rewards &amp; Promos</div>
+          <div id="applied-reward-display"></div>
+          <div id="reward-select-wrap" style="margin-bottom:10px;"></div>
+          <div class="promo-input-row">
+            <input type="text" id="promo-code-input" placeholder="Promo code (e.g. RBT-ABC123)" maxlength="12" />
+            <button type="button" class="btn-apply" id="apply-promo-btn">Apply</button>
+          </div>
+          <div id="promo-feedback" style="font-size:0.82rem;margin-top:4px;"></div>
+        </div>
+
         <div class="summary-box">
           <div class="summary-row"><span>Subtotal</span><strong id="customer-subtotal">$0.00</strong></div>
-          <div class="summary-row"><span>Tax estimate</span><strong id="customer-tax">$0.00</strong></div>
+          <div class="summary-row discount-row" id="discount-row" style="display:none;">
+            <span id="discount-label">Discount</span>
+            <strong id="customer-discount">−$0.00</strong>
+          </div>
+          <div class="summary-row"><span>Tax (8.25%)</span><strong id="customer-tax">$0.00</strong></div>
           <div class="summary-row total"><span>Total</span><strong id="customer-total">$0.00</strong></div>
         </div>
 
@@ -156,17 +257,17 @@
       </div>
     </section>
 
+    <!-- PAYMENT SCREEN -->
     <section id="screen-payment" class="kiosk-screen hidden-screen" aria-label="Payment">
       <div class="order-shell">
         <div class="mini-top">
-          <div>
-            <h2 style="margin:0;">Payment</h2>
-          </div>
+          <h2 style="margin:0;">Payment</h2>
         </div>
 
         <div class="payment-total-box">
           <p class="muted" style="margin:0;">Order total</p>
-          <h2 id="payment-total" style="margin:8px 0 0;">$0.00</h2>
+          <h2 id="payment-total" style="margin:8px 0 0;color:var(--accent);">$0.00</h2>
+          <p id="payment-discount-note" class="muted" style="margin:4px 0 0;font-size:0.85rem;display:none;"></p>
         </div>
 
         <div class="payment-grid">
@@ -174,7 +275,6 @@
           <button class="payment-option" type="button" data-payment="applepay">Apple Pay</button>
           <button class="payment-option" type="button" data-payment="cash">Cash</button>
         </div>
-
 
         <div class="kiosk-footer-actions" style="margin-top:24px;">
           <button class="btn ghost" id="back-to-review-btn" type="button">← Back to Review</button>
@@ -185,22 +285,21 @@
       </div>
     </section>
 
+    <!-- CONFIRMATION SCREEN -->
     <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
       <div class="order-shell confirmation-shell">
-        <h2 style="margin-bottom:8px;">Order placed!</h2>
-        <p class="muted" id="confirmation-message" style="margin-top:0;">
-          Your order has been received.
-        </p>
+        <h2 style="margin-bottom:8px;">Order placed! 🎉</h2>
+        <p class="muted" id="confirmation-message" style="margin-top:0;">Your order has been received.</p>
 
-        <div class="summary-box" style="max-width:420px; margin:24px auto 0;">
-          <div class="summary-row">
-            <span>Status</span>
-            <strong>Order received</strong>
-          </div>
-          <div class="summary-row">
-            <span>Pickup</span>
-            <strong>Pick up at the counter</strong>
-          </div>
+        <div class="summary-box" style="max-width:420px;margin:24px auto 0;">
+          <div class="summary-row"><span>Status</span><strong>Order received</strong></div>
+          <div class="summary-row"><span>Pickup</span><strong>Pick up at the counter</strong></div>
+        </div>
+
+        <div class="confirm-rewards-box" id="confirm-rewards-box" style="max-width:420px;margin:16px auto 0;display:none;">
+          <div class="pts-earned" id="confirm-pts-earned">+0</div>
+          <div class="pts-label">points earned this order</div>
+          <div style="margin-top:6px;font-size:0.85rem;color:var(--muted);">New balance: <strong id="confirm-pts-balance">0</strong> pts</div>
         </div>
 
         <div class="kiosk-footer-actions centered-actions" style="margin-top:28px;">
@@ -208,6 +307,7 @@
         </div>
       </div>
     </section>
+
   </main>
 
   <script src="/js/customer.js"></script>
