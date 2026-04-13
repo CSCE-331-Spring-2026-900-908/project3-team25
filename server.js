@@ -10,6 +10,8 @@ const { getPool, hasDbConfig } = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
+const weatherCache = new Map();
+const WEATHER_CACHE_MS = 10 * 60 * 1000; // 10 minutes
 
 const googleCallbackUrl =
   process.env.GOOGLE_CALLBACK_URL ||
@@ -449,6 +451,16 @@ app.post('/api/assistant', async (req, res) => {
 
 app.get('/api/weather', async (req, res) => {
   const city = String(req.query.city || 'College Station').trim();
+  const cacheKey = city.toLowerCase();
+  const now = Date.now();
+
+  const cached = weatherCache.get(cacheKey);
+  if (cached && (now - cached.timestamp) < WEATHER_CACHE_MS) {
+    return res.json({
+      ...cached.data,
+      source: 'cache'
+    });
+  }
 
   try {
     const geoRes = await fetch(
@@ -493,25 +505,16 @@ app.get('/api/weather', async (req, res) => {
       });
     }
 
-    const temperature =
-      current.temperature_2m ?? current.temperature ?? null;
-
-    const feelsLike =
-      current.apparent_temperature ?? null;
-
-    const windSpeed =
-      current.wind_speed_10m ?? current.windspeed ?? null;
-
-    const weatherCode =
-      current.weather_code ?? current.weathercode ?? null;
-
-    const isDay =
-      current.is_day ?? 1;
+    const temperature = current.temperature_2m ?? current.temperature ?? null;
+    const feelsLike = current.apparent_temperature ?? null;
+    const windSpeed = current.wind_speed_10m ?? current.windspeed ?? null;
+    const weatherCode = current.weather_code ?? current.weathercode ?? null;
+    const isDay = current.is_day ?? 1;
 
     const weatherLabel = getWeatherLabel(weatherCode);
     const drinkSuggestion = getDrinkSuggestion(temperature, weatherCode);
 
-    res.json({
+    const responseData = {
       city: `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}`,
       temperature,
       feelsLike,
@@ -520,8 +523,26 @@ app.get('/api/weather', async (req, res) => {
       weatherLabel,
       isDay,
       drinkSuggestion
+    };
+
+    weatherCache.set(cacheKey, {
+      timestamp: now,
+      data: responseData
+    });
+
+    res.json({
+      ...responseData,
+      source: 'live'
     });
   } catch (e) {
+    if (cached) {
+      return res.json({
+        ...cached.data,
+        source: 'stale-cache',
+        warning: `Live weather unavailable: ${e.message}`
+      });
+    }
+
     res.status(500).json({
       error: 'Weather unavailable.',
       details: e.message
