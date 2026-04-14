@@ -1,3 +1,4 @@
+
 :root {
   --bg: #f7efe9;
   --surface: rgba(255, 255, 255, 0.85);
@@ -14,6 +15,7 @@
   --radius-lg: 8px;
   --radius-md: 6px;
 }
+.hidden { display: none !important; }
 * {
   box-sizing: border-box;
 }
@@ -1117,7 +1119,6 @@ input[type="range"] {
   justify-content: center;
   align-items: center;
   margin-bottom: 12px;
-  background: transparent;
 }
 
 .drink-image {
@@ -1125,8 +1126,7 @@ input[type="range"] {
   max-width: 180px;
   height: 140px;
   object-fit: contain;
-  border-radius: 0;
-  mix-blend-mode: multiply;
+  border-radius: 18px;
 }
 /* ===== FINAL ACCESSIBILITY / MUSIC TOOLBAR ===== */
 
@@ -1268,11 +1268,9 @@ body.voice-guide-enabled
 .drink-modal-img {
   width: 100%;
   height: 210px;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 18px 18px 0 0;
-  background: #fffaf7;
-  mix-blend-mode: multiply;
-  padding: 16px 20px 0;
+  background: var(--bg);
 }
 .drink-modal-body {
   padding: 22px 24px 28px;

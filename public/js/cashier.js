@@ -27,7 +27,7 @@ async function initCashier() {
   document.getElementById('pin-input')?.addEventListener('keydown', e => { if (e.key==='Enter') submitPin(); });
   document.getElementById('pin-request-link')?.addEventListener('click', () => {
     const f = document.getElementById('request-access-form');
-    if (f) f.classList.toggle('hidden');
+    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
   });
   document.getElementById('request-submit-btn')?.addEventListener('click', submitAccessRequest);
   document.getElementById('cashier-logout-btn')?.addEventListener('click', cashierPinLogout);
@@ -497,11 +497,13 @@ async function submitPin() {
   if (errEl) errEl.textContent = 'Checking...';
   try {
     const res  = await fetch('/api/cashier/pin-login', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pin })
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pin: String(pin) })
     });
     const data = await res.json();
     if (!res.ok) {
-      if (errEl) errEl.textContent = data.error || 'Invalid PIN.';
+      if (errEl) errEl.textContent = data.error || 'Invalid PIN. Check with your manager.';
       if (input) input.value = '';
       return;
     }
@@ -511,8 +513,8 @@ async function submitPin() {
     if (input) input.value = '';
     if (errEl) errEl.textContent = '';
     hidePinOverlay();
-  } catch(_) {
-    if (errEl) errEl.textContent = 'Connection error. Try again.';
+  } catch(err) {
+    if (errEl) errEl.textContent = 'Connection error: ' + err.message;
   }
 }
 
