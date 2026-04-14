@@ -346,7 +346,7 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const userId = req.isAuthenticated?.() ? req.user?.id : null;
     const body = req.body || {};
-    const { items, paymentMethod = 'card', cashierId = 1, promoCode = null, rewardId = null, source = 'customer' } = body;
+    const { items, paymentMethod = 'card', cashierId = 7, promoCode = null, rewardId = null, source = 'customer' } = body;
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) throw new Error('At least one item required.');
 

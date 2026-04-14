@@ -354,7 +354,7 @@ function bindCartActions() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cashierId: pinSession ? pinSession.cashierId : 1,
+          cashierId: pinSession ? pinSession.cashierId : 7,
           source: 'cashier',
           paymentMethod,
           items: cashierOrder.map(item => ({
