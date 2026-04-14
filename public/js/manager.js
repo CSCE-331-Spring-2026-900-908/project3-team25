@@ -20,7 +20,7 @@ document.querySelectorAll('.mgr-tab').forEach(btn => {
     if (btn.dataset.tab === 'sales')     loadSalesCharts();
     if (btn.dataset.tab === 'menu')      loadMenuEditor();
     if (btn.dataset.tab === 'inventory') loadFullInventory();
-    if (btn.dataset.tab === 'employees') loadEmployees();
+    if (btn.dataset.tab === 'employees') { loadEmployees(); }
     if (btn.dataset.tab === 'reports')   { loadXReport(); loadBestOfWorst(); }
     if (btn.dataset.tab === 'requests')  loadStaffRequests();
     if (btn.dataset.tab === 'loginlog')  loadLoginLog();
@@ -65,21 +65,15 @@ async function loadOverview() {
     const refreshBtn = document.getElementById('orders-refresh-btn');
     if (refreshBtn) refreshBtn.textContent = `Last updated ${now}`;
 
-    document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => {
-      const role = i.staff_role || 'staff';
-      const roleBadge = role === 'manager'
-        ? `<span style="font-size:0.72rem;padding:2px 6px;border-radius:4px;background:rgba(79,70,229,0.1);color:#4f46e5;font-weight:700;margin-left:5px;">MGR</span>`
-        : '';
-      return `
+    document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
       <tr>
         <td>#${i.transactionid || i.transactionId}</td>
-        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}${roleBadge}</td>
+        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}</td>
         <td><strong>${fmt(i.totalamount || i.totalAmount)}</strong></td>
         <td style="text-transform:capitalize">${i.paymentmethod || i.paymentMethod || '—'}</td>
         <td>${(i.transactiontime||i.transactionTime||'').toString().slice(0,10)}</td>
         <td><span class="badge-ok">${i.status}</span></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
 
     // Category donut — distinct colors per category
     const cats  = dash.categories || {};
@@ -351,38 +345,64 @@ window.filterInvTable = renderInvTable;
 
 // ── Employees ─────────────────────────────────────────────────────────────────
 async function loadEmployees() {
-  const [empRes, mgrRes] = await Promise.all([
+  const [empRes, mgrRes, workRes] = await Promise.all([
     fetch('/api/employees'),
-    fetch('/api/managers')
+    fetch('/api/managers'),
+    fetch('/api/currently-working').catch(() => ({ ok: false }))
   ]);
   allEmployees = empRes.ok ? (await empRes.json()).cashiers || [] : [];
   allManagers  = mgrRes.ok ? (await mgrRes.json()).managers  || [] : [];
+  const workData = workRes.ok ? await workRes.json() : { working: [] };
+  const working  = workData.working || [];
+  // Map currently working by staffId
+  window._currentlyWorking = {};
+  working.forEach(w => { window._currentlyWorking[`${w.staffId}_${w.staffType}`] = w; });
   renderEmployeeTable();
   renderManagerTable();
 }
 
 function renderEmployeeTable() {
+  const cw = window._currentlyWorking || {};
   document.getElementById('emp-tbody').innerHTML = allEmployees.map(e => {
-    const active   = e.is_active ?? e.isActive ?? true;
-    const first    = e.firstname || e.firstName || '';
-    const last     = e.lastname  || e.lastName  || '';
-    const hours    = Number(e.hoursworked || e.hoursWorked || 0).toFixed(1);
-    const hireDate = (e.hiredate || e.hireDate || '').toString().slice(0,10);
-    const id       = e.cashierid || e.cashierId || e.id;
+    const active    = e.is_active ?? e.isActive ?? true;
+    const first     = e.firstname || e.firstName || '';
+    const last      = e.lastname  || e.lastName  || '';
+    const baseHours = Number(e.hoursworked || e.hoursWorked || 0).toFixed(1);
+    const hireDate  = (e.hiredate || e.hireDate || '').toString().slice(0,10) || 'N/A';
+    const id        = e.cashierid || e.cashierId || e.id;
+    const session   = cw[`${id}_cashier`];
+    const isWorking = !!session;
+    const sessionMins = session ? session.minutesWorked : 0;
+    const sessionHrs  = (sessionMins / 60).toFixed(1);
+    const workBadge   = isWorking
+      ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;background:rgba(21,128,61,0.12);color:#15803d;">
+           <span style="width:7px;height:7px;border-radius:50%;background:#15803d;animation:pulse 1.5s infinite;"></span>
+           Working ${sessionMins}m
+         </span>`
+      : (active ? '<span style="font-size:0.78rem;color:var(--muted);">Off duty</span>' : '');
+    const pin = e.pin ? e.pin : 'N/A';
     return `
       <tr>
         <td>
           <div style="display:flex;align-items:center;gap:10px;">
-            <div class="emp-avatar">${initials(first,last)}</div>
+            <div class="emp-avatar" style="${isWorking?'background:#15803d;':''}">${initials(first,last)}</div>
             <div>
               <div style="font-weight:600;">${first} ${last}</div>
-              <div style="font-size:0.76rem;color:var(--muted);">PIN: ${e.pin||'—'}</div>
+              <div style="font-size:0.76rem;color:var(--muted);">PIN: ${pin}</div>
             </div>
           </div>
         </td>
-        <td>${hireDate || '—'}</td>
-        <td>${hours} hrs</td>
-        <td><span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span></td>
+        <td>${hireDate}</td>
+        <td>
+          ${baseHours} hrs
+          ${isWorking ? `<span style="font-size:0.75rem;color:#15803d;margin-left:4px;">(+${sessionHrs} now)</span>` : ''}
+        </td>
+        <td>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span>
+            ${workBadge}
+          </div>
+        </td>
         <td>
           <button class="action-btn" onclick="openEditEmpModal(${id})">Edit</button>
           <button class="action-btn danger" onclick="toggleEmpActive(${id},${active})">${active?'Deactivate':'Reactivate'}</button>
@@ -392,24 +412,33 @@ function renderEmployeeTable() {
 }
 
 function renderManagerTable() {
+  const cw = window._currentlyWorking || {};
   document.getElementById('mgr-tbody').innerHTML = allManagers.map(m => {
     const first  = m.firstname||m.firstName||'';
     const last   = m.lastname||m.lastName||'';
     const active = m.is_active ?? m.isActive ?? true;
     const id     = m.managerid || m.id;
+    const session = cw[`${id}_manager`];
+    const isWorking = !!session;
+    const pin = m.pin ? m.pin : 'N/A';
     return `
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div class="emp-avatar" style="background:#4f46e5;">${((first[0]||'?')+(last[0]||'?')).toUpperCase()}</div>
+          <div class="emp-avatar" style="background:${isWorking?'#15803d':'#4f46e5'};">${((first[0]||'?')+(last[0]||'?')).toUpperCase()}</div>
           <div>
             <div style="font-weight:600;">${first} ${last}</div>
-            <div style="font-size:0.76rem;color:var(--muted);">PIN: ${m.pin||'—'}</div>
+            <div style="font-size:0.76rem;color:var(--muted);">PIN: ${pin}</div>
           </div>
         </div>
       </td>
-      <td>${(m.hiredate||m.hireDate||'').toString().slice(0,10)||'—'}</td>
-      <td><span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span></td>
+      <td>${(m.hiredate||m.hireDate||'').toString().slice(0,10) || 'N/A'}</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span class="${active?'badge-ok':'badge-low'}">${active?'Active':'Inactive'}</span>
+          ${isWorking ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;background:rgba(21,128,61,0.12);color:#15803d;"><span style="width:7px;height:7px;border-radius:50%;background:#15803d;"></span>Working ${session.minutesWorked}m</span>` : ''}
+        </div>
+      </td>
       <td>
         <button class="action-btn" onclick="openEditMgrModal(${id})">Edit</button>
         <button class="action-btn danger" onclick="toggleMgrActive(${id},${active})">${active?'Deactivate':'Reactivate'}</button>
@@ -635,6 +664,19 @@ async function loadUser() {
   }
 }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadUser();
+loadOverview();
+loadActiveSessions();
+
+// Auto-refresh overview every 30 seconds
+setInterval(() => {
+  const activeTab = document.querySelector('.mgr-tab.active');
+  if (!activeTab || activeTab.dataset.tab === 'overview') {
+    loadOverview();
+  }
+}, 30000);
+
 // ── Staff Requests ────────────────────────────────────────────────────────────
 async function loadStaffRequests() {
   const el = document.getElementById('staff-requests-list');
@@ -646,7 +688,7 @@ async function loadStaffRequests() {
     const reqs = data.requests || [];
     if (!reqs.length) { el.innerHTML = '<p class="muted">No pending requests.</p>'; return; }
     el.innerHTML = reqs.map(r => `
-      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;">
         <div style="flex:1;">
           <div style="font-weight:600;">${r.name}</div>
           <div style="font-size:0.82rem;color:var(--muted);">${r.email} · Requested: ${r.requested_role} · ${new Date(r.created_at).toLocaleDateString()}</div>
@@ -660,7 +702,7 @@ async function loadStaffRequests() {
         <button class="action-btn primary" onclick="approveRequest(${r.request_id})">Approve</button>
         <button class="action-btn danger"  onclick="denyRequest(${r.request_id})">Deny</button>
       </div>`).join('');
-  } catch(e) { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; }
+  } catch(e) { el.innerHTML = `<p class="muted">Error loading requests.</p>`; }
 }
 
 async function approveRequest(id) {
@@ -671,15 +713,14 @@ async function approveRequest(id) {
     method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ assignRole: role, pin })
   });
   if (res.ok) { loadStaffRequests(); loadEmployees(); }
-  else { const d = await res.json(); alert('Error: ' + (d.error||'Approve failed.')); }
+  else { const d = await res.json(); alert('Error: ' + (d.error || 'Approve failed.')); }
 }
 
 async function denyRequest(id) {
-  if (!confirm('Deny this access request?')) return;
+  if (!confirm('Deny this request?')) return;
   const res = await fetch(`/api/staff-requests/${id}/deny`, { method: 'POST' });
   if (res.ok) loadStaffRequests();
 }
-
 window.approveRequest = approveRequest;
 window.denyRequest    = denyRequest;
 
@@ -692,47 +733,32 @@ async function loadLoginLog() {
     const res  = await fetch('/api/staff-log');
     const data = res.ok ? await res.json() : { log: [] };
     const log  = data.log || [];
-    if (!log.length) { el.innerHTML = '<p class="muted">No login activity yet.</p>'; return; }
+    if (!log.length) { el.innerHTML = '<p class="muted">No login activity recorded yet.</p>'; return; }
     el.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Staff</th>
-            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Role</th>
-            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Action</th>
-            <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Time</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Employee</th>
+          <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Role</th>
+          <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Action</th>
+          <th style="text-align:left;padding:8px 10px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:2px solid var(--line);">Time</th>
+        </tr></thead>
         <tbody>
           ${log.map(row => `
             <tr>
-              <td style="padding:10px 10px;border-bottom:1px solid var(--line);font-weight:600;">${row.staff_name||'Unknown'}</td>
-              <td style="padding:10px 10px;border-bottom:1px solid var(--line);text-transform:capitalize;">${row.staff_type}</td>
-              <td style="padding:10px 10px;border-bottom:1px solid var(--line);">
+              <td style="padding:10px;border-bottom:1px solid var(--line);font-weight:600;">${row.staff_name || 'Unknown'}</td>
+              <td style="padding:10px;border-bottom:1px solid var(--line);text-transform:capitalize;">${row.staff_type}</td>
+              <td style="padding:10px;border-bottom:1px solid var(--line);">
                 <span style="padding:3px 8px;border-radius:6px;font-size:0.78rem;font-weight:700;
                   background:${row.action==='login'?'rgba(21,128,61,0.1)':'rgba(220,38,38,0.08)'};
                   color:${row.action==='login'?'#15803d':'#dc2626'};">
                   ${row.action}
                 </span>
               </td>
-              <td style="padding:10px 10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:0.82rem;">
+              <td style="padding:10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:0.82rem;">
                 ${new Date(row.logged_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
               </td>
             </tr>`).join('')}
         </tbody>
       </table>`;
-  } catch(e) { el.innerHTML = `<p class="muted">Error: ${e.message}</p>`; }
+  } catch(e) { el.innerHTML = `<p class="muted">Error loading log.</p>`; }
 }
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-loadUser();
-loadOverview();
-loadActiveSessions();
-
-// Auto-refresh overview every 30 seconds
-setInterval(() => {
-  const activeTab = document.querySelector('.mgr-tab.active');
-  if (!activeTab || activeTab.dataset.tab === 'overview') {
-    loadOverview();
-  }
-}, 30000);

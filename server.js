@@ -261,21 +261,11 @@ app.get('/api/orders/recent', async (req, res) => {
     if (hasDbConfig()) {
       const r = await queryDb(`
         SELECT t.transactionid, t.cashierid,
-               COALESCE(
-                 c.firstname || ' ' || c.lastname,
-                 m.firstname || ' ' || m.lastname,
-                 'Employee #' || t.cashierid
-               ) AS cashier_name,
-               CASE
-                 WHEN c.cashierid IS NOT NULL THEN 'cashier'
-                 WHEN m.managerid IS NOT NULL THEN 'manager'
-                 ELSE 'staff'
-               END AS staff_role,
+               COALESCE(c.firstname || ' ' || c.lastname, 'Cashier #' || t.cashierid) AS cashier_name,
                (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS transactiontime,
                t.totalamount, t.paymentmethod, t.status
         FROM transactions t
         LEFT JOIN cashier c ON c.cashierid = t.cashierid
-        LEFT JOIN manager m ON m.managerid = t.cashierid AND c.cashierid IS NULL
         ORDER BY t.transactiontime DESC LIMIT $1`, [limit]);
       return res.json({ items: r.rows, source: 'database' });
     }
@@ -779,10 +769,11 @@ app.get('/api/analytics/peak-days', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [] });
   try {
     const r = await queryDb(`
-      SELECT transactiontime::date AS day,
+      SELECT to_char((transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date, 'Mon DD, YYYY') AS day,
              COALESCE(SUM(totalamount),0) AS revenue, COUNT(*) AS orders
       FROM transactions WHERE status='completed'
-      GROUP BY 1 ORDER BY revenue DESC LIMIT 10`);
+      GROUP BY (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+      ORDER BY revenue DESC LIMIT 10`);
     res.json({ rows: r.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -808,7 +799,8 @@ app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
                totalamount, paymentmethod
         FROM transactions
         WHERE status='completed'
-          AND DATE(transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') = CURRENT_DATE AT TIME ZONE 'America/Chicago'
+          AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+              = (NOW() AT TIME ZONE 'America/Chicago')::date
       )
       SELECT h.hour_of_day,
              COALESCE(COUNT(d.totalamount),0) AS orders,
@@ -827,8 +819,8 @@ app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
   try {
     const r = await queryDb(`
       WITH daily AS (
-        SELECT date_trunc('week',t.transactiontime)::date AS week_start,
-               t.transactiontime::date AS day,
+        SELECT date_trunc('week',t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date AS week_start,
+               (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date AS day,
                SUM(t.totalamount) AS day_revenue,
                COALESCE(SUM(ti.quantity),0) AS items_sold
         FROM transactions t
@@ -841,10 +833,10 @@ app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
                   ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY items_sold DESC) AS rn_high
         FROM daily
       )
-      SELECT week_start,
-             MAX(CASE WHEN rn_low=1 THEN day END) AS worst_revenue_day,
+      SELECT to_char(week_start, 'Mon DD, YYYY') AS week_start,
+             to_char(MAX(CASE WHEN rn_low=1 THEN day END), 'Mon DD, YYYY') AS worst_revenue_day,
              MAX(CASE WHEN rn_low=1 THEN day_revenue END) AS worst_day_revenue,
-             MAX(CASE WHEN rn_high=1 THEN day END) AS best_items_day,
+             to_char(MAX(CASE WHEN rn_high=1 THEN day END), 'Mon DD, YYYY') AS best_items_day,
              MAX(CASE WHEN rn_high=1 THEN items_sold END) AS best_day_items_sold
       FROM ranked GROUP BY week_start ORDER BY week_start DESC LIMIT 12`);
     res.json({ rows: r.rows });
@@ -997,44 +989,64 @@ app.get('/api/weather-stats', (_req, res) => {
   });
 });
 
-// ─── PIN-based cashier session ────────────────────────────────────────────────
+// ─── In-memory clock tracker (login time per cashier/manager) ────────────────
+const clockedIn = new Map(); // staffId_type -> { name, role, loginTime }
 
-// POST /api/cashier/pin-login  { pin }
+// POST /api/cashier/pin-login
 app.post('/api/cashier/pin-login', async (req, res) => {
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
   const { pin } = req.body || {};
   if (!pin) return res.status(400).json({ error: 'PIN required.' });
   try {
-    // Check cashier table
-    const cr = await queryDb(`SELECT cashierid, firstname, lastname, is_active FROM cashier WHERE pin=$1`, [String(pin)]);
+    const cr = await queryDb(`SELECT cashierid, firstname, lastname, is_active, pin FROM cashier WHERE pin=$1 AND is_active=true`, [String(pin)]);
     if (cr.rows.length > 0) {
       const c = cr.rows[0];
-      if (!c.is_active) return res.status(403).json({ error: 'This account is inactive. Contact a manager.' });
-      // Log the session
-      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'cashier','login')`, [c.cashierid]).catch(() => {});
+      const key = `${c.cashierid}_cashier`;
+      clockedIn.set(key, { staffId: c.cashierid, staffType: 'cashier', name: `${c.firstname} ${c.lastname}`, loginTime: new Date().toISOString() });
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'cashier','login')`, [c.cashierid]).catch(()=>{});
       return res.json({ ok: true, role: 'cashier', cashierId: c.cashierid, name: `${c.firstname} ${c.lastname}` });
     }
-    // Check manager table
-    const mr = await queryDb(`SELECT managerid, firstname, lastname, is_active FROM manager WHERE pin=$1`, [String(pin)]);
+    const mr = await queryDb(`SELECT managerid, firstname, lastname, is_active, pin FROM manager WHERE pin=$1 AND is_active=true`, [String(pin)]);
     if (mr.rows.length > 0) {
       const m = mr.rows[0];
-      if (!m.is_active) return res.status(403).json({ error: 'This account is inactive.' });
-      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'manager','login')`, [m.managerid]).catch(() => {});
+      const key = `${m.managerid}_manager`;
+      clockedIn.set(key, { staffId: m.managerid, staffType: 'manager', name: `${m.firstname} ${m.lastname}`, loginTime: new Date().toISOString() });
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'manager','login')`, [m.managerid]).catch(()=>{});
       return res.json({ ok: true, role: 'manager', cashierId: m.managerid, name: `${m.firstname} ${m.lastname}` });
     }
-    return res.status(401).json({ error: 'Invalid PIN. Try again or ask a manager.' });
+    return res.status(401).json({ error: 'Invalid PIN. Ask a manager if you need help.' });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/cashier/pin-logout  { cashierId, staffType }
+// POST /api/cashier/pin-logout
 app.post('/api/cashier/pin-logout', async (req, res) => {
-  if (!hasDbConfig()) return res.json({ ok: true });
   const { cashierId, staffType = 'cashier' } = req.body || {};
-  await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,$2,'logout')`, [cashierId, staffType]).catch(() => {});
+  const key = `${cashierId}_${staffType}`;
+  const session = clockedIn.get(key);
+  if (session && hasDbConfig()) {
+    // Calculate hours worked this session and add to total
+    const mins = (Date.now() - new Date(session.loginTime).getTime()) / 60000;
+    const hrs  = mins / 60;
+    if (hrs > 0.01 && staffType === 'cashier') {
+      await queryDb(`UPDATE cashier SET hoursworked = hoursworked + $1 WHERE cashierid = $2`, [Number(hrs.toFixed(4)), Number(cashierId)]).catch(()=>{});
+    }
+    await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,$2,'logout')`, [cashierId, staffType]).catch(()=>{});
+  }
+  clockedIn.delete(key);
   res.json({ ok: true });
 });
 
-// POST /api/staff-requests  — new user requests access
+// GET /api/currently-working
+app.get('/api/currently-working', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const working = Array.from(clockedIn.values()).map(s => ({
+    ...s,
+    minutesWorked: Math.floor((Date.now() - new Date(s.loginTime).getTime()) / 60000)
+  }));
+  res.json({ working });
+});
+
+// POST /api/staff-requests
 app.post('/api/staff-requests', async (req, res) => {
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
   const { name, email, requestedRole = 'cashier' } = req.body || {};
@@ -1046,11 +1058,11 @@ app.post('/api/staff-requests', async (req, res) => {
        ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, status='pending', created_at=NOW()`,
       [name, email, requestedRole]
     );
-    res.status(201).json({ ok: true, message: 'Request submitted. A manager will approve your access.' });
+    res.status(201).json({ ok: true, message: 'Request submitted. A manager will set up your PIN.' });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/staff-requests  — manager sees pending requests
+// GET /api/staff-requests
 app.get('/api/staff-requests', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
   if (!hasDbConfig()) return res.json({ requests: [] });
@@ -1060,35 +1072,27 @@ app.get('/api/staff-requests', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/staff-requests/:id/approve  — manager approves, creates cashier/manager record
+// POST /api/staff-requests/:id/approve
 app.post('/api/staff-requests/:id/approve', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
   const { assignRole = 'cashier', pin } = req.body || {};
-  if (!pin) return res.status(400).json({ error: 'PIN required for new account.' });
+  if (!pin) return res.status(400).json({ error: 'PIN required.' });
   try {
     const rr = await queryDb(`SELECT * FROM staff_requests WHERE request_id=$1`, [Number(req.params.id)]);
     const request = rr.rows[0];
     if (!request) return res.status(404).json({ error: 'Request not found.' });
     const today = new Date().toISOString().slice(0,10);
-    let newId;
+    const parts = request.name.trim().split(' ');
+    const first = parts[0] || request.name;
+    const last  = parts.slice(1).join(' ') || '';
     if (assignRole === 'manager') {
-      const nameParts = request.name.trim().split(' ');
-      const mr = await queryDb(
-        `INSERT INTO manager (firstname, lastname, hiredate, pin, is_active) VALUES ($1,$2,$3,$4,true) RETURNING managerid`,
-        [nameParts[0]||request.name, nameParts.slice(1).join(' ')||'', today, pin]
-      );
-      newId = mr.rows[0].managerid;
+      await queryDb(`INSERT INTO manager (firstname,lastname,hiredate,pin,is_active) VALUES ($1,$2,$3,$4,true)`, [first, last, today, pin]);
     } else {
-      const nameParts = request.name.trim().split(' ');
-      const cr = await queryDb(
-        `INSERT INTO cashier (firstname, lastname, hiredate, pin, hoursworked, is_active) VALUES ($1,$2,$3,$4,0,true) RETURNING cashierid`,
-        [nameParts[0]||request.name, nameParts.slice(1).join(' ')||'', today, pin]
-      );
-      newId = cr.rows[0].cashierid;
+      await queryDb(`INSERT INTO cashier (firstname,lastname,hiredate,pin,hoursworked,is_active) VALUES ($1,$2,$3,$4,0,true)`, [first, last, today, pin]);
     }
     await queryDb(`UPDATE staff_requests SET status='approved' WHERE request_id=$1`, [Number(req.params.id)]);
-    res.json({ ok: true, newId, assignRole });
+    res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1102,14 +1106,14 @@ app.post('/api/staff-requests/:id/deny', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/staff-log  — last 20 login/logout events
+// GET /api/staff-log
 app.get('/api/staff-log', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
   if (!hasDbConfig()) return res.json({ log: [] });
   try {
     const r = await queryDb(`
       SELECT sl.log_id, sl.staff_id, sl.staff_type, sl.action,
-             sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago' AS logged_at,
+             (sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS logged_at,
              CASE sl.staff_type
                WHEN 'cashier' THEN c.firstname || ' ' || c.lastname
                WHEN 'manager' THEN m.firstname || ' ' || m.lastname

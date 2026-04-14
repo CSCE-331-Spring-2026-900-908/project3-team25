@@ -18,6 +18,7 @@
 
     .mgr-panel { display:none; }
     .mgr-panel.active { display:block; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
     .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
     .stat-card { background:white; border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
@@ -262,7 +263,7 @@
             </div>
             <div style="max-height:400px;overflow-y:auto;border-radius:8px;">
               <table>
-                <thead><tr><th>ID</th><th>Employee</th><th>Total</th><th>Payment</th><th>Date</th><th>Status</th></tr></thead>
+                <thead><tr><th>ID</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Date</th><th>Status</th></tr></thead>
                 <tbody id="orders-tbody"></tbody>
               </table>
             </div>
@@ -388,7 +389,7 @@
       </div>
     </div>
 
-    <!-- STAFF REQUESTS TAB -->
+    <!-- ACCESS REQUESTS TAB -->
     <div class="mgr-panel" id="tab-requests">
       <div class="mgr-card">
         <div class="top-row">
@@ -396,8 +397,8 @@
           <button class="action-btn" onclick="loadStaffRequests()">Refresh</button>
         </div>
         <p class="muted" style="font-size:0.85rem;margin-bottom:16px;">
-          When a new staff member visits the cashier page and submits an access request, they appear here.
-          Assign a role and PIN, then approve to create their account automatically.
+          When a new employee visits the cashier page and submits a request, it appears here.
+          Assign a role and PIN, then approve to create their account.
         </p>
         <div id="staff-requests-list"><p class="muted">Loading…</p></div>
       </div>
@@ -410,9 +411,7 @@
           <h3>Staff Login History</h3>
           <button class="action-btn" onclick="loadLoginLog()">Refresh</button>
         </div>
-        <p class="muted" style="font-size:0.85rem;margin-bottom:16px;">
-          Last 20 PIN login and logout events across all cashiers and managers.
-        </p>
+        <p class="muted" style="font-size:0.85rem;margin-bottom:16px;">Last 20 PIN login and logout events.</p>
         <div id="login-log-list"><p class="muted">Loading…</p></div>
       </div>
     </div>
