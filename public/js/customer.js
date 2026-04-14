@@ -1340,7 +1340,7 @@ document.getElementById('customer-checkout-btn').addEventListener('click', async
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cashierId: 1,
+        cashierId: 7,
         paymentMethod: selectedPaymentMethod,
         rewardId: appliedRewardId || null,
         promoCode: appliedPromoCode || null,
