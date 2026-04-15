@@ -758,6 +758,17 @@ app.get('/api/auth/config', (_req, res) => res.json({ googleClientConfigured: Bo
 app.get('/api/health', (_req, res) => res.json({ ok:true, dbConfigured:hasDbConfig() }));
 
 app.get('/cashier.html', (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
+app.get('/manager-login', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).send('Google OAuth not configured.');
+  }
+  // Pass /manager.html as returnTo via state param
+  passport.authenticate('google', {
+    scope: ['profile','email'],
+    state: '/manager.html'
+  })(req, res, next);
+});
+
 app.get('/manager.html', (req, res) => {
   if (req.isAuthenticated?.() && req.user?.role==='manager') return res.sendFile(path.join(__dirname,'public','manager.html'));
   res.redirect('/?unauthorized=1');

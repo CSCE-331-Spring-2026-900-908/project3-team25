@@ -21,15 +21,9 @@ const EXTRA_BOBA_PRICE = 0.75;
 async function initCashier() {
   document.getElementById('cashier-logout-btn')?.addEventListener('click', cashierPinLogout);
 
-  const staffState = await getCashierAuthState();
-  if (!staffState.authenticated) {
-    // Not logged in — ask for Google login first
-    renderCashierOverlay('google');
-  } else {
-    // Already logged in with ANY Google account — show PIN screen
-    // The PIN itself is what grants cashier access, not the Google role
-    renderCashierOverlay('pin', staffState.user);
-  }
+  // Show PIN screen immediately — no Google login needed
+  // PIN controls all cashier access
+  renderCashierOverlay('pin', null);
 
   // Language selector
   const langSel = document.getElementById('cashier-lang-select');
