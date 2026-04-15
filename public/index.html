@@ -99,8 +99,8 @@
 
   <!-- Auth bar at top -->
   <div class="portal-auth-bar" id="auth-bar">
-    <span id="auth-bar-text" class="muted">Not signed in</span>
-    <a href="/auth/google" class="btn" id="auth-bar-btn" style="font-size:0.85rem;padding:8px 16px;">Sign in with Google</a>
+    <span id="auth-bar-text" class="muted">Welcome to Reveille Bubble Tea</span>
+    <span id="auth-bar-btn" style="display:none;"></span>
   </div>
 
   <main id="main-content">
@@ -119,7 +119,7 @@
 
       <!-- Customer Kiosk -->
       <div class="portal-card">
-        <div class="portal-card-icon" style="background:rgba(158,59,53,0.1);">🧋</div>
+        <div class="portal-card-icon" style="background:rgba(158,59,53,0.1);color:var(--accent);font-weight:800;font-size:1rem;">KIOSK</div>
         <h2>Customer Kiosk</h2>
         <p>Order drinks, earn reward points, spin the wheel, and customize your order.</p>
         <a href="/customer.html" class="portal-btn">Order Now</a>
@@ -127,7 +127,7 @@
 
       <!-- Cashier POS -->
       <div class="portal-card">
-        <div class="portal-card-icon" style="background:rgba(79,70,229,0.1);">🖥️</div>
+        <div class="portal-card-icon" style="background:rgba(79,70,229,0.1);color:#4f46e5;font-weight:800;font-size:1rem;">POS</div>
         <h2>Cashier POS</h2>
         <p>Staff point-of-sale terminal. Requires TAMU login and staff PIN to access.</p>
         <a href="/cashier.html" class="portal-btn">Open Cashier</a>
@@ -135,7 +135,7 @@
 
       <!-- Manager Dashboard -->
       <div class="portal-card">
-        <div class="portal-card-icon" style="background:rgba(21,128,61,0.1);">📊</div>
+        <div class="portal-card-icon" style="background:rgba(21,128,61,0.1);color:#15803d;font-weight:800;font-size:1rem;">MGR</div>
         <h2>Manager Dashboard</h2>
         <p>Analytics, inventory, menu editing, employee management, and reports.</p>
         <a href="/manager-login" class="portal-btn">Manager Login</a>
@@ -143,7 +143,7 @@
 
       <!-- Menu Board -->
       <div class="portal-card">
-        <div class="portal-card-icon" style="background:rgba(202,138,4,0.1);">📋</div>
+        <div class="portal-card-icon" style="background:rgba(202,138,4,0.1);color:#92400e;font-weight:800;font-size:1rem;">MENU</div>
         <h2>Menu Board</h2>
         <p>Live display menu with current items, prices, weather, and promotions.</p>
         <a href="/menu-board.html" class="portal-btn ghost">View Menu Board</a>
@@ -153,26 +153,22 @@
   </main>
 
   <script>
-    // Load auth state for the top bar only
     (async () => {
-      const bar     = document.getElementById('auth-bar-text');
-      const btn     = document.getElementById('auth-bar-btn');
-      const msg     = document.getElementById('portal-msg');
-      const params  = new URLSearchParams(window.location.search);
-
+      const bar  = document.getElementById('auth-bar-text');
+      const btn  = document.getElementById('auth-bar-btn');
+      const msg  = document.getElementById('portal-msg');
+      const params = new URLSearchParams(window.location.search);
       if (params.get('unauthorized')) msg.textContent = 'You do not have permission to access that page.';
       if (params.get('loginError'))   msg.textContent = 'Login failed. Please try again.';
-
       try {
         const res  = await fetch('/api/me');
         const data = await res.json();
         if (data.authenticated && data.user) {
           const u = data.user;
           bar.innerHTML = `Signed in as <strong>${u.displayName}</strong> &nbsp;·&nbsp; <span style="text-transform:capitalize;">${u.role}</span>`;
-          btn.textContent = 'Sign out';
-          btn.href = '#';
-          btn.addEventListener('click', async e => {
-            e.preventDefault();
+          btn.style.display = '';
+          btn.innerHTML = `<button style="padding:7px 14px;border:1px solid var(--line);background:white;border-radius:8px;font:inherit;font-size:0.82rem;cursor:pointer;color:var(--accent-dark);font-weight:600;" id="signout-btn">Sign Out</button>`;
+          document.getElementById('signout-btn').addEventListener('click', async () => {
             await fetch('/auth/logout', { method: 'POST' });
             window.location.reload();
           });
