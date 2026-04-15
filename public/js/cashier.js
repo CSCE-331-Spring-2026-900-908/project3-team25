@@ -191,12 +191,21 @@ function renderProductGrid() {
 
   grid.innerHTML = filtered.map(item => {
     const img = cashierDrinkImg(item.name);
-    return `<button class="cashier-product-btn" data-id="${item.id}" type="button">
-        <div class="cashier-product-art">
-          <img src="${img}" alt="${item.name}" onerror="this.src='/boba/Sonny-Boba.png'" />
+    return `<button class="cashier-product-btn" data-id="${item.id}" style="
+        background-image: url('${img}');
+        background-size: 62%;
+        background-repeat: no-repeat;
+        background-position: center 10%;
+        background-color: #fffaf7;
+        background-blend-mode: multiply;
+        padding-top: 72px;
+        position: relative;
+      ">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 45%,rgba(255,250,247,0.97) 72%);border-radius:14px;pointer-events:none;"></div>
+        <div style="position:relative;z-index:1;">
+          <strong>${item.name}</strong>
+          <span>$${Number(item.price).toFixed(2)}</span>
         </div>
-        <strong>${item.name}</strong>
-        <span>$${Number(item.price).toFixed(2)}</span>
       </button>`;
   }).join('');
 

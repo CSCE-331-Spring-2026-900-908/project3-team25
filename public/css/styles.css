@@ -957,7 +957,7 @@ td {
 }
 
 .cashier-product-btn {
-  background: white;
+  background: #fffaf7;
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 10px;
@@ -999,25 +999,6 @@ td {
   font-size: 0.95rem;
   font-weight: 900;
   color: var(--accent-dark);
-}
-
-.cashier-product-art {
-  width: 100%;
-  min-height: 92px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 0 4px;
-}
-
-.cashier-product-art img {
-  width: 100%;
-  max-width: 132px;
-  height: 88px;
-  object-fit: contain;
-  object-position: center center;
-  mix-blend-mode: normal;
-  filter: drop-shadow(0 6px 10px rgba(94, 61, 38, 0.12));
 }
 
 /* Bottom modify bar */
@@ -1135,24 +1116,21 @@ input[type="range"] {
    ============================================================ */
 .drink-image-wrap {
   width: 100%;
-  min-height: 168px;
   display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 12px;
-  padding: 8px 0 2px;
-  background: transparent;
 }
 
 .drink-image {
   width: 100%;
-  max-width: 210px;
+  max-width: 200px;
   height: 150px;
-  object-fit: contain;
-  object-position: center center;
-  border-radius: 0;
-  mix-blend-mode: normal;
-  filter: drop-shadow(0 8px 12px rgba(94, 61, 38, 0.12));
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #fffaf7;
+  background-blend-mode: multiply;
 }
 /* ===== FINAL ACCESSIBILITY / MUSIC TOOLBAR ===== */
 
