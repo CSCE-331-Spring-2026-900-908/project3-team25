@@ -211,15 +211,28 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+  passport.authenticate('google', { scope: ['profile','email'], state: req.query.intent || '' })(req, res, next);
+});
+
+// Manager login — triggers Google OAuth then redirects to manager if authorized
+app.get('/manager-login', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).send('Google OAuth not configured.');
+  }
+  passport.authenticate('google', { scope: ['profile','email'], state: 'manager' })(req, res, next);
 });
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
-    const role = req.user?.role;
-    if (role === 'manager') return res.redirect('/');
-    if (role === 'cashier') return res.redirect('/cashier.html');
+    const role   = req.user?.role;
+    const intent = req.query.state || '';
+    if (intent === 'manager') {
+      if (role === 'manager') return res.redirect('/manager.html');
+      return res.redirect('/?unauthorized=1');
+    }
+    if (role === 'manager') return res.redirect('/manager.html');
+    if (role === 'cashier')  return res.redirect('/cashier.html');
     return res.redirect('/customer.html');
   }
 );
@@ -346,7 +359,6 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const userId = req.isAuthenticated?.() ? req.user?.id : null;
     const body = req.body || {};
-    console.log('DEBUG cashierId:', JSON.stringify(body).slice(0,200));
     const { items, paymentMethod = 'card', cashierId = 7, promoCode = null, rewardId = null, source = 'customer' } = body;
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) throw new Error('At least one item required.');

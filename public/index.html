@@ -6,34 +6,180 @@
   <title>Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .landing-hero {
+      text-align: center;
+      padding: 48px 24px 32px;
+    }
+    .landing-hero h1 { font-size: 2rem; margin: 0 0 6px; color: var(--accent-dark); }
+    .landing-hero p  { color: var(--muted); margin: 0; font-size: 1rem; }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px 48px;
+    }
+
+    .portal-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 32px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+      transition: box-shadow 0.2s, transform 0.15s;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .portal-card:hover {
+      box-shadow: 0 8px 32px rgba(158,59,53,0.13);
+      transform: translateY(-3px);
+    }
+    .portal-card-icon {
+      width: 60px; height: 60px;
+      border-radius: 14px;
+      display: grid; place-items: center;
+      font-size: 1.6rem;
+      margin-bottom: 4px;
+    }
+    .portal-card h2 { font-size: 1.15rem; margin: 0; color: var(--accent-dark); }
+    .portal-card p  { font-size: 0.85rem; color: var(--muted); margin: 0; line-height: 1.4; }
+    .portal-card .portal-btn {
+      margin-top: 12px;
+      padding: 10px 22px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      text-decoration: none;
+      display: block;
+      transition: filter 0.15s;
+    }
+    .portal-card .portal-btn:hover { filter: brightness(1.08); }
+    .portal-card .portal-btn.ghost {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+    }
+
+    .portal-auth-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .portal-auth-bar strong { color: var(--ink); }
+    #portal-msg {
+      text-align: center;
+      color: var(--accent);
+      font-size: 0.88rem;
+      min-height: 20px;
+      margin: 8px 0 0;
+    }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
-  <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
+
+  <!-- Auth bar at top -->
+  <div class="portal-auth-bar" id="auth-bar">
+    <span id="auth-bar-text" class="muted">Not signed in</span>
+    <a href="/auth/google" class="btn" id="auth-bar-btn" style="font-size:0.85rem;padding:8px 16px;">Sign in with Google</a>
   </div>
 
-  <main id="main-content" class="page-shell">
-
-    <header class="portal-header">
-      <div class="brand-mark">
-        <div class="brand-badge">RB</div>
+  <main id="main-content">
+    <div class="landing-hero">
+      <div class="brand-mark" style="justify-content:center;margin-bottom:16px;">
+        <div class="brand-badge" style="width:56px;height:56px;font-size:1.3rem;">RB</div>
         <div>
-          <h1>Reveille Bubble Tea</h1>
-          <p class="muted">Team 25</p>
+          <h1 style="margin:0;font-size:1.5rem;">Reveille Bubble Tea</h1>
+          <p class="muted" style="margin:2px 0 0;font-size:0.85rem;">Team 25</p>
         </div>
       </div>
-      <div id="auth-status" class="portal-auth"></div>
-    </header>
+      <p id="portal-msg"></p>
+    </div>
 
-    <p id="portal-access-message" class="muted portal-access-msg"></p>
+    <div class="portal-grid">
 
-    <!-- Role-aware dashboard injected by auth.js -->
-    <div id="role-dashboard"></div>
+      <!-- Customer Kiosk -->
+      <div class="portal-card">
+        <div class="portal-card-icon" style="background:rgba(158,59,53,0.1);">🧋</div>
+        <h2>Customer Kiosk</h2>
+        <p>Order drinks, earn reward points, spin the wheel, and customize your order.</p>
+        <a href="/customer.html" class="portal-btn">Order Now</a>
+      </div>
 
+      <!-- Cashier POS -->
+      <div class="portal-card">
+        <div class="portal-card-icon" style="background:rgba(79,70,229,0.1);">🖥️</div>
+        <h2>Cashier POS</h2>
+        <p>Staff point-of-sale terminal. Requires TAMU login and staff PIN to access.</p>
+        <a href="/cashier.html" class="portal-btn">Open Cashier</a>
+      </div>
+
+      <!-- Manager Dashboard -->
+      <div class="portal-card">
+        <div class="portal-card-icon" style="background:rgba(21,128,61,0.1);">📊</div>
+        <h2>Manager Dashboard</h2>
+        <p>Analytics, inventory, menu editing, employee management, and reports.</p>
+        <a href="/manager-login" class="portal-btn">Manager Login</a>
+      </div>
+
+      <!-- Menu Board -->
+      <div class="portal-card">
+        <div class="portal-card-icon" style="background:rgba(202,138,4,0.1);">📋</div>
+        <h2>Menu Board</h2>
+        <p>Live display menu with current items, prices, weather, and promotions.</p>
+        <a href="/menu-board.html" class="portal-btn ghost">View Menu Board</a>
+      </div>
+
+    </div>
   </main>
 
-  <script src="/js/auth.js"></script>
+  <script>
+    // Load auth state for the top bar only
+    (async () => {
+      const bar     = document.getElementById('auth-bar-text');
+      const btn     = document.getElementById('auth-bar-btn');
+      const msg     = document.getElementById('portal-msg');
+      const params  = new URLSearchParams(window.location.search);
+
+      if (params.get('unauthorized')) msg.textContent = 'You do not have permission to access that page.';
+      if (params.get('loginError'))   msg.textContent = 'Login failed. Please try again.';
+
+      try {
+        const res  = await fetch('/api/me');
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          const u = data.user;
+          bar.innerHTML = `Signed in as <strong>${u.displayName}</strong> &nbsp;·&nbsp; <span style="text-transform:capitalize;">${u.role}</span>`;
+          btn.textContent = 'Sign out';
+          btn.href = '#';
+          btn.addEventListener('click', async e => {
+            e.preventDefault();
+            await fetch('/auth/logout', { method: 'POST' });
+            window.location.reload();
+          });
+        }
+      } catch(_) {}
+    })();
+  </script>
   <script src="/js/accessibility.js"></script>
 </body>
 </html>

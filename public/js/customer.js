@@ -1536,6 +1536,37 @@ async function loadCustomerWeather() {
 
 async function init() {
   applyStaticTranslations();
+
+  // Show welcome overlay unless already authenticated or returning from Google
+  const overlay = document.getElementById('kiosk-welcome-overlay');
+  const guestBtn = document.getElementById('kiosk-guest-btn');
+
+  // Check if already logged in
+  let isLoggedIn = false;
+  try {
+    const res  = await fetch('/api/me');
+    const data = await res.json();
+    if (data.authenticated && data.user) isLoggedIn = true;
+  } catch(_) {}
+
+  if (isLoggedIn) {
+    // Already signed in — hide overlay immediately
+    if (overlay) overlay.style.display = 'none';
+  } else {
+    // Show overlay — wait for guest button or Google redirect
+    if (overlay) overlay.style.display = 'flex';
+    if (guestBtn) {
+      guestBtn.addEventListener('click', () => {
+        if (overlay) overlay.style.display = 'none';
+      });
+    }
+    // Don't proceed with init until guest clicks through
+    // (Google login will redirect back to this page authenticated)
+    await new Promise(resolve => {
+      if (guestBtn) guestBtn.addEventListener('click', resolve, { once: true });
+    });
+  }
+
   await loadUser();
   await loadCustomerMenu();
   await loadCustomerWeather();
