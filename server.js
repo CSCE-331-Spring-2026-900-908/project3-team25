@@ -254,25 +254,21 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  const safeReturnTo = sanitizeReturnTo(req.query.returnTo);
-  if (safeReturnTo) {
-    req.session.returnTo = safeReturnTo;
-    req.session.save(() => {
-      passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
-    });
-  } else {
-    passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
-  }
+  const safeReturnTo = sanitizeReturnTo(req.query.returnTo) || '';
+  // Pass returnTo through OAuth state parameter — reliable across redirects
+  passport.authenticate('google', {
+    scope: ['profile','email'],
+    state: safeReturnTo
+  })(req, res, next);
 });
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
-    const returnTo = sanitizeReturnTo(req.session?.returnTo);
-    if (req.session) delete req.session.returnTo;
-    // Always honor returnTo if it was set — regardless of role
+    // Read returnTo from state parameter (passed through Google redirect reliably)
+    const returnTo = sanitizeReturnTo(req.query.state);
     if (returnTo) return res.redirect(returnTo);
-    // No returnTo — use role-based default
+    // Fallback by role
     const role = req.user?.role;
     if (role === 'manager') return res.redirect('/manager.html');
     if (role === 'cashier') return res.redirect('/cashier.html');
