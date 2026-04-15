@@ -270,8 +270,9 @@ app.get('/auth/google/callback',
   (req, res) => {
     const returnTo = sanitizeReturnTo(req.session?.returnTo);
     if (req.session) delete req.session.returnTo;
+    // Always honor returnTo if it was set — regardless of role
     if (returnTo) return res.redirect(returnTo);
-
+    // No returnTo — use role-based default
     const role = req.user?.role;
     if (role === 'manager') return res.redirect('/manager.html');
     if (role === 'cashier') return res.redirect('/cashier.html');

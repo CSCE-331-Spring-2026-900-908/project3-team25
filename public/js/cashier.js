@@ -23,10 +23,11 @@ async function initCashier() {
 
   const staffState = await getCashierAuthState();
   if (!staffState.authenticated) {
+    // Not logged in — ask for Google login first
     renderCashierOverlay('google');
-  } else if (!staffState.allowed) {
-    renderCashierOverlay('unauthorized', staffState.user);
   } else {
+    // Already logged in with ANY Google account — show PIN screen
+    // The PIN itself is what grants cashier access, not the Google role
     renderCashierOverlay('pin', staffState.user);
   }
 
