@@ -254,8 +254,16 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  const safeReturnTo = sanitizeReturnTo(req.query.returnTo);
-  if (safeReturnTo) req.session.returnTo = safeReturnTo;
+
+  const safeReturnTo = sanitizeReturnTo(req.query.returnTo) || '/customer.html';
+  if (req.session) {
+    req.session.returnTo = safeReturnTo;
+    return req.session.save(err => {
+      if (err) return next(err);
+      passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+    });
+  }
+
   passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
 });
 
