@@ -10,118 +10,8 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="accessibility-toolbar" aria-label="Accessibility controls">
-    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">Voice</button>
+    <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
   </div>
-
-  <!-- Kiosk Welcome / Login Overlay -->
-  <div id="kiosk-welcome-overlay" style="
-    position:fixed;inset:0;background:var(--bg);z-index:4000;
-    display:flex;align-items:center;justify-content:center;
-  ">
-    <div style="
-      background:white;border:1px solid var(--line);border-radius:24px;
-      padding:40px 36px;max-width:480px;width:100%;
-      box-shadow:0 24px 64px rgba(0,0,0,0.12);text-align:center;
-    ">
-      <div style="width:60px;height:60px;border-radius:14px;background:var(--accent);
-        color:white;display:grid;place-items:center;font-weight:800;font-size:1.3rem;
-        margin:0 auto 16px;">RB</div>
-      <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Welcome to Reveille Bubble Tea</h2>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 24px;line-height:1.5;">
-        Sign in to earn reward points, or continue as a guest to browse and order.
-      </p>
-
-      <!-- Tab switcher -->
-      <div style="display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:20px;">
-        <button id="tab-qr-btn" onclick="showLoginTab('qr')" style="
-          flex:1;padding:10px;border:none;font:inherit;font-size:0.88rem;font-weight:600;
-          cursor:pointer;background:var(--accent);color:white;transition:all 0.15s;">
-          Scan QR Code
-        </button>
-        <button id="tab-email-btn" onclick="showLoginTab('email')" style="
-          flex:1;padding:10px;border:none;font:inherit;font-size:0.88rem;font-weight:600;
-          cursor:pointer;background:white;color:var(--muted);transition:all 0.15s;">
-          Sign In with Email
-        </button>
-      </div>
-
-      <!-- QR Code tab -->
-      <div id="tab-qr" style="margin-bottom:16px;">
-        <p style="font-size:0.85rem;color:var(--muted);margin:0 0 14px;">
-          Scan this QR code with your phone to sign in with your TAMU Google account.
-        </p>
-        <div style="display:inline-block;padding:14px;background:white;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;">
-          <!-- QR code using Google Charts API pointing to /auth/google -->
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://project3-team25-m13k.onrender.com/auth/google"
-               alt="QR code to sign in" width="160" height="160"
-               style="display:block;border-radius:6px;" />
-        </div>
-        <p style="font-size:0.78rem;color:var(--muted);margin:0;">
-          Point your phone camera at the QR code above
-        </p>
-      </div>
-
-      <!-- Email / Google tab -->
-      <div id="tab-email" style="display:none;margin-bottom:16px;">
-        <p style="font-size:0.85rem;color:var(--muted);margin:0 0 14px;">
-          Sign in with your TAMU Google account to earn points and spin the wheel.
-        </p>
-        <a href="/auth/google" style="
-          display:block;width:100%;padding:13px;
-          background:var(--accent);color:white;
-          border:none;border-radius:10px;
-          font:inherit;font-size:0.95rem;font-weight:700;
-          text-decoration:none;box-sizing:border-box;
-          transition:filter 0.15s;
-        " onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter='none'">
-          Continue with TAMU Google Account
-        </a>
-      </div>
-
-      <!-- Divider -->
-      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 16px;">
-        <div style="flex:1;height:1px;background:var(--line);"></div>
-        <span style="font-size:0.78rem;color:var(--muted);">or</span>
-        <div style="flex:1;height:1px;background:var(--line);"></div>
-      </div>
-
-      <!-- Guest button -->
-      <button id="kiosk-guest-btn" style="
-        width:100%;padding:12px;background:transparent;
-        border:1.5px solid var(--line);border-radius:10px;
-        font:inherit;font-size:0.9rem;font-weight:600;
-        color:var(--muted);cursor:pointer;box-sizing:border-box;
-      ">Continue as Guest</button>
-
-      <p style="font-size:0.76rem;color:var(--muted);margin:12px 0 0;line-height:1.4;">
-        Guests can order but cannot earn points or use the spin wheel.
-      </p>
-    </div>
-  </div>
-
-  <script>
-    function showLoginTab(tab) {
-      const qrDiv    = document.getElementById('tab-qr');
-      const emailDiv = document.getElementById('tab-email');
-      const qrBtn    = document.getElementById('tab-qr-btn');
-      const emailBtn = document.getElementById('tab-email-btn');
-      if (tab === 'qr') {
-        qrDiv.style.display    = '';
-        emailDiv.style.display = 'none';
-        qrBtn.style.background    = 'var(--accent)';
-        qrBtn.style.color         = 'white';
-        emailBtn.style.background = 'white';
-        emailBtn.style.color      = 'var(--muted)';
-      } else {
-        qrDiv.style.display    = 'none';
-        emailDiv.style.display = '';
-        emailBtn.style.background = 'var(--accent)';
-        emailBtn.style.color      = 'white';
-        qrBtn.style.background    = 'white';
-        qrBtn.style.color         = 'var(--muted)';
-      }
-    }
-  </script>
 
   <!-- ── Drink Detail Modal ─────────────────────────────── -->
   <div class="drink-modal-overlay" id="drink-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-drink-name">
@@ -226,6 +116,20 @@
     </div>
   </div>
 
+  <!-- ── Login Prompt Modal ─────────────────────────── -->
+  <div class="drink-modal-overlay hidden" id="login-prompt-overlay" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title">
+    <div class="drink-modal" style="max-width:520px;">
+      <div class="drink-modal-body" style="padding-top:28px;">
+        <h3 id="login-prompt-title" style="margin:0 0 12px;">Sign in before checkout?</h3>
+        <p class="muted" id="login-prompt-text" style="margin:0 0 20px;line-height:1.6;">Sign in to use reward points and promos, or continue as a guest to place your order right away.</p>
+        <div class="drink-modal-footer">
+          <button class="btn-cancel" id="login-prompt-guest" type="button">Continue as Guest</button>
+          <a class="btn-add" id="login-prompt-signin" href="/auth/google?next=/customer.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">Sign In with Google</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Edit Modal ────────────────────────────────────── -->
   <div class="drink-modal-overlay hidden" id="edit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="drink-modal">
@@ -282,7 +186,9 @@
           <p class="muted" id="kiosk-label" style="margin:2px 0 0;font-size:0.8rem;">Kiosk</p>
         </div>
       </div>
-      <div class="cashier-topbar-right" style="display:flex;align-items:center;gap:10px;">
+      <div class="cashier-topbar-right" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <a id="kiosk-login-btn" class="btn ghost" href="/auth/google?next=/customer.html" style="padding:8px 14px;font-size:0.85rem;text-decoration:none;">Sign In / Points</a>
+        <button id="kiosk-logout-btn" class="btn ghost" type="button" style="padding:8px 14px;font-size:0.85rem;display:none;">Sign Out</button>
         <label for="language-select" id="language-select-label" class="muted" style="font-size:0.82rem;">Language</label>
         <select id="language-select" style="padding:8px 10px;border-radius:8px;border:1px solid var(--line);font:inherit;background:#fff;">
           <option value="en">English</option>

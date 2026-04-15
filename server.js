@@ -211,28 +211,25 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  passport.authenticate('google', { scope: ['profile','email'], state: req.query.intent || '' })(req, res, next);
-});
-
-// Manager login — triggers Google OAuth then redirects to manager if authorized
-app.get('/manager-login', (req, res, next) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(500).send('Google OAuth not configured.');
+  const nextPath = String(req.query.next || '').trim();
+  if (nextPath.startsWith('/') && !nextPath.startsWith('//')) {
+    req.session.redirectAfterLogin = nextPath;
   }
-  passport.authenticate('google', { scope: ['profile','email'], state: 'manager' })(req, res, next);
+  passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
 });
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
-    const role   = req.user?.role;
-    const intent = req.query.state || '';
-    if (intent === 'manager') {
-      if (role === 'manager') return res.redirect('/manager.html');
-      return res.redirect('/?unauthorized=1');
-    }
-    if (role === 'manager') return res.redirect('/manager.html');
-    if (role === 'cashier')  return res.redirect('/cashier.html');
+    const role = req.user?.role;
+    const requested = req.session?.redirectAfterLogin;
+    if (req.session) delete req.session.redirectAfterLogin;
+
+    if (requested === '/cashier.html') return res.redirect('/cashier.html');
+    if (requested === '/customer.html') return res.redirect('/customer.html');
+
+    if (role === 'manager') return res.redirect('/');
+    if (role === 'cashier') return res.redirect('/cashier.html');
     return res.redirect('/customer.html');
   }
 );
@@ -359,6 +356,7 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const userId = req.isAuthenticated?.() ? req.user?.id : null;
     const body = req.body || {};
+    console.log('DEBUG cashierId:', JSON.stringify(body).slice(0,200));
     const { items, paymentMethod = 'card', cashierId = 7, promoCode = null, rewardId = null, source = 'customer' } = body;
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) throw new Error('At least one item required.');
@@ -652,7 +650,7 @@ app.post('/api/auth/mock-login', (req, res) => {
 app.get('/api/auth/config', (_req, res) => res.json({ googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID), requiredEmail:'reveille.bubbletea@gmail.com', googleCallbackUrl }));
 app.get('/api/health', (_req, res) => res.json({ ok:true, dbConfigured:hasDbConfig() }));
 
-app.get('/cashier.html', requireStaff, (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
+app.get('/cashier.html', (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
 app.get('/manager.html', (req, res) => {
   if (req.isAuthenticated?.() && req.user?.role==='manager') return res.sendFile(path.join(__dirname,'public','manager.html'));
   res.redirect('/?unauthorized=1');

@@ -21,20 +21,24 @@
 
   <!-- PIN Overlay -->
   <div id="pin-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:3000;display:flex;align-items:center;justify-content:center;">
-    <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+    <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
       <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
       <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Reveille Bubble Tea</h2>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 24px;">Enter your staff PIN to begin</p>
-      <input type="password" id="pin-input" maxlength="8" placeholder="••••"
-        style="width:100%;padding:14px;text-align:center;font-size:1.6rem;letter-spacing:0.35em;border:2px solid var(--line);border-radius:10px;font-weight:700;box-sizing:border-box;margin-bottom:10px;" />
-      <div id="pin-error" style="color:var(--accent);font-size:0.85rem;min-height:20px;margin-bottom:10px;"></div>
-      <button id="pin-submit-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;">Sign In</button>
-      <div id="pin-request-link" style="font-size:0.83rem;color:var(--muted);cursor:pointer;text-decoration:underline;">New here? Request access from a manager</div>
-      <div id="request-access-form" style="display:none;margin-top:16px;text-align:left;">
-        <input type="text"  id="request-name"  placeholder="Your full name"   style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
-        <input type="email" id="request-email" placeholder="Your TAMU email"  style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
-        <button id="request-submit-btn" style="width:100%;padding:11px;background:var(--accent-dark);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Submit Request</button>
-        <div id="request-msg" style="font-size:0.82rem;margin-top:6px;min-height:18px;"></div>
+      <p id="cashier-auth-message" style="color:var(--muted);font-size:0.88rem;margin:0 0 18px;">Sign in with Google first. Staff accounts with a TAMU email can continue to PIN entry.</p>
+      <a id="cashier-google-btn" href="/auth/google?next=/cashier.html" style="display:inline-flex;align-items:center;justify-content:center;width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;text-decoration:none;">Sign In with Google</a>
+      <div id="cashier-pin-section" style="display:none;">
+        <p style="color:var(--muted);font-size:0.88rem;margin:0 0 16px;">TAMU staff detected. Enter your staff PIN to begin.</p>
+        <input type="password" id="pin-input" maxlength="8" placeholder="••••"
+          style="width:100%;padding:14px;text-align:center;font-size:1.6rem;letter-spacing:0.35em;border:2px solid var(--line);border-radius:10px;font-weight:700;box-sizing:border-box;margin-bottom:10px;" />
+        <div id="pin-error" style="color:var(--accent);font-size:0.85rem;min-height:20px;margin-bottom:10px;"></div>
+        <button id="pin-submit-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;">Enter PIN</button>
+        <div id="pin-request-link" style="font-size:0.83rem;color:var(--muted);cursor:pointer;text-decoration:underline;">New here? Request access from a manager</div>
+        <div id="request-access-form" style="display:none;margin-top:16px;text-align:left;">
+          <input type="text"  id="request-name"  placeholder="Your full name"   style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+          <input type="email" id="request-email" placeholder="Your TAMU email"  style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+          <button id="request-submit-btn" style="width:100%;padding:11px;background:var(--accent-dark);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Submit Request</button>
+          <div id="request-msg" style="font-size:0.82rem;margin-top:6px;min-height:18px;"></div>
+        </div>
       </div>
     </div>
   </div>

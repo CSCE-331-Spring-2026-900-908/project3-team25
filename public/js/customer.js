@@ -118,7 +118,7 @@ const TRANSLATIONS = {
     ptsNeeded: 'pts needed',
     needMore: 'need',
     more: 'more',
-    signInToSpin: 'Sign in with your TAMU Google account to spin!',
+    signInToSpin: 'Sign in with your Google account to spin!',
     alreadySpun: 'Already spun today. Come back tomorrow!',
     checkingEligibility: 'Checking eligibility…',
     spinChance: 'Spin once per day for a chance to win prizes!',
@@ -248,7 +248,7 @@ const TRANSLATIONS = {
     ptsNeeded: 'pts necesarios',
     needMore: 'faltan',
     more: 'más',
-    signInToSpin: '¡Inicia sesión con tu cuenta TAMU de Google para girar!',
+    signInToSpin: '¡Inicia sesión con tu cuenta de Google para girar!',
     alreadySpun: 'Ya giraste hoy. ¡Vuelve mañana!',
     checkingEligibility: 'Verificando elegibilidad…',
     spinChance: '¡Gira una vez al día para tener la oportunidad de ganar premios!',
@@ -512,10 +512,22 @@ async function loadUser() {
   try {
     const res = await fetch('/api/me');
     const data = await res.json();
-    if (!data.authenticated) return;
-    currentUser = data.user;
     const greeting = document.getElementById('kiosk-user-greeting');
+    const loginBtn = document.getElementById('kiosk-login-btn');
+    const logoutBtn = document.getElementById('kiosk-logout-btn');
+
+    if (!data.authenticated) {
+      currentUser = null;
+      if (greeting) greeting.textContent = '';
+      if (loginBtn) loginBtn.style.display = 'inline-flex';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      return;
+    }
+
+    currentUser = data.user;
     if (greeting) greeting.textContent = `${t('hi')}, ${currentUser.firstName || currentUser.displayName}`;
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'inline-flex';
     renderRewardsTopbar(currentUser.rewardPoints ?? 0);
   } catch (_) {}
 }
@@ -1391,11 +1403,25 @@ document.getElementById('go-to-review-btn').addEventListener('click', () => {
 });
 
 document.getElementById('back-to-menu-btn').addEventListener('click', () => setActiveScreen('menu'));
+function openLoginPromptForCheckout() {
+  document.getElementById('login-prompt-overlay')?.classList.remove('hidden');
+}
+
+function closeLoginPromptForCheckout() {
+  document.getElementById('login-prompt-overlay')?.classList.add('hidden');
+}
+
 document.getElementById('go-to-payment-btn').addEventListener('click', () => {
   if (!customerOrder.length) {
     showToast(t('emptyOrder'));
     return;
   }
+
+  if (!currentUser) {
+    openLoginPromptForCheckout();
+    return;
+  }
+
   renderTotals();
   setActiveScreen('payment');
 });
@@ -1421,6 +1447,18 @@ document.getElementById('start-new-order-btn').addEventListener('click', () => {
 });
 
 document.getElementById('apply-promo-btn').addEventListener('click', applyPromoCode);
+document.getElementById('kiosk-logout-btn')?.addEventListener('click', async () => {
+  await fetch('/auth/logout', { method: 'POST' });
+  window.location.href = '/customer.html';
+});
+document.getElementById('login-prompt-guest')?.addEventListener('click', () => {
+  closeLoginPromptForCheckout();
+  renderTotals();
+  setActiveScreen('payment');
+});
+document.getElementById('login-prompt-overlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('login-prompt-overlay')) closeLoginPromptForCheckout();
+});
 
 // Rewards / spin buttons
 document.getElementById('open-rewards-btn')?.addEventListener('click', openRewardsModal);
@@ -1536,37 +1574,6 @@ async function loadCustomerWeather() {
 
 async function init() {
   applyStaticTranslations();
-
-  // Show welcome overlay unless already authenticated or returning from Google
-  const overlay = document.getElementById('kiosk-welcome-overlay');
-  const guestBtn = document.getElementById('kiosk-guest-btn');
-
-  // Check if already logged in
-  let isLoggedIn = false;
-  try {
-    const res  = await fetch('/api/me');
-    const data = await res.json();
-    if (data.authenticated && data.user) isLoggedIn = true;
-  } catch(_) {}
-
-  if (isLoggedIn) {
-    // Already signed in — hide overlay immediately
-    if (overlay) overlay.style.display = 'none';
-  } else {
-    // Show overlay — wait for guest button or Google redirect
-    if (overlay) overlay.style.display = 'flex';
-    if (guestBtn) {
-      guestBtn.addEventListener('click', () => {
-        if (overlay) overlay.style.display = 'none';
-      });
-    }
-    // Don't proceed with init until guest clicks through
-    // (Google login will redirect back to this page authenticated)
-    await new Promise(resolve => {
-      if (guestBtn) guestBtn.addEventListener('click', resolve, { once: true });
-    });
-  }
-
   await loadUser();
   await loadCustomerMenu();
   await loadCustomerWeather();

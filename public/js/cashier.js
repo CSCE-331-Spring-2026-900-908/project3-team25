@@ -17,10 +17,49 @@ const CATEGORY_LABELS = {
 const EXTRA_BOBA_PRODUCT_ID = 16;
 const EXTRA_BOBA_PRICE = 0.75;
 
+async function hydrateCashierAuthState() {
+  const msgEl = document.getElementById('cashier-auth-message');
+  const pinSection = document.getElementById('cashier-pin-section');
+  const googleBtn = document.getElementById('cashier-google-btn');
+  const nameEl = document.getElementById('cashier-user-name');
+
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+
+    if (!data.authenticated) {
+      if (msgEl) msgEl.textContent = 'Sign in with Google first. Staff accounts with a TAMU email can continue to PIN entry.';
+      if (pinSection) pinSection.style.display = 'none';
+      if (googleBtn) googleBtn.style.display = 'inline-flex';
+      if (nameEl) nameEl.textContent = 'Not signed in';
+      return;
+    }
+
+    const user = data.user || {};
+    if (nameEl) nameEl.textContent = user.displayName || user.email || 'Signed in';
+
+    if (user.role === 'cashier' || user.role === 'manager') {
+      if (msgEl) msgEl.textContent = `Signed in as ${user.displayName || user.email}. Enter your staff PIN to continue.`;
+      if (pinSection) pinSection.style.display = 'block';
+      if (googleBtn) googleBtn.style.display = 'none';
+      return;
+    }
+
+    if (msgEl) msgEl.textContent = 'This Google account does not have cashier access. Please sign in with an approved TAMU staff account.';
+    if (pinSection) pinSection.style.display = 'none';
+    if (googleBtn) googleBtn.style.display = 'inline-flex';
+  } catch (_) {
+    if (msgEl) msgEl.textContent = 'Could not verify your sign-in status. Please try again.';
+    if (pinSection) pinSection.style.display = 'none';
+    if (googleBtn) googleBtn.style.display = 'inline-flex';
+  }
+}
+
 //  INIT 
 async function initCashier() {
-  // Show PIN screen immediately — no access without PIN
+  // Show auth overlay immediately
   showPinOverlay();
+  await hydrateCashierAuthState();
 
   // Wire PIN overlay buttons
   document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
