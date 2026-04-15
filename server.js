@@ -255,8 +255,14 @@ app.get('/auth/google', (req, res, next) => {
     return res.status(500).send('Google OAuth not configured.');
   }
   const safeReturnTo = sanitizeReturnTo(req.query.returnTo);
-  if (safeReturnTo) req.session.returnTo = safeReturnTo;
-  passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+  if (safeReturnTo) {
+    req.session.returnTo = safeReturnTo;
+    req.session.save(() => {
+      passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+    });
+  } else {
+    passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+  }
 });
 
 app.get('/auth/google/callback',
