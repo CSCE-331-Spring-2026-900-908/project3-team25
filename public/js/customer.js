@@ -736,8 +736,7 @@ function renderMenu() {
     <article class="menu-card" data-id="${item.id}" tabindex="0" role="button"
              aria-label="${item.name}, $${Number(item.price).toFixed(2)}">
       <div class="drink-image-wrap">
-        <img src="${getDrinkImg(item.name)}" alt="${item.name}" class="drink-image"
-             onerror="this.src='/boba/Sonny-Boba.png'" />
+        <div class="drink-image" style="background-image:url('${getDrinkImg(item.name)}');"></div>
       </div>
       <div class="topline">
         <h3 style="margin:0;">${item.name}</h3>

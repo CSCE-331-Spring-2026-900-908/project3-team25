@@ -957,7 +957,7 @@ td {
 }
 
 .cashier-product-btn {
-  background: white;
+  background: #fffaf7;
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 10px;
@@ -1120,16 +1120,17 @@ input[type="range"] {
   justify-content: center;
   align-items: center;
   margin-bottom: 12px;
-  background: #fffaf7;
 }
 
 .drink-image {
   width: 100%;
-  max-width: 180px;
-  height: 140px;
-  object-fit: contain;
-  border-radius: 0;
-  mix-blend-mode: multiply;
+  max-width: 200px;
+  height: 150px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #fffaf7;
+  background-blend-mode: multiply;
 }
 /* ===== FINAL ACCESSIBILITY / MUSIC TOOLBAR ===== */
 
