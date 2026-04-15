@@ -254,16 +254,8 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-
-  const safeReturnTo = sanitizeReturnTo(req.query.returnTo) || '/customer.html';
-  if (req.session) {
-    req.session.returnTo = safeReturnTo;
-    return req.session.save(err => {
-      if (err) return next(err);
-      passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
-    });
-  }
-
+  const safeReturnTo = sanitizeReturnTo(req.query.returnTo);
+  if (safeReturnTo) req.session.returnTo = safeReturnTo;
   passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
 });
 
@@ -275,7 +267,7 @@ app.get('/auth/google/callback',
     if (returnTo) return res.redirect(returnTo);
 
     const role = req.user?.role;
-    if (role === 'manager') return res.redirect('/');
+    if (role === 'manager') return res.redirect('/manager.html');
     if (role === 'cashier') return res.redirect('/cashier.html');
     return res.redirect('/customer.html');
   }
