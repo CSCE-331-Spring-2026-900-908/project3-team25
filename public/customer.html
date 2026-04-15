@@ -116,20 +116,6 @@
     </div>
   </div>
 
-  <!-- ── Login Prompt Modal ─────────────────────────── -->
-  <div class="drink-modal-overlay hidden" id="login-prompt-overlay" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title">
-    <div class="drink-modal" style="max-width:520px;">
-      <div class="drink-modal-body" style="padding-top:28px;">
-        <h3 id="login-prompt-title" style="margin:0 0 12px;">Sign in before checkout?</h3>
-        <p class="muted" id="login-prompt-text" style="margin:0 0 20px;line-height:1.6;">Sign in to use reward points and promos, or continue as a guest to place your order right away.</p>
-        <div class="drink-modal-footer">
-          <button class="btn-cancel" id="login-prompt-guest" type="button">Continue as Guest</button>
-          <a class="btn-add" id="login-prompt-signin" href="/auth/google?next=/customer.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">Sign In with Google</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ── Edit Modal ────────────────────────────────────── -->
   <div class="drink-modal-overlay hidden" id="edit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="drink-modal">
@@ -186,15 +172,14 @@
           <p class="muted" id="kiosk-label" style="margin:2px 0 0;font-size:0.8rem;">Kiosk</p>
         </div>
       </div>
-      <div class="cashier-topbar-right" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-        <a id="kiosk-login-btn" class="btn ghost" href="/auth/google?next=/customer.html" style="padding:8px 14px;font-size:0.85rem;text-decoration:none;">Sign In / Points</a>
-        <button id="kiosk-logout-btn" class="btn ghost" type="button" style="padding:8px 14px;font-size:0.85rem;display:none;">Sign Out</button>
+      <div class="cashier-topbar-right" style="display:flex;align-items:center;gap:10px;">
         <label for="language-select" id="language-select-label" class="muted" style="font-size:0.82rem;">Language</label>
         <select id="language-select" style="padding:8px 10px;border-radius:8px;border:1px solid var(--line);font:inherit;background:#fff;">
           <option value="en">English</option>
           <option value="es">Español</option>
         </select>
         <span id="kiosk-user-greeting" class="cashier-user-info" style="font-size:0.85rem;"></span>
+        <button id="kiosk-auth-btn" type="button" style="padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;cursor:pointer;color:var(--accent-dark);font-weight:600;">Sign In</button>
       </div>
     </header>
 
@@ -332,6 +317,44 @@
     </section>
 
   </main>
+
+
+  <div id="guest-login-overlay" class="drink-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guest-login-title">
+    <div class="drink-modal" style="max-width:560px;">
+      <div class="drink-modal-body" style="padding-top:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+          <div>
+            <h3 id="guest-login-title" style="margin:0;color:var(--accent-dark);font-size:1.7rem;">Sign in before checkout?</h3>
+            <p style="margin:6px 0 0;color:var(--muted);">Sign in to earn reward points, or continue as a guest.</p>
+          </div>
+          <button id="guest-login-close" type="button" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);">✕</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">Scan QR Code</button>
+          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
+        </div>
+
+        <div id="guest-login-qr-panel">
+          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.</p>
+          <div style="display:flex;justify-content:center;margin-bottom:10px;">
+            <img id="guest-login-qr-image" alt="Sign in QR code" style="width:220px;height:220px;border-radius:16px;border:1px solid var(--line);padding:10px;background:#fff;object-fit:contain;" />
+          </div>
+          <p id="guest-login-qr-status" style="margin:0;color:var(--muted);text-align:center;font-size:0.9rem;">Waiting for phone sign-in…</p>
+        </div>
+
+        <div id="guest-login-google-panel" style="display:none;">
+          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
+          <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:22px;">
+          <button id="guest-continue-btn" type="button" class="btn ghost" style="flex:1;">Continue as Guest</button>
+          <button id="guest-login-rewards-btn" type="button" class="btn" style="flex:1;">Sign In for Rewards</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/customer.js"></script>
   <script src="/js/accessibility.js"></script>

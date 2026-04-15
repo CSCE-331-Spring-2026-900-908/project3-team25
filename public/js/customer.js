@@ -5,6 +5,10 @@ let customerActiveCategory = '';
 let customerOrder = [];
 let selectedPaymentMethod = 'card';
 let currentUser = null;
+let currentScreen = 'menu';
+let guestLoginPairToken = null;
+let guestLoginPoller = null;
+let guestCheckoutRequested = false;
 
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
 
@@ -118,7 +122,7 @@ const TRANSLATIONS = {
     ptsNeeded: 'pts needed',
     needMore: 'need',
     more: 'more',
-    signInToSpin: 'Sign in with your Google account to spin!',
+    signInToSpin: 'Sign in with your TAMU Google account to spin!',
     alreadySpun: 'Already spun today. Come back tomorrow!',
     checkingEligibility: 'Checking eligibility…',
     spinChance: 'Spin once per day for a chance to win prizes!',
@@ -248,7 +252,7 @@ const TRANSLATIONS = {
     ptsNeeded: 'pts necesarios',
     needMore: 'faltan',
     more: 'más',
-    signInToSpin: '¡Inicia sesión con tu cuenta de Google para girar!',
+    signInToSpin: '¡Inicia sesión con tu cuenta TAMU de Google para girar!',
     alreadySpun: 'Ya giraste hoy. ¡Vuelve mañana!',
     checkingEligibility: 'Verificando elegibilidad…',
     spinChance: '¡Gira una vez al día para tener la oportunidad de ganar premios!',
@@ -394,6 +398,7 @@ function updateSelectOptionsText() {
     const label = document.querySelector(`label[for="${id}"]`);
     if (label) label.textContent = text;
   });
+  saveKioskState();
 }
 
 function applyStaticTranslations() {
@@ -481,6 +486,7 @@ function calcTax(subtotal) {
 
 // ─── Screen routing ───────────────────────────────────────────────────────────
 function setActiveScreen(name) {
+  currentScreen = name;
   ['menu', 'review', 'payment', 'confirm'].forEach(s => {
     const el = document.getElementById(`screen-${s}`);
     el.classList.remove('active-screen');
@@ -489,10 +495,170 @@ function setActiveScreen(name) {
   const target = document.getElementById(`screen-${name}`);
   target.classList.remove('hidden-screen');
   target.classList.add('active-screen');
+  saveKioskState();
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let toastTimer = null;
+
+function saveKioskState(extra = {}) {
+  const state = {
+    customerOrder,
+    customerActiveCategory,
+    selectedPaymentMethod,
+    currentLanguage,
+    currentScreen,
+    guestCheckoutRequested,
+    appliedRewardId,
+    appliedRewardLabel,
+    appliedPromoCode,
+    appliedPromoLabel,
+    discountAmount,
+    spinPrizeDetails,
+    ...extra
+  };
+  sessionStorage.setItem('rbtKioskState', JSON.stringify(state));
+}
+
+function restoreKioskState() {
+  try {
+    const raw = sessionStorage.getItem('rbtKioskState');
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    customerOrder = Array.isArray(state.customerOrder) ? state.customerOrder : [];
+    customerActiveCategory = state.customerActiveCategory || '';
+    selectedPaymentMethod = state.selectedPaymentMethod || 'card';
+    currentLanguage = state.currentLanguage || currentLanguage;
+    currentScreen = state.currentScreen || 'menu';
+    guestCheckoutRequested = Boolean(state.guestCheckoutRequested);
+    appliedRewardId = state.appliedRewardId || null;
+    appliedRewardLabel = state.appliedRewardLabel || '';
+    appliedPromoCode = state.appliedPromoCode || null;
+    appliedPromoLabel = state.appliedPromoLabel || '';
+    discountAmount = Number(state.discountAmount || 0);
+    spinPrizeDetails = state.spinPrizeDetails || null;
+  } catch (_) {}
+}
+
+function clearGuestPairingPoller() {
+  if (guestLoginPoller) {
+    clearInterval(guestLoginPoller);
+    guestLoginPoller = null;
+  }
+}
+
+function updateKioskAuthButton() {
+  const btn = document.getElementById('kiosk-auth-btn');
+  if (!btn) return;
+  btn.textContent = currentUser ? 'Sign Out' : 'Sign In';
+}
+
+function openGuestLoginOverlay(fromCheckout = false) {
+  guestCheckoutRequested = fromCheckout;
+  saveKioskState();
+  const overlay = document.getElementById('guest-login-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  overlay.classList.add('open');
+  switchGuestLoginTab('qr');
+  startGuestPairing();
+}
+
+function closeGuestLoginOverlay() {
+  const overlay = document.getElementById('guest-login-overlay');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  overlay.classList.remove('open');
+  clearGuestPairingPoller();
+  guestLoginPairToken = null;
+}
+
+function switchGuestLoginTab(tab) {
+  const qrBtn = document.getElementById('guest-login-tab-qr');
+  const googleBtn = document.getElementById('guest-login-tab-google');
+  const qrPanel = document.getElementById('guest-login-qr-panel');
+  const googlePanel = document.getElementById('guest-login-google-panel');
+  if (!qrBtn || !googleBtn || !qrPanel || !googlePanel) return;
+
+  const qrActive = tab === 'qr';
+  qrBtn.style.background = qrActive ? 'var(--accent)' : '#fff';
+  qrBtn.style.color = qrActive ? '#fff' : 'var(--muted)';
+  googleBtn.style.background = qrActive ? '#fff' : 'var(--accent)';
+  googleBtn.style.color = qrActive ? 'var(--muted)' : '#fff';
+  qrPanel.style.display = qrActive ? '' : 'none';
+  googlePanel.style.display = qrActive ? 'none' : '';
+}
+
+async function startGuestPairing() {
+  const img = document.getElementById('guest-login-qr-image');
+  const status = document.getElementById('guest-login-qr-status');
+  if (!img || !status) return;
+  clearGuestPairingPoller();
+  status.textContent = 'Preparing secure sign-in…';
+  try {
+    const res = await fetch('/api/auth/pair/new?returnTo=' + encodeURIComponent('/customer.html'));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not create QR sign-in.');
+    guestLoginPairToken = data.token;
+    img.src = data.qrUrl;
+    status.textContent = 'Scan the QR code with your phone, then finish Google sign-in there.';
+    guestLoginPoller = setInterval(checkGuestPairingStatus, 2000);
+  } catch (err) {
+    status.textContent = err.message;
+  }
+}
+
+async function checkGuestPairingStatus() {
+  if (!guestLoginPairToken) return;
+  const statusEl = document.getElementById('guest-login-qr-status');
+  try {
+    const res = await fetch(`/api/auth/pair-status/${guestLoginPairToken}`);
+    const data = await res.json();
+    if (data.status === 'authorized') {
+      clearGuestPairingPoller();
+      if (statusEl) statusEl.textContent = 'Sign-in complete. Connecting this kiosk…';
+      const claimRes = await fetch(`/api/auth/pair-claim/${guestLoginPairToken}`, { method: 'POST' });
+      const claimData = await claimRes.json();
+      if (!claimRes.ok) throw new Error(claimData.error || 'Could not finish kiosk sign-in.');
+      await loadUser();
+      closeGuestLoginOverlay();
+      if (guestCheckoutRequested && customerOrder.length) {
+        renderTotals();
+        setActiveScreen('payment');
+      }
+      guestCheckoutRequested = false;
+      saveKioskState();
+      return;
+    }
+    if (data.status === 'expired') {
+      clearGuestPairingPoller();
+      guestLoginPairToken = null;
+      if (statusEl) statusEl.textContent = 'This QR code expired. Please reopen the sign-in box to get a new one.';
+    }
+  } catch (err) {
+    if (statusEl) statusEl.textContent = err.message;
+  }
+}
+
+function startCustomerGoogleLogin(fromCheckout = false) {
+  guestCheckoutRequested = fromCheckout;
+  saveKioskState({ guestCheckoutRequested });
+  window.location.href = '/auth/google?returnTo=' + encodeURIComponent('/customer.html');
+}
+
+function handleCustomerAuthButton() {
+  if (currentUser) {
+    fetch('/auth/logout', { method: 'POST' }).finally(() => {
+      currentUser = null;
+      updateKioskAuthButton();
+      const greeting = document.getElementById('kiosk-user-greeting');
+      if (greeting) greeting.textContent = '';
+      window.location.reload();
+    });
+    return;
+  }
+  openGuestLoginOverlay(false);
+}
 
 function showToast(msg) {
   let tEl = document.getElementById('kiosk-toast');
@@ -512,23 +678,16 @@ async function loadUser() {
   try {
     const res = await fetch('/api/me');
     const data = await res.json();
-    const greeting = document.getElementById('kiosk-user-greeting');
-    const loginBtn = document.getElementById('kiosk-login-btn');
-    const logoutBtn = document.getElementById('kiosk-logout-btn');
-
     if (!data.authenticated) {
       currentUser = null;
-      if (greeting) greeting.textContent = '';
-      if (loginBtn) loginBtn.style.display = 'inline-flex';
-      if (logoutBtn) logoutBtn.style.display = 'none';
+      updateKioskAuthButton();
       return;
     }
-
     currentUser = data.user;
+    const greeting = document.getElementById('kiosk-user-greeting');
     if (greeting) greeting.textContent = `${t('hi')}, ${currentUser.firstName || currentUser.displayName}`;
-    if (loginBtn) loginBtn.style.display = 'none';
-    if (logoutBtn) logoutBtn.style.display = 'inline-flex';
     renderRewardsTopbar(currentUser.rewardPoints ?? 0);
+    updateKioskAuthButton();
   } catch (_) {}
 }
 
@@ -564,6 +723,7 @@ function renderTabs() {
       renderMenu();
     });
   });
+  saveKioskState();
 }
 
 // ─── Menu grid ────────────────────────────────────────────────────────────────
@@ -615,6 +775,7 @@ function renderMenu() {
       if (item) openDrinkModal(item);
     });
   });
+  saveKioskState();
 }
 
 // ─── Drink Detail Modal ───────────────────────────────────────────────────────
@@ -726,6 +887,7 @@ function renderOrder() {
 
   if (!customerOrder.length) {
     lines.innerHTML = `<p class="cart-note">${t('noDrinksYet')}</p>`;
+    saveKioskState();
     return;
   }
 
@@ -762,6 +924,8 @@ function renderOrder() {
   lines.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', () => openEditModal(Number(btn.dataset.index)));
   });
+
+  saveKioskState();
 }
 
 function renderTotals() {
@@ -791,6 +955,8 @@ function renderTotals() {
     const note = document.getElementById('payment-discount-note');
     if (note) note.style.display = 'none';
   }
+
+  saveKioskState();
 }
 
 // ─── Rewards panel on review screen ──────────────────────────────────────────
@@ -1331,6 +1497,7 @@ function setPaymentMethod(method) {
     if (btn.dataset.payment === 'applepay') btn.textContent = t('applePay');
     if (btn.dataset.payment === 'cash') btn.textContent = t('cash');
   });
+  saveKioskState();
 }
 
 document.querySelectorAll('.payment-option').forEach(btn => {
@@ -1403,25 +1570,15 @@ document.getElementById('go-to-review-btn').addEventListener('click', () => {
 });
 
 document.getElementById('back-to-menu-btn').addEventListener('click', () => setActiveScreen('menu'));
-function openLoginPromptForCheckout() {
-  document.getElementById('login-prompt-overlay')?.classList.remove('hidden');
-}
-
-function closeLoginPromptForCheckout() {
-  document.getElementById('login-prompt-overlay')?.classList.add('hidden');
-}
-
 document.getElementById('go-to-payment-btn').addEventListener('click', () => {
   if (!customerOrder.length) {
     showToast(t('emptyOrder'));
     return;
   }
-
   if (!currentUser) {
-    openLoginPromptForCheckout();
+    openGuestLoginOverlay(true);
     return;
   }
-
   renderTotals();
   setActiveScreen('payment');
 });
@@ -1447,18 +1604,6 @@ document.getElementById('start-new-order-btn').addEventListener('click', () => {
 });
 
 document.getElementById('apply-promo-btn').addEventListener('click', applyPromoCode);
-document.getElementById('kiosk-logout-btn')?.addEventListener('click', async () => {
-  await fetch('/auth/logout', { method: 'POST' });
-  window.location.href = '/customer.html';
-});
-document.getElementById('login-prompt-guest')?.addEventListener('click', () => {
-  closeLoginPromptForCheckout();
-  renderTotals();
-  setActiveScreen('payment');
-});
-document.getElementById('login-prompt-overlay')?.addEventListener('click', e => {
-  if (e.target === document.getElementById('login-prompt-overlay')) closeLoginPromptForCheckout();
-});
 
 // Rewards / spin buttons
 document.getElementById('open-rewards-btn')?.addEventListener('click', openRewardsModal);
@@ -1484,6 +1629,28 @@ document.getElementById('language-select')?.addEventListener('change', e => {
   loadCustomerWeather();
 });
 
+document.getElementById('kiosk-auth-btn')?.addEventListener('click', handleCustomerAuthButton);
+document.getElementById('guest-login-close')?.addEventListener('click', closeGuestLoginOverlay);
+document.getElementById('guest-login-overlay')?.addEventListener('click', event => {
+  if (event.target.id === 'guest-login-overlay') closeGuestLoginOverlay();
+});
+document.getElementById('guest-login-tab-qr')?.addEventListener('click', () => {
+  switchGuestLoginTab('qr');
+  if (!guestLoginPairToken) startGuestPairing();
+});
+document.getElementById('guest-login-tab-google')?.addEventListener('click', () => switchGuestLoginTab('google'));
+document.getElementById('guest-login-google-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
+document.getElementById('guest-login-rewards-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
+document.getElementById('guest-continue-btn')?.addEventListener('click', () => {
+  closeGuestLoginOverlay();
+  if (guestCheckoutRequested && customerOrder.length) {
+    renderTotals();
+    setActiveScreen('payment');
+  }
+  guestCheckoutRequested = false;
+  saveKioskState();
+});
+
 // ─── Deep-link support (#rewards / #spin from portal) ────────────────────────
 function checkDeepLink() {
   if (window.location.hash === '#rewards') openRewardsModal();
@@ -1496,7 +1663,9 @@ async function loadCustomerMenu() {
   const data = await res.json();
   customerMenu = data.items || [];
   customerCategories = Object.keys(data.categories || {});
-  customerActiveCategory = customerCategories[0] || '';
+  if (!customerCategories.includes(customerActiveCategory)) {
+    customerActiveCategory = customerCategories[0] || '';
+  }
   renderTabs();
   renderMenu();
   renderOrder();
@@ -1573,12 +1742,27 @@ async function loadCustomerWeather() {
 }
 
 async function init() {
+  restoreKioskState();
   applyStaticTranslations();
   await loadUser();
   await loadCustomerMenu();
   await loadCustomerWeather();
-  setPaymentMethod('card');
-  setActiveScreen('menu');
+  setPaymentMethod(selectedPaymentMethod || 'card');
+
+  if (guestCheckoutRequested && currentUser && customerOrder.length) {
+    renderTotals();
+    setActiveScreen('payment');
+    guestCheckoutRequested = false;
+  } else if (customerOrder.length && ['review', 'payment', 'confirm'].includes(currentScreen)) {
+    renderOrder();
+    if (currentScreen === 'payment') renderTotals();
+    setActiveScreen(currentScreen);
+  } else {
+    setActiveScreen('menu');
+  }
+
+  updateKioskAuthButton();
+  saveKioskState();
   checkDeepLink();
 }
 

@@ -22,6 +22,9 @@ const COLLEGE_STATION_WEATHER = {
 const googleCallbackUrl =
   process.env.GOOGLE_CALLBACK_URL ||
   'https://project3-team25-m13k.onrender.com/auth/google/callback';
+const publicBaseUrl = (googleCallbackUrl.replace(/\/auth\/google\/callback$/, '') || '').replace(/\/$/, '');
+const authPairs = new Map();
+const AUTH_PAIR_TTL_MS = 5 * 60 * 1000;
 
 app.set('trust proxy', 1);
 app.use(express.json());
@@ -46,6 +49,46 @@ function getUserRoleFromEmail(email) {
 function requireStaff(req, res, next) {
   if (req.isAuthenticated?.() && (req.user?.role === 'cashier' || req.user?.role === 'manager')) return next();
   return res.redirect('/?unauthorized=1');
+}
+
+function requireStaff(req, res, next) {
+  if (req.isAuthenticated?.() && (req.user?.role === 'cashier' || req.user?.role === 'manager')) return next();
+  return res.redirect('/?unauthorized=1');
+}
+
+function sanitizeReturnTo(value) {
+  const target = String(value || '').trim();
+  if (!target.startsWith('/')) return '';
+  if (target.startsWith('//')) return '';
+  return target;
+}
+
+function cleanupAuthPairs() {
+  const now = Date.now();
+  for (const [token, pair] of authPairs.entries()) {
+    if (!pair || pair.expiresAt <= now || pair.claimedAt) authPairs.delete(token);
+  }
+}
+
+function buildPairQrUrl(url) {
+  return `https://quickchart.io/qr?size=220&text=${encodeURIComponent(url)}`;
+}
+
+function issueAuthPair(returnTo = '/customer.html') {
+  cleanupAuthPairs();
+  const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const safeReturnTo = sanitizeReturnTo(returnTo) || '/customer.html';
+  const pairUrl = `${publicBaseUrl}/auth/pair/${token}`;
+  authPairs.set(token, {
+    token,
+    returnTo: safeReturnTo,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + AUTH_PAIR_TTL_MS,
+    status: 'pending',
+    user: null,
+    claimedAt: null
+  });
+  return { token, pairUrl, qrUrl: buildPairQrUrl(pairUrl), expiresInMs: AUTH_PAIR_TTL_MS };
 }
 
 passport.serializeUser((user, done) => done(null, user));
@@ -211,23 +254,19 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  const nextPath = String(req.query.next || '').trim();
-  if (nextPath.startsWith('/') && !nextPath.startsWith('//')) {
-    req.session.redirectAfterLogin = nextPath;
-  }
+  const safeReturnTo = sanitizeReturnTo(req.query.returnTo);
+  if (safeReturnTo) req.session.returnTo = safeReturnTo;
   passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
 });
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
+    const returnTo = sanitizeReturnTo(req.session?.returnTo);
+    if (req.session) delete req.session.returnTo;
+    if (returnTo) return res.redirect(returnTo);
+
     const role = req.user?.role;
-    const requested = req.session?.redirectAfterLogin;
-    if (req.session) delete req.session.redirectAfterLogin;
-
-    if (requested === '/cashier.html') return res.redirect('/cashier.html');
-    if (requested === '/customer.html') return res.redirect('/customer.html');
-
     if (role === 'manager') return res.redirect('/');
     if (role === 'cashier') return res.redirect('/cashier.html');
     return res.redirect('/customer.html');
@@ -245,6 +284,71 @@ app.get('/api/me', async (req, res) => {
     try { const r = await queryDb(`SELECT reward_points FROM user_accounts WHERE user_id=$1`, [req.user.id]); rewardPoints = r.rows[0]?.reward_points ?? 0; } catch(_) {}
   }
   res.json({ authenticated: true, user: { id: req.user.id, displayName: req.user.displayName, firstName: req.user.firstName || req.user.displayName?.split(' ')[0] || 'User', email: req.user.email, role: req.user.role, rewardPoints } });
+});
+
+app.get('/api/staff-auth-status', (req, res) => {
+  const authenticated = Boolean(req.isAuthenticated?.() && req.user);
+  const role = req.user?.role || null;
+  const allowed = role === 'cashier' || role === 'manager';
+  res.json({
+    authenticated,
+    allowed,
+    role,
+    user: authenticated ? {
+      displayName: req.user.displayName,
+      firstName: req.user.firstName || req.user.displayName?.split(' ')[0] || 'User',
+      email: req.user.email
+    } : null
+  });
+});
+
+app.get('/api/auth/pair/new', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Google OAuth not configured.' });
+  }
+  const pair = issueAuthPair(req.query.returnTo || '/customer.html');
+  res.json(pair);
+});
+
+app.get('/auth/pair/:token', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair) return res.status(404).send('This kiosk sign-in session expired. Please scan the new QR code on the kiosk.');
+  const continueUrl = `/auth/google?returnTo=${encodeURIComponent(`/auth/pair/complete?token=${req.params.token}`)}`;
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kiosk Sign In</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f8f3ef;color:#3f2a24;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px}.card{max-width:420px;background:#fff;border:1px solid #e8d4cb;border-radius:20px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.08)}.badge{width:64px;height:64px;border-radius:16px;background:#b54a40;color:#fff;font-weight:800;font-size:28px;display:grid;place-items:center;margin:0 auto 16px}.btn{display:inline-block;background:#b54a40;color:#fff;text-decoration:none;padding:14px 18px;border-radius:12px;font-weight:700;margin-top:10px}.sub{color:#7d645c;font-size:.95rem;line-height:1.5}</style></head><body><div class="card"><div class="badge">RB</div><h1 style="margin:0 0 10px;font-size:1.7rem;">Sign in to Reveille Bubble Tea</h1><p class="sub">Continue with Google on your phone. After you finish, the kiosk on the counter will log in automatically.</p><a class="btn" href="${continueUrl}">Continue with Google</a></div></body></html>`);
+});
+
+app.get('/auth/pair/complete', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.query.token);
+  if (!pair) return res.status(404).send('This kiosk sign-in session expired. Please rescan the QR code.');
+  if (!req.isAuthenticated?.() || !req.user) {
+    return res.redirect(`/auth/google?returnTo=${encodeURIComponent(`/auth/pair/complete?token=${req.query.token}`)}`);
+  }
+  pair.status = 'authorized';
+  pair.user = req.user;
+  authPairs.set(req.query.token, pair);
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kiosk Connected</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f8f3ef;color:#3f2a24;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px}.card{max-width:430px;background:#fff;border:1px solid #e8d4cb;border-radius:20px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.08)}.badge{width:64px;height:64px;border-radius:16px;background:#b54a40;color:#fff;font-weight:800;font-size:28px;display:grid;place-items:center;margin:0 auto 16px}</style></head><body><div class="card"><div class="badge">RB</div><h1 style="margin:0 0 10px;font-size:1.7rem;">Kiosk connected</h1><p style="color:#7d645c;line-height:1.5">You are signed in as <strong>${req.user.displayName}</strong>. You can go back to the kiosk now and continue your order.</p></div></body></html>`);
+});
+
+app.get('/api/auth/pair-status/:token', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair) return res.status(404).json({ status: 'expired' });
+  res.json({ status: pair.status, expiresInMs: Math.max(0, pair.expiresAt - Date.now()) });
+});
+
+app.post('/api/auth/pair-claim/:token', (req, res, next) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair || pair.status !== 'authorized' || !pair.user) return res.status(404).json({ error: 'Pairing not ready.' });
+  req.login(pair.user, err => {
+    if (err) return next(err);
+    pair.status = 'claimed';
+    pair.claimedAt = Date.now();
+    authPairs.set(req.params.token, pair);
+    res.json({ ok: true, user: pair.user, returnTo: pair.returnTo });
+  });
 });
 
 app.get('/api/menu', async (_req, res) => {

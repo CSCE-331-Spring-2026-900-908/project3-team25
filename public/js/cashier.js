@@ -17,59 +17,18 @@ const CATEGORY_LABELS = {
 const EXTRA_BOBA_PRODUCT_ID = 16;
 const EXTRA_BOBA_PRICE = 0.75;
 
-async function hydrateCashierAuthState() {
-  const msgEl = document.getElementById('cashier-auth-message');
-  const pinSection = document.getElementById('cashier-pin-section');
-  const googleBtn = document.getElementById('cashier-google-btn');
-  const nameEl = document.getElementById('cashier-user-name');
-
-  try {
-    const res = await fetch('/api/me');
-    const data = await res.json();
-
-    if (!data.authenticated) {
-      if (msgEl) msgEl.textContent = 'Sign in with Google first. Staff accounts with a TAMU email can continue to PIN entry.';
-      if (pinSection) pinSection.style.display = 'none';
-      if (googleBtn) googleBtn.style.display = 'inline-flex';
-      if (nameEl) nameEl.textContent = 'Not signed in';
-      return;
-    }
-
-    const user = data.user || {};
-    if (nameEl) nameEl.textContent = user.displayName || user.email || 'Signed in';
-
-    if (user.role === 'cashier' || user.role === 'manager') {
-      if (msgEl) msgEl.textContent = `Signed in as ${user.displayName || user.email}. Enter your staff PIN to continue.`;
-      if (pinSection) pinSection.style.display = 'block';
-      if (googleBtn) googleBtn.style.display = 'none';
-      return;
-    }
-
-    if (msgEl) msgEl.textContent = 'This Google account does not have cashier access. Please sign in with an approved TAMU staff account.';
-    if (pinSection) pinSection.style.display = 'none';
-    if (googleBtn) googleBtn.style.display = 'inline-flex';
-  } catch (_) {
-    if (msgEl) msgEl.textContent = 'Could not verify your sign-in status. Please try again.';
-    if (pinSection) pinSection.style.display = 'none';
-    if (googleBtn) googleBtn.style.display = 'inline-flex';
-  }
-}
-
 //  INIT 
 async function initCashier() {
-  // Show auth overlay immediately
-  showPinOverlay();
-  await hydrateCashierAuthState();
-
-  // Wire PIN overlay buttons
-  document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
-  document.getElementById('pin-input')?.addEventListener('keydown', e => { if (e.key==='Enter') submitPin(); });
-  document.getElementById('pin-request-link')?.addEventListener('click', () => {
-    const f = document.getElementById('request-access-form');
-    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  });
-  document.getElementById('request-submit-btn')?.addEventListener('click', submitAccessRequest);
   document.getElementById('cashier-logout-btn')?.addEventListener('click', cashierPinLogout);
+
+  const staffState = await getCashierAuthState();
+  if (!staffState.authenticated) {
+    renderCashierOverlay('google');
+  } else if (!staffState.allowed) {
+    renderCashierOverlay('unauthorized', staffState.user);
+  } else {
+    renderCashierOverlay('pin', staffState.user);
+  }
 
   // Language selector
   const langSel = document.getElementById('cashier-lang-select');
@@ -105,6 +64,86 @@ async function initCashier() {
       e.target.classList.add('hidden');
     }
   });
+}
+
+async function getCashierAuthState() {
+  try {
+    const res = await fetch('/api/staff-auth-status');
+    return await res.json();
+  } catch (_) {
+    return { authenticated: false, allowed: false, user: null };
+  }
+}
+
+function startGoogleCashierLogin() {
+  window.location.href = '/auth/google?returnTo=' + encodeURIComponent('/cashier.html');
+}
+
+function wirePinOverlayActions() {
+  document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
+  document.getElementById('pin-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
+  document.getElementById('pin-request-link')?.addEventListener('click', () => {
+    const f = document.getElementById('request-access-form');
+    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('request-submit-btn')?.addEventListener('click', submitAccessRequest);
+}
+
+function renderCashierOverlay(mode, user = null) {
+  const overlay = document.getElementById('pin-overlay');
+  if (!overlay) return;
+
+  if (mode === 'google') {
+    overlay.innerHTML = `
+      <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+        <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+        <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Cashier sign in</h2>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 24px;">Sign in with your Google account first. After that, staff members can enter their PIN right here.</p>
+        <button id="cashier-google-login-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;">Continue with Google</button>
+      </div>`;
+    overlay.classList.remove('hidden');
+    document.getElementById('cashier-google-login-btn')?.addEventListener('click', startGoogleCashierLogin);
+    return;
+  }
+
+  if (mode === 'unauthorized') {
+    overlay.innerHTML = `
+      <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+        <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+        <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Staff access only</h2>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 20px;">${user?.displayName || 'This Google account'} is not approved for cashier access. Sign out and use a staff Google account.</p>
+        <button id="cashier-switch-account-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;">Sign out</button>
+      </div>`;
+    overlay.classList.remove('hidden');
+    document.getElementById('cashier-switch-account-btn')?.addEventListener('click', async () => {
+      await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+      startGoogleCashierLogin();
+    });
+    return;
+  }
+
+  overlay.innerHTML = `
+    <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+      <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+      <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Reveille Bubble Tea</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 24px;">Signed in as ${user?.displayName || 'staff'}. Enter your staff PIN to begin.</p>
+      <input type="password" id="pin-input" maxlength="8" placeholder="••••" style="width:100%;padding:14px;text-align:center;font-size:1.6rem;letter-spacing:0.35em;border:2px solid var(--line);border-radius:10px;font-weight:700;box-sizing:border-box;margin-bottom:10px;" />
+      <div id="pin-error" style="color:var(--accent);font-size:0.85rem;min-height:20px;margin-bottom:10px;"></div>
+      <button id="pin-submit-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;">Enter PIN</button>
+      <div id="pin-request-link" style="font-size:0.83rem;color:var(--muted);cursor:pointer;text-decoration:underline;">New here? Request access from a manager</div>
+      <div id="request-access-form" style="display:none;margin-top:16px;text-align:left;">
+        <input type="text" id="request-name" placeholder="Your full name" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+        <input type="email" id="request-email" placeholder="Your TAMU email" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+        <button id="request-submit-btn" style="width:100%;padding:11px;background:var(--accent-dark);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Submit Request</button>
+        <div id="request-msg" style="font-size:0.82rem;margin-top:6px;min-height:18px;"></div>
+      </div>
+    </div>`;
+  overlay.classList.remove('hidden');
+  if (user?.displayName) {
+    const nameEl = document.getElementById('cashier-user-name');
+    if (nameEl) nameEl.textContent = user.displayName;
+  }
+  wirePinOverlayActions();
 }
 
 //  CATEGORIES 
