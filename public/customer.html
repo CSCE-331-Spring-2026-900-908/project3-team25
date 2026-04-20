@@ -87,7 +87,7 @@
 
       <hr style="border:none;border-top:1px solid var(--line);margin:18px 0;" />
       <h4 id="rewards-history-title" style="margin:0 0 10px;">Redemption History</h4>
-      <div id="rewards-history-list"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
+      <div id="rewards-history-list" aria-live="polite"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
 
       <div style="margin-top:20px;display:flex;gap:10px;">
         <button type="button" id="open-spin-btn" class="btn" style="flex:1;">Spin the Wheel</button>
@@ -100,13 +100,13 @@
   <div class="spin-modal-overlay" id="spin-modal-overlay" role="dialog" aria-modal="true" aria-label="Spin the wheel">
     <div class="spin-modal">
       <h3 id="spin-modal-title">Spin &amp; Win</h3>
-      <p id="spin-status-msg"></p>
+      <p id="spin-status-msg" aria-live="polite"></p>
       <div class="spin-wheel-wrap">
         <div class="spin-pointer">▼</div>
         <canvas id="spin-canvas" width="260" height="260"></canvas>
       </div>
       <button type="button" id="spin-btn" class="btn-spin">SPIN!</button>
-      <div class="spin-result" id="spin-result">
+      <div class="spin-result" id="spin-result" aria-live="polite">
         <div id="spin-prize-label"></div>
         <div class="spin-code" id="spin-promo-code"></div>
       </div>
@@ -297,7 +297,7 @@
     <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
       <div class="order-shell confirmation-shell">
         <h2 id="confirm-title" style="margin-bottom:8px;">Order placed!</h2>
-        <p class="muted" id="confirmation-message" style="margin-top:0;">Your order has been received.</p>
+        <p class="muted" id="confirmation-message" aria-live="polite" style="margin-top:0;">Your order has been received.</p>
 
         <div class="summary-box" style="max-width:420px;margin:24px auto 0;">
           <div class="summary-row"><span id="confirm-status-label">Status</span><strong id="confirm-status-value">Order received</strong></div>

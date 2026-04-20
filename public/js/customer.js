@@ -782,7 +782,11 @@ function openDrinkModal(item) {
   modalItem = item;
   modalQty = 1;
 
-  document.getElementById('modal-drink-img').src = getDrinkImg(item.name);
+  const modalImg = document.getElementById('modal-drink-img');
+  if (modalImg) {
+    modalImg.src = getDrinkImg(item.name);
+    modalImg.alt = `${item.name} drink image`;
+  }
   document.getElementById('modal-drink-img').alt = item.name;
   document.getElementById('modal-drink-name').textContent = item.name;
   document.getElementById('modal-drink-desc').textContent = item.description || '';
@@ -802,6 +806,10 @@ function openDrinkModal(item) {
 }
 
 function closeDrinkModal() {
+  const modalImg = document.getElementById('modal-drink-img');
+    if (modalImg) {
+      modalImg.alt = '';
+    }
   document.getElementById('drink-modal-overlay').classList.remove('open');
   modalItem = null;
 }

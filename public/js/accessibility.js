@@ -200,7 +200,7 @@
     }
 
     return target.closest(
-      'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .portal-launch-btn'
+      'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .portal-btn, .portal-card'
     );
   }
 
@@ -298,6 +298,23 @@
     });
   }
 
+  function wireKeyboardActivation() {
+    document.addEventListener('keydown', (event) => {
+      const el = getTrackedElement(event.target);
+      if (!el) return;
+
+      const tag = (el.tagName || '').toLowerCase();
+
+      // Let native buttons, links, inputs, and selects handle themselves
+      if (['button', 'a', 'input', 'select', 'textarea'].includes(tag)) return;
+
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        el.click();
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     getLiveRegion();
     loadVoices();
@@ -307,6 +324,7 @@
     wireFocusSpeech();
     wireClickSpeech();
     wireSelectSpeech();
+    wireKeyboardActivation();
   });
 
   if ("speechSynthesis" in window) {
