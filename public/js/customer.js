@@ -338,6 +338,47 @@ function translateCategoryName(category) {
   return map[currentLanguage]?.[category] || category.replace(/_/g, ' ');
 }
 
+function translateDrinkName(name) {
+  const map = {
+    en: {
+      'Classic Milk Tea': 'Classic Milk Tea',
+      'Brown Sugar Milk Tea': 'Brown Sugar Milk Tea',
+      'Taro Milk Tea': 'Taro Milk Tea',
+      'Matcha Milk Tea': 'Matcha Milk Tea',
+      'Thai Tea': 'Thai Tea',
+      'Honey Green Tea': 'Honey Green Tea',
+      'Wintermelon Milk Tea': 'Wintermelon Milk Tea',
+      'Oolong Milk Tea': 'Oolong Milk Tea',
+      'Coffee Milk Tea': 'Coffee Milk Tea',
+      'Lychee Green Tea': 'Lychee Green Tea',
+      'Mango Green Tea': 'Mango Green Tea',
+      'Peach Green Tea': 'Peach Green Tea',
+      'Strawberry Green Tea': 'Strawberry Green Tea',
+      'Jasmine Green Tea': 'Jasmine Green Tea',
+      'Black Tea Lemonade': 'Black Tea Lemonade'
+    },
+    es: {
+      'Classic Milk Tea': 'Té con leche clásico',
+      'Brown Sugar Milk Tea': 'Té con leche con azúcar morena',
+      'Taro Milk Tea': 'Té con leche de taro',
+      'Matcha Milk Tea': 'Té con leche de matcha',
+      'Thai Tea': 'Té tailandés',
+      'Honey Green Tea': 'Té verde con miel',
+      'Wintermelon Milk Tea': 'Té con leche de melón de invierno',
+      'Oolong Milk Tea': 'Té con leche oolong',
+      'Coffee Milk Tea': 'Té con leche de café',
+      'Lychee Green Tea': 'Té verde de lichi',
+      'Mango Green Tea': 'Té verde de mango',
+      'Peach Green Tea': 'Té verde de durazno',
+      'Strawberry Green Tea': 'Té verde de fresa',
+      'Jasmine Green Tea': 'Té verde de jazmín',
+      'Black Tea Lemonade': 'Limonada de té negro'
+    }
+  };
+
+  return map[currentLanguage]?.[name] || name;
+}
+
 function translateSelectionValue(value) {
   const valueMap = {
     'No Sugar': t('noSugar'),
@@ -732,14 +773,17 @@ function renderMenu() {
   if (!wrap) return;
   const filtered = customerMenu.filter(i => i.category === customerActiveCategory);
 
-  wrap.innerHTML = filtered.map(item => `
+  wrap.innerHTML = filtered.map(item => {
+  const displayName = translateDrinkName(item.name);
+
+  return `
     <article class="menu-card" data-id="${item.id}" tabindex="0" role="button"
-             aria-label="${item.name}, $${Number(item.price).toFixed(2)}">
+             aria-label="${displayName}, $${Number(item.price).toFixed(2)}">
       <div class="drink-image-wrap">
         <div class="drink-image" style="background-image:url('${getDrinkImg(item.name)}');"></div>
       </div>
       <div class="topline">
-        <h3 style="margin:0;">${item.name}</h3>
+        <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
       <div class="price-line" style="margin-top:auto;">
@@ -749,7 +793,8 @@ function renderMenu() {
         </button>
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
 
   wrap.querySelectorAll('.menu-card').forEach(card => {
     card.addEventListener('click', e => {
@@ -787,8 +832,11 @@ function openDrinkModal(item) {
     modalImg.src = getDrinkImg(item.name);
     modalImg.alt = `${item.name} drink image`;
   }
-  document.getElementById('modal-drink-img').alt = item.name;
-  document.getElementById('modal-drink-name').textContent = item.name;
+
+  const displayName = translateDrinkName(item.name);
+
+  document.getElementById('modal-drink-img').alt = displayName;
+  document.getElementById('modal-drink-name').textContent = displayName;
   document.getElementById('modal-drink-desc').textContent = item.description || '';
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
@@ -849,7 +897,7 @@ function addModalItemToOrder() {
     linePrice
   });
 
-  showToast(`${modalItem.name} x ${modalQty} ${t('added')}`);
+  showToast(`${translateDrinkName(modalItem.name)} x ${modalQty} ${t('added')}`);
   closeDrinkModal();
   renderOrder();
 }
