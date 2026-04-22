@@ -1757,13 +1757,25 @@ async function loadCustomerWeather() {
   }
 
   function drinkSuggestion(temp, code) {
-    if ([61, 63, 65, 80, 81, 82, 95].includes(Number(code))) return 'Rainy outside. Warm up with a Brown Sugar or Matcha Milk Tea.';
-    if (temp >= 95) return 'Scorching hot! A Lychee or Mango Green Tea with extra ice is the move.';
-    if (temp >= 85) return 'Really warm out. Strawberry or Peach Green Tea over ice is refreshing.';
-    if (temp >= 75) return 'Warm and sunny. Fruit teas are flying today, especially Mango Green Tea.';
-    if (temp >= 65) return 'Mild and comfortable. Classic Milk Tea or Taro Milk Tea are great picks.';
-    if (temp >= 50) return 'Getting cool outside. Brown Sugar Milk Tea or Thai Tea will warm you up.';
-    return 'Cold out there. Rich milk teas like Matcha or Brown Sugar are perfect today.';
+    if ([61, 63, 65, 80, 81, 82, 95].includes(Number(code))) {
+      return t('rainyDaySuggestion');
+    }
+    if (temp >= 95) {
+      return t('hotDaySuggestion');
+    }
+    if (temp >= 85) {
+      return t('hotDaySuggestion');
+    }
+    if (temp >= 75) {
+      return t('niceWeatherSuggestion');
+    }
+    if (temp >= 65) {
+      return t('niceWeatherSuggestion');
+    }
+    if (temp >= 50) {
+      return t('coolWeatherSuggestion');
+    }
+    return t('coolWeatherSuggestion');
   }
 
   try {
