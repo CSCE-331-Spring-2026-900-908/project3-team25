@@ -63,7 +63,7 @@
           <button id="modal-qty-minus" type="button" aria-label="Decrease quantity">−</button>
           <span id="modal-qty-display">1</span>
           <button id="modal-qty-plus" type="button" aria-label="Increase quantity">+</button>
-          <span class="muted" style="font-size:0.85rem;margin-left:4px;">qty</span>
+          <span class="muted" id="modal-qty-label" style="font-size:0.85rem;margin-left:4px;">qty</span>
         </div>
 
         <div class="drink-modal-footer">
@@ -78,7 +78,7 @@
   <div class="rewards-modal-overlay" id="rewards-modal-overlay" role="dialog" aria-modal="true" aria-label="Rewards">
     <div class="rewards-modal">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <h3>Your Rewards</h3>
+        <h3 id="rewards-modal-title">Your Rewards</h3>
         <button type="button" id="rewards-modal-close" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);">✕</button>
       </div>
       <div class="pts-display" id="rewards-pts-display">0 pts</div>
@@ -86,8 +86,8 @@
       <div id="rewards-catalog-list"></div>
 
       <hr style="border:none;border-top:1px solid var(--line);margin:18px 0;" />
-      <h4 style="margin:0 0 10px;">Redemption History</h4>
-      <div id="rewards-history-list"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
+      <h4 id="rewards-history-title" style="margin:0 0 10px;">Redemption History</h4>
+      <div id="rewards-history-list" aria-live="polite"><p class="muted" style="font-size:0.85rem;">No redemptions yet.</p></div>
 
       <div style="margin-top:20px;display:flex;gap:10px;">
         <button type="button" id="open-spin-btn" class="btn" style="flex:1;">Spin the Wheel</button>
@@ -99,14 +99,14 @@
   <!-- ── Spin Wheel Modal ───────────────────────────────── -->
   <div class="spin-modal-overlay" id="spin-modal-overlay" role="dialog" aria-modal="true" aria-label="Spin the wheel">
     <div class="spin-modal">
-      <h3>Spin &amp; Win</h3>
-      <p id="spin-status-msg"></p>
+      <h3 id="spin-modal-title">Spin &amp; Win</h3>
+      <p id="spin-status-msg" aria-live="polite"></p>
       <div class="spin-wheel-wrap">
         <div class="spin-pointer">▼</div>
         <canvas id="spin-canvas" width="260" height="260"></canvas>
       </div>
       <button type="button" id="spin-btn" class="btn-spin">SPIN!</button>
-      <div class="spin-result" id="spin-result">
+      <div class="spin-result" id="spin-result" aria-live="polite">
         <div id="spin-prize-label"></div>
         <div class="spin-code" id="spin-promo-code"></div>
       </div>
@@ -169,11 +169,17 @@
         <div class="brand-badge" style="width:44px;height:44px;font-size:1rem;">RB</div>
         <div>
           <h1 style="font-size:1.05rem;margin:0;">Reveille Bubble Tea</h1>
-          <p class="muted" style="margin:2px 0 0;font-size:0.8rem;">Kiosk</p>
+          <p class="muted" id="kiosk-label" style="margin:2px 0 0;font-size:0.8rem;">Kiosk</p>
         </div>
       </div>
-      <div class="cashier-topbar-right">
+      <div class="cashier-topbar-right" style="display:flex;align-items:center;gap:10px;">
+        <label for="language-select" id="language-select-label" class="muted" style="font-size:0.82rem;">Language</label>
+        <select id="language-select" style="padding:8px 10px;border-radius:8px;border:1px solid var(--line);font:inherit;background:#fff;">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
         <span id="kiosk-user-greeting" class="cashier-user-info" style="font-size:0.85rem;"></span>
+        <button id="kiosk-auth-btn" type="button" style="padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;cursor:pointer;color:var(--accent-dark);font-weight:600;">Sign In</button>
       </div>
     </header>
 
@@ -184,7 +190,7 @@
         <!-- Rewards bar (shown when logged in) -->
         <div id="rewards-topbar" class="rewards-topbar" style="display:none;">
           <div>
-            <div class="pts-label">Your Reward Points</div>
+            <div class="pts-label" id="topbar-points-label">Your Reward Points</div>
             <div class="pts-value" id="topbar-pts">0</div>
           </div>
           <div style="display:flex;gap:8px;">
@@ -198,7 +204,7 @@
         </div>
 
         <div class="mini-top" style="margin-bottom:16px;">
-          <h2 style="margin:0;">Choose your drink</h2>
+          <h2 id="menu-title" style="margin:0;">Choose your drink</h2>
           <span class="badge" id="customer-item-count">0 items</span>
         </div>
 
@@ -208,7 +214,7 @@
         <div class="kiosk-footer-actions" style="margin-top:24px;">
           <div class="summary-pill">
             <strong id="menu-screen-count">0</strong>
-            <span>drink(s) selected</span>
+            <span id="menu-screen-count-label">drink(s) selected</span>
           </div>
           <button class="btn" id="go-to-review-btn" type="button">Review Order →</button>
         </div>
@@ -219,7 +225,7 @@
     <section id="screen-review" class="kiosk-screen hidden-screen" aria-label="Review order">
       <div class="order-shell">
         <div class="mini-top">
-          <h2 style="margin:0;">Review your order</h2>
+          <h2 id="review-title" style="margin:0;">Review your order</h2>
           <span class="badge" id="review-item-count">0 items</span>
         </div>
 
@@ -229,7 +235,7 @@
 
         <!-- Rewards / promo redemption panel -->
         <div id="checkout-rewards-panel" style="display:none;margin:16px 0;">
-          <div style="font-weight:700;margin-bottom:8px;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Rewards &amp; Promos</div>
+          <div id="checkout-rewards-title" style="font-weight:700;margin-bottom:8px;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Rewards &amp; Promos</div>
           <div id="applied-reward-display"></div>
           <div id="reward-select-wrap" style="margin-bottom:10px;"></div>
           <div class="promo-input-row">
@@ -240,13 +246,13 @@
         </div>
 
         <div class="summary-box">
-          <div class="summary-row"><span>Subtotal</span><strong id="customer-subtotal">$0.00</strong></div>
+          <div class="summary-row"><span id="subtotal-label">Subtotal</span><strong id="customer-subtotal">$0.00</strong></div>
           <div class="summary-row discount-row" id="discount-row" style="display:none;">
             <span id="discount-label">Discount</span>
             <strong id="customer-discount">−$0.00</strong>
           </div>
-          <div class="summary-row"><span>Tax (8.25%)</span><strong id="customer-tax">$0.00</strong></div>
-          <div class="summary-row total"><span>Total</span><strong id="customer-total">$0.00</strong></div>
+          <div class="summary-row"><span id="tax-label">Tax (8.25%)</span><strong id="customer-tax">$0.00</strong></div>
+          <div class="summary-row total"><span id="total-label">Total</span><strong id="customer-total">$0.00</strong></div>
         </div>
 
         <div class="kiosk-footer-actions" style="margin-top:24px;">
@@ -263,11 +269,11 @@
     <section id="screen-payment" class="kiosk-screen hidden-screen" aria-label="Payment">
       <div class="order-shell">
         <div class="mini-top">
-          <h2 style="margin:0;">Payment</h2>
+          <h2 id="payment-title" style="margin:0;">Payment</h2>
         </div>
 
         <div class="payment-total-box">
-          <p class="muted" style="margin:0;">Order total</p>
+          <p class="muted" id="payment-total-label" style="margin:0;">Order total</p>
           <h2 id="payment-total" style="margin:8px 0 0;color:var(--accent);">$0.00</h2>
           <p id="payment-discount-note" class="muted" style="margin:4px 0 0;font-size:0.85rem;display:none;"></p>
         </div>
@@ -290,18 +296,18 @@
     <!-- CONFIRMATION SCREEN -->
     <section id="screen-confirm" class="kiosk-screen hidden-screen" aria-label="Order confirmation">
       <div class="order-shell confirmation-shell">
-        <h2 style="margin-bottom:8px;">Order placed!</h2>
-        <p class="muted" id="confirmation-message" style="margin-top:0;">Your order has been received.</p>
+        <h2 id="confirm-title" style="margin-bottom:8px;">Order placed!</h2>
+        <p class="muted" id="confirmation-message" aria-live="polite" style="margin-top:0;">Your order has been received.</p>
 
         <div class="summary-box" style="max-width:420px;margin:24px auto 0;">
-          <div class="summary-row"><span>Status</span><strong>Order received</strong></div>
-          <div class="summary-row"><span>Pickup</span><strong>Pick up at the counter</strong></div>
+          <div class="summary-row"><span id="confirm-status-label">Status</span><strong id="confirm-status-value">Order received</strong></div>
+          <div class="summary-row"><span id="confirm-pickup-label">Pickup</span><strong id="confirm-pickup-value">Pick up at the counter</strong></div>
         </div>
 
         <div class="confirm-rewards-box" id="confirm-rewards-box" style="max-width:420px;margin:16px auto 0;display:none;">
           <div class="pts-earned" id="confirm-pts-earned">+0</div>
-          <div class="pts-label">points earned this order</div>
-          <div style="margin-top:6px;font-size:0.85rem;color:var(--muted);">New balance: <strong id="confirm-pts-balance">0</strong> pts</div>
+          <div class="pts-label" id="confirm-points-earned-label">points earned this order</div>
+          <div id="confirm-balance-text" style="margin-top:6px;font-size:0.85rem;color:var(--muted);">New balance: <strong id="confirm-pts-balance">0</strong> pts</div>
         </div>
 
         <div class="kiosk-footer-actions centered-actions" style="margin-top:28px;">
@@ -311,6 +317,44 @@
     </section>
 
   </main>
+
+
+  <div id="guest-login-overlay" class="drink-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guest-login-title">
+    <div class="drink-modal" style="max-width:560px;">
+      <div class="drink-modal-body" style="padding-top:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+          <div>
+            <h3 id="guest-login-title" style="margin:0;color:var(--accent-dark);font-size:1.7rem;">Sign in before checkout?</h3>
+            <p style="margin:6px 0 0;color:var(--muted);">Sign in to earn reward points, or continue as a guest.</p>
+          </div>
+          <button id="guest-login-close" type="button" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);">✕</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">Scan QR Code</button>
+          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
+        </div>
+
+        <div id="guest-login-qr-panel">
+          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.</p>
+          <div style="display:flex;justify-content:center;margin-bottom:10px;">
+            <img id="guest-login-qr-image" alt="Sign in QR code" style="width:220px;height:220px;border-radius:16px;border:1px solid var(--line);padding:10px;background:#fff;object-fit:contain;" />
+          </div>
+          <p id="guest-login-qr-status" style="margin:0;color:var(--muted);text-align:center;font-size:0.9rem;">Waiting for phone sign-in…</p>
+        </div>
+
+        <div id="guest-login-google-panel" style="display:none;">
+          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
+          <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:22px;">
+          <button id="guest-continue-btn" type="button" class="btn ghost" style="flex:1;">Continue as Guest</button>
+          <button id="guest-login-rewards-btn" type="button" class="btn" style="flex:1;">Sign In for Rewards</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/customer.js"></script>
   <script src="/js/accessibility.js"></script>

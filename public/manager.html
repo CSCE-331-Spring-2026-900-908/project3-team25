@@ -18,6 +18,7 @@
 
     .mgr-panel { display:none; }
     .mgr-panel.active { display:block; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
     .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
     .stat-card { background:white; border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
@@ -239,6 +240,8 @@
       <button class="mgr-tab" data-tab="menu">Menu Editor</button>
       <button class="mgr-tab" data-tab="inventory">Inventory</button>
       <button class="mgr-tab" data-tab="employees">Employees</button>
+      <button class="mgr-tab" data-tab="requests">Access Requests</button>
+      <button class="mgr-tab" data-tab="loginlog">Login Log</button>
       <button class="mgr-tab" data-tab="reports">Reports</button>
     </div>
 
@@ -383,6 +386,33 @@
           <thead><tr><th>Name</th><th>Hire Date</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="mgr-tbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ACCESS REQUESTS TAB -->
+    <div class="mgr-panel" id="tab-requests">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>Access Requests</h3>
+          <button class="action-btn" onclick="loadStaffRequests()">Refresh</button>
+        </div>
+        <p class="muted" style="font-size:0.85rem;margin-bottom:16px;">
+          When a new employee visits the cashier page and submits a request, it appears here.
+          Assign a role and PIN, then approve to create their account.
+        </p>
+        <div id="staff-requests-list"><p class="muted">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- LOGIN LOG TAB -->
+    <div class="mgr-panel" id="tab-loginlog">
+      <div class="mgr-card">
+        <div class="top-row">
+          <h3>Staff Login History</h3>
+          <button class="action-btn" onclick="loadLoginLog()">Refresh</button>
+        </div>
+        <p class="muted" style="font-size:0.85rem;margin-bottom:16px;">Last 20 PIN login and logout events.</p>
+        <div id="login-log-list"><p class="muted">Loading…</p></div>
       </div>
     </div>
 

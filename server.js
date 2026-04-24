@@ -22,6 +22,9 @@ const COLLEGE_STATION_WEATHER = {
 const googleCallbackUrl =
   process.env.GOOGLE_CALLBACK_URL ||
   'https://project3-team25-m13k.onrender.com/auth/google/callback';
+const publicBaseUrl = (googleCallbackUrl.replace(/\/auth\/google\/callback$/, '') || '').replace(/\/$/, '');
+const authPairs = new Map();
+const AUTH_PAIR_TTL_MS = 5 * 60 * 1000;
 
 app.set('trust proxy', 1);
 app.use(express.json());
@@ -46,6 +49,46 @@ function getUserRoleFromEmail(email) {
 function requireStaff(req, res, next) {
   if (req.isAuthenticated?.() && (req.user?.role === 'cashier' || req.user?.role === 'manager')) return next();
   return res.redirect('/?unauthorized=1');
+}
+
+function requireStaff(req, res, next) {
+  if (req.isAuthenticated?.() && (req.user?.role === 'cashier' || req.user?.role === 'manager')) return next();
+  return res.redirect('/?unauthorized=1');
+}
+
+function sanitizeReturnTo(value) {
+  const target = String(value || '').trim();
+  if (!target.startsWith('/')) return '';
+  if (target.startsWith('//')) return '';
+  return target;
+}
+
+function cleanupAuthPairs() {
+  const now = Date.now();
+  for (const [token, pair] of authPairs.entries()) {
+    if (!pair || pair.expiresAt <= now || pair.claimedAt) authPairs.delete(token);
+  }
+}
+
+function buildPairQrUrl(url) {
+  return `https://quickchart.io/qr?size=220&text=${encodeURIComponent(url)}`;
+}
+
+function issueAuthPair(returnTo = '/customer.html') {
+  cleanupAuthPairs();
+  const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const safeReturnTo = sanitizeReturnTo(returnTo) || '/customer.html';
+  const pairUrl = `${publicBaseUrl}/auth/pair/${token}`;
+  authPairs.set(token, {
+    token,
+    returnTo: safeReturnTo,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + AUTH_PAIR_TTL_MS,
+    status: 'pending',
+    user: null,
+    claimedAt: null
+  });
+  return { token, pairUrl, qrUrl: buildPairQrUrl(pairUrl), expiresInMs: AUTH_PAIR_TTL_MS };
 }
 
 passport.serializeUser((user, done) => done(null, user));
@@ -211,14 +254,23 @@ app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return res.status(500).send('Google OAuth not configured.');
   }
-  passport.authenticate('google', { scope: ['profile','email'] })(req, res, next);
+  const safeReturnTo = sanitizeReturnTo(req.query.returnTo) || '';
+  // Pass returnTo through OAuth state parameter — reliable across redirects
+  passport.authenticate('google', {
+    scope: ['profile','email'],
+    state: safeReturnTo
+  })(req, res, next);
 });
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/?loginError=1' }),
   (req, res) => {
+    // Read returnTo from state parameter (passed through Google redirect reliably)
+    const returnTo = sanitizeReturnTo(req.query.state);
+    if (returnTo) return res.redirect(returnTo);
+    // Fallback by role
     const role = req.user?.role;
-    if (role === 'manager') return res.redirect('/');
+    if (role === 'manager') return res.redirect('/manager.html');
     if (role === 'cashier') return res.redirect('/cashier.html');
     return res.redirect('/customer.html');
   }
@@ -235,6 +287,71 @@ app.get('/api/me', async (req, res) => {
     try { const r = await queryDb(`SELECT reward_points FROM user_accounts WHERE user_id=$1`, [req.user.id]); rewardPoints = r.rows[0]?.reward_points ?? 0; } catch(_) {}
   }
   res.json({ authenticated: true, user: { id: req.user.id, displayName: req.user.displayName, firstName: req.user.firstName || req.user.displayName?.split(' ')[0] || 'User', email: req.user.email, role: req.user.role, rewardPoints } });
+});
+
+app.get('/api/staff-auth-status', (req, res) => {
+  const authenticated = Boolean(req.isAuthenticated?.() && req.user);
+  const role = req.user?.role || null;
+  const allowed = role === 'cashier' || role === 'manager';
+  res.json({
+    authenticated,
+    allowed,
+    role,
+    user: authenticated ? {
+      displayName: req.user.displayName,
+      firstName: req.user.firstName || req.user.displayName?.split(' ')[0] || 'User',
+      email: req.user.email
+    } : null
+  });
+});
+
+app.get('/api/auth/pair/new', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Google OAuth not configured.' });
+  }
+  const pair = issueAuthPair(req.query.returnTo || '/customer.html');
+  res.json(pair);
+});
+
+app.get('/auth/pair/:token', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair) return res.status(404).send('This kiosk sign-in session expired. Please scan the new QR code on the kiosk.');
+  const continueUrl = `/auth/google?returnTo=${encodeURIComponent(`/auth/pair/complete?token=${req.params.token}`)}`;
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kiosk Sign In</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f8f3ef;color:#3f2a24;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px}.card{max-width:420px;background:#fff;border:1px solid #e8d4cb;border-radius:20px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.08)}.badge{width:64px;height:64px;border-radius:16px;background:#b54a40;color:#fff;font-weight:800;font-size:28px;display:grid;place-items:center;margin:0 auto 16px}.btn{display:inline-block;background:#b54a40;color:#fff;text-decoration:none;padding:14px 18px;border-radius:12px;font-weight:700;margin-top:10px}.sub{color:#7d645c;font-size:.95rem;line-height:1.5}</style></head><body><div class="card"><div class="badge">RB</div><h1 style="margin:0 0 10px;font-size:1.7rem;">Sign in to Reveille Bubble Tea</h1><p class="sub">Continue with Google on your phone. After you finish, the kiosk on the counter will log in automatically.</p><a class="btn" href="${continueUrl}">Continue with Google</a></div></body></html>`);
+});
+
+app.get('/auth/pair/complete', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.query.token);
+  if (!pair) return res.status(404).send('This kiosk sign-in session expired. Please rescan the QR code.');
+  if (!req.isAuthenticated?.() || !req.user) {
+    return res.redirect(`/auth/google?returnTo=${encodeURIComponent(`/auth/pair/complete?token=${req.query.token}`)}`);
+  }
+  pair.status = 'authorized';
+  pair.user = req.user;
+  authPairs.set(req.query.token, pair);
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kiosk Connected</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f8f3ef;color:#3f2a24;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px}.card{max-width:430px;background:#fff;border:1px solid #e8d4cb;border-radius:20px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.08)}.badge{width:64px;height:64px;border-radius:16px;background:#b54a40;color:#fff;font-weight:800;font-size:28px;display:grid;place-items:center;margin:0 auto 16px}</style></head><body><div class="card"><div class="badge">RB</div><h1 style="margin:0 0 10px;font-size:1.7rem;">Kiosk connected</h1><p style="color:#7d645c;line-height:1.5">You are signed in as <strong>${req.user.displayName}</strong>. You can go back to the kiosk now and continue your order.</p></div></body></html>`);
+});
+
+app.get('/api/auth/pair-status/:token', (req, res) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair) return res.status(404).json({ status: 'expired' });
+  res.json({ status: pair.status, expiresInMs: Math.max(0, pair.expiresAt - Date.now()) });
+});
+
+app.post('/api/auth/pair-claim/:token', (req, res, next) => {
+  cleanupAuthPairs();
+  const pair = authPairs.get(req.params.token);
+  if (!pair || pair.status !== 'authorized' || !pair.user) return res.status(404).json({ error: 'Pairing not ready.' });
+  req.login(pair.user, err => {
+    if (err) return next(err);
+    pair.status = 'claimed';
+    pair.claimedAt = Date.now();
+    authPairs.set(req.params.token, pair);
+    res.json({ ok: true, user: pair.user, returnTo: pair.returnTo });
+  });
 });
 
 app.get('/api/menu', async (_req, res) => {
@@ -346,7 +463,8 @@ app.post('/api/checkout', async (req, res) => {
   try {
     const userId = req.isAuthenticated?.() ? req.user?.id : null;
     const body = req.body || {};
-    const { items, paymentMethod = 'card', cashierId = 1, promoCode = null, rewardId = null, source = 'customer' } = body;
+    console.log('DEBUG cashierId:', JSON.stringify(body).slice(0,200));
+    const { items, paymentMethod = 'card', cashierId = 7, promoCode = null, rewardId = null, source = 'customer' } = body;
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) throw new Error('At least one item required.');
 
@@ -639,7 +757,18 @@ app.post('/api/auth/mock-login', (req, res) => {
 app.get('/api/auth/config', (_req, res) => res.json({ googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID), requiredEmail:'reveille.bubbletea@gmail.com', googleCallbackUrl }));
 app.get('/api/health', (_req, res) => res.json({ ok:true, dbConfigured:hasDbConfig() }));
 
-app.get('/cashier.html', requireStaff, (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
+app.get('/cashier.html', (_req, res) => res.sendFile(path.join(__dirname,'public','cashier.html')));
+app.get('/manager-login', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).send('Google OAuth not configured.');
+  }
+  // Pass /manager.html as returnTo via state param
+  passport.authenticate('google', {
+    scope: ['profile','email'],
+    state: '/manager.html'
+  })(req, res, next);
+});
+
 app.get('/manager.html', (req, res) => {
   if (req.isAuthenticated?.() && req.user?.role==='manager') return res.sendFile(path.join(__dirname,'public','manager.html'));
   res.redirect('/?unauthorized=1');
@@ -769,10 +898,11 @@ app.get('/api/analytics/peak-days', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [] });
   try {
     const r = await queryDb(`
-      SELECT transactiontime::date AS day,
+      SELECT to_char((transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date, 'Mon DD, YYYY') AS day,
              COALESCE(SUM(totalamount),0) AS revenue, COUNT(*) AS orders
       FROM transactions WHERE status='completed'
-      GROUP BY 1 ORDER BY revenue DESC LIMIT 10`);
+      GROUP BY (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+      ORDER BY revenue DESC LIMIT 10`);
     res.json({ rows: r.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -798,7 +928,8 @@ app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
                totalamount, paymentmethod
         FROM transactions
         WHERE status='completed'
-          AND DATE(transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') = CURRENT_DATE AT TIME ZONE 'America/Chicago'
+          AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+              = (NOW() AT TIME ZONE 'America/Chicago')::date
       )
       SELECT h.hour_of_day,
              COALESCE(COUNT(d.totalamount),0) AS orders,
@@ -817,8 +948,8 @@ app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
   try {
     const r = await queryDb(`
       WITH daily AS (
-        SELECT date_trunc('week',t.transactiontime)::date AS week_start,
-               t.transactiontime::date AS day,
+        SELECT date_trunc('week',t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date AS week_start,
+               (t.transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date AS day,
                SUM(t.totalamount) AS day_revenue,
                COALESCE(SUM(ti.quantity),0) AS items_sold
         FROM transactions t
@@ -831,10 +962,10 @@ app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
                   ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY items_sold DESC) AS rn_high
         FROM daily
       )
-      SELECT week_start,
-             MAX(CASE WHEN rn_low=1 THEN day END) AS worst_revenue_day,
+      SELECT to_char(week_start, 'Mon DD, YYYY') AS week_start,
+             to_char(MAX(CASE WHEN rn_low=1 THEN day END), 'Mon DD, YYYY') AS worst_revenue_day,
              MAX(CASE WHEN rn_low=1 THEN day_revenue END) AS worst_day_revenue,
-             MAX(CASE WHEN rn_high=1 THEN day END) AS best_items_day,
+             to_char(MAX(CASE WHEN rn_high=1 THEN day END), 'Mon DD, YYYY') AS best_items_day,
              MAX(CASE WHEN rn_high=1 THEN items_sold END) AS best_day_items_sold
       FROM ranked GROUP BY week_start ORDER BY week_start DESC LIMIT 12`);
     res.json({ rows: r.rows });
@@ -985,6 +1116,144 @@ app.get('/api/weather-stats', (_req, res) => {
     externalCalls: externalWeatherCalls,
     cacheSize: weatherCache.size
   });
+});
+
+// ─── In-memory clock tracker (login time per cashier/manager) ────────────────
+const clockedIn = new Map(); // staffId_type -> { name, role, loginTime }
+
+// POST /api/cashier/pin-login
+app.post('/api/cashier/pin-login', async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { pin } = req.body || {};
+  if (!pin) return res.status(400).json({ error: 'PIN required.' });
+  try {
+    const cr = await queryDb(`SELECT cashierid, firstname, lastname, is_active, pin FROM cashier WHERE pin=$1 AND is_active=true`, [String(pin)]);
+    if (cr.rows.length > 0) {
+      const c = cr.rows[0];
+      const key = `${c.cashierid}_cashier`;
+      clockedIn.set(key, { staffId: c.cashierid, staffType: 'cashier', name: `${c.firstname} ${c.lastname}`, loginTime: new Date().toISOString() });
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'cashier','login')`, [c.cashierid]).catch(()=>{});
+      return res.json({ ok: true, role: 'cashier', cashierId: c.cashierid, name: `${c.firstname} ${c.lastname}` });
+    }
+    const mr = await queryDb(`SELECT managerid, firstname, lastname, is_active, pin FROM manager WHERE pin=$1 AND is_active=true`, [String(pin)]);
+    if (mr.rows.length > 0) {
+      const m = mr.rows[0];
+      const key = `${m.managerid}_manager`;
+      clockedIn.set(key, { staffId: m.managerid, staffType: 'manager', name: `${m.firstname} ${m.lastname}`, loginTime: new Date().toISOString() });
+      await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,'manager','login')`, [m.managerid]).catch(()=>{});
+      return res.json({ ok: true, role: 'manager', cashierId: m.managerid, name: `${m.firstname} ${m.lastname}` });
+    }
+    return res.status(401).json({ error: 'Invalid PIN. Ask a manager if you need help.' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/cashier/pin-logout
+app.post('/api/cashier/pin-logout', async (req, res) => {
+  const { cashierId, staffType = 'cashier' } = req.body || {};
+  const key = `${cashierId}_${staffType}`;
+  const session = clockedIn.get(key);
+  if (session && hasDbConfig()) {
+    // Calculate hours worked this session and add to total
+    const mins = (Date.now() - new Date(session.loginTime).getTime()) / 60000;
+    const hrs  = mins / 60;
+    if (hrs > 0.01 && staffType === 'cashier') {
+      await queryDb(`UPDATE cashier SET hoursworked = hoursworked + $1 WHERE cashierid = $2`, [Number(hrs.toFixed(4)), Number(cashierId)]).catch(()=>{});
+    }
+    await queryDb(`INSERT INTO staff_login_log (staff_id, staff_type, action) VALUES ($1,$2,'logout')`, [cashierId, staffType]).catch(()=>{});
+  }
+  clockedIn.delete(key);
+  res.json({ ok: true });
+});
+
+// GET /api/currently-working
+app.get('/api/currently-working', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  const working = Array.from(clockedIn.values()).map(s => ({
+    ...s,
+    minutesWorked: Math.floor((Date.now() - new Date(s.loginTime).getTime()) / 60000)
+  }));
+  res.json({ working });
+});
+
+// POST /api/staff-requests
+app.post('/api/staff-requests', async (req, res) => {
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { name, email, requestedRole = 'cashier' } = req.body || {};
+  if (!name || !email) return res.status(400).json({ error: 'Name and email required.' });
+  try {
+    await queryDb(
+      `INSERT INTO staff_requests (name, email, requested_role, status, created_at)
+       VALUES ($1,$2,$3,'pending',NOW())
+       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, status='pending', created_at=NOW()`,
+      [name, email, requestedRole]
+    );
+    res.status(201).json({ ok: true, message: 'Request submitted. A manager will set up your PIN.' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/staff-requests
+app.get('/api/staff-requests', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ requests: [] });
+  try {
+    const r = await queryDb(`SELECT * FROM staff_requests WHERE status='pending' ORDER BY created_at DESC`);
+    res.json({ requests: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/staff-requests/:id/approve
+app.post('/api/staff-requests/:id/approve', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
+  const { assignRole = 'cashier', pin } = req.body || {};
+  if (!pin) return res.status(400).json({ error: 'PIN required.' });
+  try {
+    const rr = await queryDb(`SELECT * FROM staff_requests WHERE request_id=$1`, [Number(req.params.id)]);
+    const request = rr.rows[0];
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    const today = new Date().toISOString().slice(0,10);
+    const parts = request.name.trim().split(' ');
+    const first = parts[0] || request.name;
+    const last  = parts.slice(1).join(' ') || '';
+    if (assignRole === 'manager') {
+      await queryDb(`INSERT INTO manager (firstname,lastname,hiredate,pin,is_active) VALUES ($1,$2,$3,$4,true)`, [first, last, today, pin]);
+    } else {
+      await queryDb(`INSERT INTO cashier (firstname,lastname,hiredate,pin,hoursworked,is_active) VALUES ($1,$2,$3,$4,0,true)`, [first, last, today, pin]);
+    }
+    await queryDb(`UPDATE staff_requests SET status='approved' WHERE request_id=$1`, [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/staff-requests/:id/deny
+app.post('/api/staff-requests/:id/deny', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ ok: true });
+  try {
+    await queryDb(`UPDATE staff_requests SET status='denied' WHERE request_id=$1`, [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/staff-log
+app.get('/api/staff-log', async (req, res) => {
+  if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
+  if (!hasDbConfig()) return res.json({ log: [] });
+  try {
+    const r = await queryDb(`
+      SELECT sl.log_id, sl.staff_id, sl.staff_type, sl.action,
+             (sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS logged_at,
+             CASE sl.staff_type
+               WHEN 'cashier' THEN c.firstname || ' ' || c.lastname
+               WHEN 'manager' THEN m.firstname || ' ' || m.lastname
+               ELSE 'Unknown'
+             END AS staff_name
+      FROM staff_login_log sl
+      LEFT JOIN cashier c ON sl.staff_type='cashier' AND c.cashierid=sl.staff_id
+      LEFT JOIN manager m ON sl.staff_type='manager' AND m.managerid=sl.staff_id
+      ORDER BY sl.logged_at DESC LIMIT 20`);
+    res.json({ log: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

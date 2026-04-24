@@ -4,6 +4,7 @@ let cashierCategories = [];
 let cashierActiveCategory = '';
 let cashierOrder = []; // { id, name, qty, unitPrice, sugar, ice, note, linePrice }
 let cashierSelectedRow = -1;
+let pinSession = null; // { cashierId, name, role } — set after PIN login
 
 const CATEGORY_LABELS = {
   milk_tea:  'Milky\nSeries',
@@ -18,18 +19,19 @@ const EXTRA_BOBA_PRICE = 0.75;
 
 //  INIT 
 async function initCashier() {
-  // Load logged-in user display name
-  try {
-    const res = await fetch('/api/me');
-    const data = await res.json();
-    const nameEl = document.getElementById('cashier-user-name');
-    if (data.authenticated && data.user) {
-      nameEl.textContent = data.user.displayName || data.user.email || 'Staff';
-    } else {
-      nameEl.textContent = 'Guest';
-    }
-  } catch (_) {
-    document.getElementById('cashier-user-name').textContent = 'Staff';
+  document.getElementById('cashier-logout-btn')?.addEventListener('click', cashierPinLogout);
+
+  // Show PIN screen immediately — no Google login needed
+  // PIN controls all cashier access
+  renderCashierOverlay('pin', null);
+
+  // Language selector
+  const langSel = document.getElementById('cashier-lang-select');
+  if (langSel) {
+    langSel.addEventListener('change', () => {
+      // Re-render categories with new language if needed
+      renderCategories();
+    });
   }
 
   // Load menu from API
@@ -52,12 +54,91 @@ async function initCashier() {
   bindHelpers();
   loadCashierWeather();
 
-  // Close modify overlay when clicking the backdrop
   document.getElementById('cashier-modify-overlay').addEventListener('click', e => {
     if (e.target.id === 'cashier-modify-overlay') {
       e.target.classList.add('hidden');
     }
   });
+}
+
+async function getCashierAuthState() {
+  try {
+    const res = await fetch('/api/staff-auth-status');
+    return await res.json();
+  } catch (_) {
+    return { authenticated: false, allowed: false, user: null };
+  }
+}
+
+function startGoogleCashierLogin() {
+  window.location.href = '/auth/google?returnTo=' + encodeURIComponent('/cashier.html');
+}
+
+function wirePinOverlayActions() {
+  document.getElementById('pin-submit-btn')?.addEventListener('click', submitPin);
+  document.getElementById('pin-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
+  document.getElementById('pin-request-link')?.addEventListener('click', () => {
+    const f = document.getElementById('request-access-form');
+    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('request-submit-btn')?.addEventListener('click', submitAccessRequest);
+}
+
+function renderCashierOverlay(mode, user = null) {
+  const overlay = document.getElementById('pin-overlay');
+  if (!overlay) return;
+
+  if (mode === 'google') {
+    overlay.innerHTML = `
+      <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+        <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+        <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Cashier sign in</h2>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 24px;">Sign in with your Google account first. After that, staff members can enter their PIN right here.</p>
+        <button id="cashier-google-login-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;">Continue with Google</button>
+      </div>`;
+    overlay.classList.remove('hidden');
+    document.getElementById('cashier-google-login-btn')?.addEventListener('click', startGoogleCashierLogin);
+    return;
+  }
+
+  if (mode === 'unauthorized') {
+    overlay.innerHTML = `
+      <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+        <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+        <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Staff access only</h2>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 20px;">${user?.displayName || 'This Google account'} is not approved for cashier access. Sign out and use a staff Google account.</p>
+        <button id="cashier-switch-account-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;">Sign out</button>
+      </div>`;
+    overlay.classList.remove('hidden');
+    document.getElementById('cashier-switch-account-btn')?.addEventListener('click', async () => {
+      await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+      startGoogleCashierLogin();
+    });
+    return;
+  }
+
+  overlay.innerHTML = `
+    <div style="background:white;border:1px solid var(--line);border-radius:20px;padding:40px 36px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.12);text-align:center;">
+      <div style="width:60px;height:60px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800;font-size:1.4rem;margin:0 auto 16px;">RB</div>
+      <h2 style="margin:0 0 6px;font-size:1.4rem;color:var(--accent-dark);">Reveille Bubble Tea</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 24px;">Signed in as ${user?.displayName || 'staff'}. Enter your staff PIN to begin.</p>
+      <input type="password" id="pin-input" maxlength="8" placeholder="••••" style="width:100%;padding:14px;text-align:center;font-size:1.6rem;letter-spacing:0.35em;border:2px solid var(--line);border-radius:10px;font-weight:700;box-sizing:border-box;margin-bottom:10px;" />
+      <div id="pin-error" style="color:var(--accent);font-size:0.85rem;min-height:20px;margin-bottom:10px;"></div>
+      <button id="pin-submit-btn" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;">Enter PIN</button>
+      <div id="pin-request-link" style="font-size:0.83rem;color:var(--muted);cursor:pointer;text-decoration:underline;">New here? Request access from a manager</div>
+      <div id="request-access-form" style="display:none;margin-top:16px;text-align:left;">
+        <input type="text" id="request-name" placeholder="Your full name" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+        <input type="email" id="request-email" placeholder="Your TAMU email" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;" />
+        <button id="request-submit-btn" style="width:100%;padding:11px;background:var(--accent-dark);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Submit Request</button>
+        <div id="request-msg" style="font-size:0.82rem;margin-top:6px;min-height:18px;"></div>
+      </div>
+    </div>`;
+  overlay.classList.remove('hidden');
+  if (user?.displayName) {
+    const nameEl = document.getElementById('cashier-user-name');
+    if (nameEl) nameEl.textContent = user.displayName;
+  }
+  wirePinOverlayActions();
 }
 
 //  CATEGORIES 
@@ -78,7 +159,27 @@ function renderCategories() {
   });
 }
 
-//  PRODUCT GRID 
+//  IMAGE MAP
+const CASHIER_IMAGE_MAP = {
+  'Classic Milk Tea':      '/boba/Classic-Milk-Tea.PNG',
+  'Brown Sugar Milk Tea':  '/boba/Brown-Sugar-Milk-Tea.PNG',
+  'Taro Milk Tea':         '/boba/Taro-Milk-Tea.PNG',
+  'Matcha Milk Tea':       '/boba/Matcha-Milk-Tea.PNG',
+  'Thai Tea':              '/boba/Thai-Milk-Tea.PNG',
+  'Honey Green Tea':       '/boba/Honey-Green-Tea.PNG',
+  'Wintermelon Milk Tea':  '/boba/Wintermelon-Milk-Tea.PNG',
+  'Oolong Milk Tea':       '/boba/Ooglong-Tea.png',
+  'Coffee Milk Tea':       '/boba/Coffee-Milk-Tea.png',
+  'Lychee Green Tea':      '/boba/Lychee.png',
+  'Mango Green Tea':       '/boba/Mango.png',
+  'Peach Green Tea':       '/boba/Peach.png',
+  'Strawberry Green Tea':  '/boba/Strawberry-.png',
+  'Jasmine Green Tea':     '/boba/Sonny-Boba.png',
+  'Black Tea Lemonade':    '/boba/Sonny-Boba.png'
+};
+function cashierDrinkImg(name) { return CASHIER_IMAGE_MAP[name] || '/boba/Sonny-Boba.png'; }
+
+//  PRODUCT GRID
 function renderProductGrid() {
   const grid = document.getElementById('cashier-product-grid');
   const filtered = cashierMenu.filter(item => item.category === cashierActiveCategory);
@@ -88,12 +189,25 @@ function renderProductGrid() {
     return;
   }
 
-  grid.innerHTML = filtered.map(item =>
-    `<button class="cashier-product-btn" data-id="${item.id}">
-      <strong>${item.name}</strong>
-      <span>$${Number(item.price).toFixed(2)}</span>
-    </button>`
-  ).join('');
+  grid.innerHTML = filtered.map(item => {
+    const img = cashierDrinkImg(item.name);
+    return `<button class="cashier-product-btn" data-id="${item.id}" style="
+        background-image: url('${img}');
+        background-size: 62%;
+        background-repeat: no-repeat;
+        background-position: center 10%;
+        background-color: #fffaf7;
+        background-blend-mode: multiply;
+        padding-top: 72px;
+        position: relative;
+      ">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 45%,rgba(255,250,247,0.97) 72%);border-radius:14px;pointer-events:none;"></div>
+        <div style="position:relative;z-index:1;">
+          <strong>${item.name}</strong>
+          <span>$${Number(item.price).toFixed(2)}</span>
+        </div>
+      </button>`;
+  }).join('');
 
   grid.querySelectorAll('.cashier-product-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -313,7 +427,7 @@ function bindCartActions() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cashierId: 1,
+          cashierId: pinSession ? pinSession.cashierId : 7,
           source: 'cashier',
           paymentMethod,
           items: cashierOrder.map(item => ({
@@ -398,10 +512,13 @@ async function loadCashierWeather() {
     return m[Number(code)] || 'Mixed conditions';
   }
   function drinkSuggestion(temp, code) {
-    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy day — recommend cozy milk teas.';
-    if (temp >= 85) return 'Hot day — push fruit teas and extra ice.';
-    if (temp >= 72) return 'Nice weather — fruit teas or milk teas work great.';
-    return 'Cool weather — milk teas and warm flavors are popular.';
+    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy outside. Customers will want warm milk teas like Brown Sugar or Matcha.';
+    if (temp >= 95) return 'Scorching hot. Lead with Mango or Lychee Green Tea over extra ice.';
+    if (temp >= 85) return 'Really warm. Strawberry or Peach Green Tea are great iced options today.';
+    if (temp >= 75) return 'Warm day. Fruit teas are selling well, especially Mango Green Tea.';
+    if (temp >= 65) return 'Mild weather. Classic Milk Tea and Taro Milk Tea are popular choices.';
+    if (temp >= 50) return 'Getting cool. Push Brown Sugar Milk Tea or Thai Tea to warm customers up.';
+    return 'Cold outside. Rich milk teas like Matcha or Brown Sugar are the top picks today.';
   }
 
   try {
@@ -434,3 +551,73 @@ async function loadCashierWeather() {
 
 //  START 
 initCashier();
+
+// ── PIN Overlay ───────────────────────────────────────────────────────────────
+function showPinOverlay() {
+  const el = document.getElementById('pin-overlay');
+  if (el) el.classList.remove('hidden');
+}
+function hidePinOverlay() {
+  const el = document.getElementById('pin-overlay');
+  if (el) el.classList.add('hidden');
+}
+
+async function submitPin() {
+  const input = document.getElementById('pin-input');
+  const errEl = document.getElementById('pin-error');
+  const pin   = input?.value.trim();
+  if (!pin) { if (errEl) errEl.textContent = 'Please enter your PIN.'; return; }
+  if (errEl) errEl.textContent = 'Checking...';
+  try {
+    const res  = await fetch('/api/cashier/pin-login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pin: String(pin) })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (errEl) errEl.textContent = data.error || 'Invalid PIN. Check with your manager.';
+      if (input) input.value = '';
+      return;
+    }
+    pinSession = { cashierId: data.cashierId, name: data.name, role: data.role };
+    const nameEl = document.getElementById('cashier-user-name');
+    if (nameEl) nameEl.textContent = data.name;
+    if (input) input.value = '';
+    if (errEl) errEl.textContent = '';
+    hidePinOverlay();
+  } catch(err) {
+    if (errEl) errEl.textContent = 'Connection error: ' + err.message;
+  }
+}
+
+async function cashierPinLogout() {
+  if (pinSession) {
+    await fetch('/api/cashier/pin-logout', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ cashierId: pinSession.cashierId, staffType: pinSession.role === 'manager' ? 'manager' : 'cashier' })
+    }).catch(()=>{});
+    pinSession = null;
+  }
+  cashierOrder = [];
+  cashierSelectedRow = -1;
+  renderCart();
+  showPinOverlay();
+}
+
+async function submitAccessRequest() {
+  const name  = document.getElementById('request-name')?.value.trim();
+  const email = document.getElementById('request-email')?.value.trim();
+  const msg   = document.getElementById('request-msg');
+  if (!name || !email) { if (msg) msg.textContent = 'Please enter your name and email.'; return; }
+  if (msg) msg.textContent = 'Submitting...';
+  try {
+    const res  = await fetch('/api/staff-requests', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, email })
+    });
+    const data = await res.json();
+    if (msg) { msg.textContent = data.message || 'Request submitted!'; msg.style.color = '#15803d'; }
+  } catch(_) {
+    if (msg) msg.textContent = 'Could not submit. Try again.';
+  }
+}
