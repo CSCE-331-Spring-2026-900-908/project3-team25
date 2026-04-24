@@ -51,8 +51,6 @@ async function initCashier() {
   renderCart();
   bindModButtons();
   bindCartActions();
-  bindHelpers();
-  loadCashierWeather();
 
   document.getElementById('cashier-modify-overlay').addEventListener('click', e => {
     if (e.target.id === 'cashier-modify-overlay') {
@@ -159,26 +157,6 @@ function renderCategories() {
   });
 }
 
-//  IMAGE MAP
-const CASHIER_IMAGE_MAP = {
-  'Classic Milk Tea':      '/boba/Classic-Milk-Tea.PNG',
-  'Brown Sugar Milk Tea':  '/boba/Brown-Sugar-Milk-Tea.PNG',
-  'Taro Milk Tea':         '/boba/Taro-Milk-Tea.PNG',
-  'Matcha Milk Tea':       '/boba/Matcha-Milk-Tea.PNG',
-  'Thai Tea':              '/boba/Thai-Milk-Tea.PNG',
-  'Honey Green Tea':       '/boba/Honey-Green-Tea.PNG',
-  'Wintermelon Milk Tea':  '/boba/Wintermelon-Milk-Tea.PNG',
-  'Oolong Milk Tea':       '/boba/Ooglong-Tea.png',
-  'Coffee Milk Tea':       '/boba/Coffee-Milk-Tea.png',
-  'Lychee Green Tea':      '/boba/Lychee.png',
-  'Mango Green Tea':       '/boba/Mango.png',
-  'Peach Green Tea':       '/boba/Peach.png',
-  'Strawberry Green Tea':  '/boba/Strawberry-.png',
-  'Jasmine Green Tea':     '/boba/Sonny-Boba.png',
-  'Black Tea Lemonade':    '/boba/Sonny-Boba.png'
-};
-function cashierDrinkImg(name) { return CASHIER_IMAGE_MAP[name] || '/boba/Sonny-Boba.png'; }
-
 //  PRODUCT GRID
 function renderProductGrid() {
   const grid = document.getElementById('cashier-product-grid');
@@ -189,25 +167,12 @@ function renderProductGrid() {
     return;
   }
 
-  grid.innerHTML = filtered.map(item => {
-    const img = cashierDrinkImg(item.name);
-    return `<button class="cashier-product-btn" data-id="${item.id}" style="
-        background-image: url('${img}');
-        background-size: 62%;
-        background-repeat: no-repeat;
-        background-position: center 10%;
-        background-color: #fffaf7;
-        background-blend-mode: multiply;
-        padding-top: 72px;
-        position: relative;
-      ">
-        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 45%,rgba(255,250,247,0.97) 72%);border-radius:14px;pointer-events:none;"></div>
-        <div style="position:relative;z-index:1;">
-          <strong>${item.name}</strong>
-          <span>$${Number(item.price).toFixed(2)}</span>
-        </div>
-      </button>`;
-  }).join('');
+  grid.innerHTML = filtered.map(item =>
+    `<button class="cashier-product-btn" data-id="${item.id}">
+        <strong>${item.name}</strong>
+        <span>$${Number(item.price).toFixed(2)}</span>
+      </button>`
+  ).join('');
 
   grid.querySelectorAll('.cashier-product-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -461,95 +426,7 @@ function setStatus(msg, type = '') {
   el.className = 'cashier-checkout-status' + (type ? ' ' + type : '');
 }
 
-//  HELPERS 
-function bindHelpers() {
-  document.getElementById('cashier-translate-btn').addEventListener('click', async () => {
-    const text   = document.getElementById('cashier-translate-text').value.trim();
-    const target = document.getElementById('cashier-translate-target').value;
-    const out    = document.getElementById('cashier-translate-result');
-    out.textContent = 'Translating…';
-    try {
-      const res  = await fetch(`/api/translate?text=${encodeURIComponent(text)}&target=${encodeURIComponent(target)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Translation failed.');
-      out.textContent = data.translatedText;
-    } catch (e) {
-      out.textContent = e.message;
-    }
-  });
-
-  document.getElementById('cashier-assistant-btn').addEventListener('click', async () => {
-    const message = document.getElementById('cashier-assistant-input').value.trim();
-    const out     = document.getElementById('cashier-assistant-result');
-    out.textContent = 'Thinking…';
-    try {
-      const res  = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
-      const data = await res.json();
-      out.textContent = data.reply || 'No response.';
-    } catch (e) {
-      out.textContent = e.message;
-    }
-  });
-}
-
-async function loadCashierWeather() {
-  const wrap = document.getElementById('cashier-weather-card');
-  if (!wrap) return;
-  wrap.innerHTML = '<p class="muted">Loading weather…</p>';
-
-  // Call Open-Meteo directly from browser (Render free plan blocks outbound server calls)
-  const LAT = 30.6280, LON = -96.3344;
-
-  function weatherLabel(code) {
-    const m = { 0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
-      45:'Foggy',51:'Light drizzle',53:'Drizzle',61:'Light rain',63:'Moderate rain',
-      65:'Heavy rain',80:'Rain showers',81:'Moderate showers',82:'Heavy showers',
-      95:'Thunderstorm',96:'Thunderstorm + hail' };
-    return m[Number(code)] || 'Mixed conditions';
-  }
-  function drinkSuggestion(temp, code) {
-    if ([61,63,65,80,81,82,95].includes(Number(code))) return 'Rainy outside. Customers will want warm milk teas like Brown Sugar or Matcha.';
-    if (temp >= 95) return 'Scorching hot. Lead with Mango or Lychee Green Tea over extra ice.';
-    if (temp >= 85) return 'Really warm. Strawberry or Peach Green Tea are great iced options today.';
-    if (temp >= 75) return 'Warm day. Fruit teas are selling well, especially Mango Green Tea.';
-    if (temp >= 65) return 'Mild weather. Classic Milk Tea and Taro Milk Tea are popular choices.';
-    if (temp >= 50) return 'Getting cool. Push Brown Sugar Milk Tea or Thai Tea to warm customers up.';
-    return 'Cold outside. Rich milk teas like Matcha or Brown Sugar are the top picks today.';
-  }
-
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FChicago`;
-    const res  = await fetch(url);
-    const data = await res.json();
-    const cur  = data.current || {};
-
-    const temp  = cur.temperature_2m       != null ? Math.round(cur.temperature_2m)       : null;
-    const feels = cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : null;
-    const wind  = cur.wind_speed_10m       != null ? Math.round(cur.wind_speed_10m)       : null;
-    const code  = cur.weather_code ?? null;
-
-    if (temp === null) throw new Error('No data');
-
-    wrap.innerHTML = `
-      <div style="display:grid;gap:6px;">
-        <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);">${temp}°F</div>
-        <div style="font-size:0.85rem;color:var(--muted);">
-          ${weatherLabel(code)}
-          ${feels !== null ? ` · Feels like ${feels}°F` : ''}
-          ${wind  !== null ? ` · ${wind} mph wind` : ''}
-        </div>
-        <div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-top:4px;">${drinkSuggestion(temp, code)}</div>
-      </div>`;
-  } catch (_) {
-    wrap.innerHTML = '<p class="muted">Weather unavailable right now.</p>';
-  }
-}
-
-//  START 
+//  START
 initCashier();
 
 // ── PIN Overlay ───────────────────────────────────────────────────────────────
