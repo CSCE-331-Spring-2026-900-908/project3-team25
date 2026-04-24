@@ -171,12 +171,18 @@ input:focus-visible {
 .promo-card,
 .category-shell,
 .order-shell,
-.helper-card,
-.board-panel {
+.helper-card {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   padding: 24px;
+}
+.board-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow);
 }
 .metric {
   padding: 22px;
@@ -400,10 +406,13 @@ td {
 }
 .board-panel h3 {
   margin: 0 0 14px;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--accent-dark);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
 }
 .board-panel ul {
   list-style: none;
@@ -416,8 +425,9 @@ td {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0;
+  padding: 11px 0;
   border-bottom: 1px solid var(--line);
+  font-size: 1.05rem;
 }
 .board-panel li:last-child {
   border-bottom: none;
