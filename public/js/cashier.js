@@ -260,12 +260,11 @@ function applyQuickMod(type, value) {
 
   if (type === 'sugar') {
     item.sugar = value;
-    if (value >= 200 && !item.note.includes('2x Sweet')) {
-      item.note = (item.note ? item.note + ', ' : '') + '2x Sweet';
-    }
   } else if (type === 'ice') {
     item.ice = Math.min(value, 100);
-    const tag = value === 0 ? 'No Ice' : 'Half Ice';
+    const tag      = value === 0 ? 'No Ice' : 'Half Ice';
+    const opposite = value === 0 ? 'Half Ice' : 'No Ice';
+    item.note = item.note.split(', ').filter(n => n !== opposite).join(', ');
     if (!item.note.includes(tag)) {
       item.note = (item.note ? item.note + ', ' : '') + tag;
     }
