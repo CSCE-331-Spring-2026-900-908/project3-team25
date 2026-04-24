@@ -5,241 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Menu Board | Reveille Bubble Tea</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
-  <style>
-    :root {
-      --bg: #1a0a05;
-      --card: rgba(255,250,247,0.06);
-      --card-border: rgba(255,250,247,0.12);
-      --accent: #c05a40;
-      --gold: #e8b86d;
-      --ink: #fff7f2;
-      --muted: rgba(255,247,242,0.6);
-      --glow: rgba(192,90,64,0.25);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    /* Animated background particles */
-    .bg-canvas {
-      position: fixed; inset: 0; z-index: 0;
-      pointer-events: none;
-    }
-
-    /* Floating orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.18;
-      animation: drift linear infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
-    @keyframes drift {
-      0%   { transform: translate(0,0) scale(1); }
-      33%  { transform: translate(40px,-60px) scale(1.1); }
-      66%  { transform: translate(-30px,40px) scale(0.95); }
-      100% { transform: translate(0,0) scale(1); }
-    }
-
-    /* Content */
-    .board-wrapper {
-      position: relative; z-index: 1;
-      max-width: 1400px; margin: 0 auto;
-      padding: 28px 32px 48px;
-    }
-
-    /* Header */
-    .board-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 32px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--card-border);
-    }
-    .board-brand { display: flex; align-items: center; gap: 16px; }
-    .board-badge {
-      width: 56px; height: 56px; border-radius: 12px;
-      background: var(--accent);
-      display: grid; place-items: center;
-      font-weight: 800; font-size: 1.3rem; color: white;
-      box-shadow: 0 0 24px var(--glow);
-    }
-    .board-title { font-size: 1.6rem; font-weight: 800; }
-    .board-sub   { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
-
-    /* Live clock */
-    .board-clock {
-      text-align: right;
-    }
-    .clock-time { font-size: 2rem; font-weight: 800; color: var(--gold); letter-spacing: 0.04em; }
-    .clock-date { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
-
-    /* Weather strip */
-    .weather-strip {
-      background: var(--card);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 12px 20px;
-      margin-bottom: 28px;
-      display: flex; align-items: center; gap: 20px;
-      font-size: 0.9rem;
-    }
-    .weather-strip .temp { font-size: 1.4rem; font-weight: 800; color: var(--gold); }
-    .weather-strip .tip  { color: var(--muted); margin-left: auto; font-style: italic; }
-
-    /* Category grid */
-    .board-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    /* Category panel */
-    .board-panel {
-      background: var(--card);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 22px 24px;
-      backdrop-filter: blur(8px);
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s, box-shadow 0.3s;
-      animation: fadeSlideIn 0.6s ease both;
-    }
-    .board-panel::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--gold));
-      border-radius: 16px 16px 0 0;
-    }
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .board-panel:hover {
-      border-color: rgba(192,90,64,0.4);
-      box-shadow: 0 0 32px rgba(192,90,64,0.12);
-    }
-
-    .board-panel h3 {
-      font-size: 0.78rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--gold);
-      margin-bottom: 16px;
-    }
-
-    .board-panel ul { list-style: none; }
-    .board-panel li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 9px 0;
-      border-bottom: 1px solid rgba(255,247,242,0.06);
-      font-size: 0.95rem;
-      transition: color 0.15s;
-    }
-    .board-panel li:last-child { border-bottom: none; }
-    .board-panel li:hover { color: var(--gold); }
-    .board-panel li .item-name { flex: 1; }
-    .board-panel li .item-price {
-      font-weight: 700;
-      color: var(--accent);
-      white-space: nowrap;
-      font-size: 1rem;
-    }
-
-    /* Popular badge */
-    .pop-tag {
-      font-size: 0.65rem;
-      font-weight: 700;
-      background: rgba(232,184,109,0.15);
-      color: var(--gold);
-      border: 1px solid rgba(232,184,109,0.3);
-      padding: 2px 7px;
-      border-radius: 999px;
-      margin-left: 6px;
-      vertical-align: middle;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* Scrolling ticker at bottom */
-    .ticker-wrap {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(192,90,64,0.15);
-      border-top: 1px solid rgba(192,90,64,0.25);
-      padding: 10px 0;
-      overflow: hidden;
-      z-index: 10;
-      backdrop-filter: blur(6px);
-    }
-    .ticker-track {
-      display: flex;
-      white-space: nowrap;
-      animation: ticker 40s linear infinite;
-    }
-    .ticker-track span { padding: 0 60px; font-size: 0.88rem; color: var(--gold); font-weight: 600; }
-    @keyframes ticker {
-      from { transform: translateX(100vw); }
-      to   { transform: translateX(-100%); }
-    }
-
-    /* Pulse animation on prices */
-    @keyframes pricePulse {
-      0%,100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
 
-  <!-- Floating orbs -->
-  <div class="orb" style="width:500px;height:500px;background:#9e3b35;top:-100px;left:-100px;animation-duration:18s;"></div>
-  <div class="orb" style="width:400px;height:400px;background:#c9832a;top:30%;right:-80px;animation-duration:24s;animation-delay:-8s;"></div>
-  <div class="orb" style="width:350px;height:350px;background:#5a1a10;bottom:10%;left:20%;animation-duration:20s;animation-delay:-12s;"></div>
+  <main id="main-content" class="page-shell">
 
-  <div class="board-wrapper">
-
-    <header class="cashier-topbar" style="margin-bottom: 24px;">
+    <header class="portal-header">
       <div class="brand-mark">
         <div class="brand-badge">RB</div>
         <div>
-          <h1 style="margin:0; font-size:1.3rem;">Reveille Bubble Tea</h1>
-          <p class="muted" style="margin:2px 0 0;">Menu Board</p>
+          <h1>Reveille Bubble Tea</h1>
+          <p class="muted">Menu Board</p>
         </div>
       </div>
-      <div class="cashier-topbar-right">
-        <span class="cashier-user-info">Menu Board</span>
+      <div class="board-clock">
+        <div class="clock-time" id="clock-time">--:--</div>
+        <div class="clock-date" id="clock-date"></div>
       </div>
     </header>
 
-    <!-- Weather -->
-    <div class="weather-strip" id="board-weather">
-      <div class="temp" id="bw-temp">--°F</div>
-      <div id="bw-label" style="color:var(--muted);">Loading weather…</div>
-      <div class="tip" id="bw-tip"></div>
+    <div class="board-weather-strip" id="board-weather">
+      <span class="board-weather-temp" id="bw-temp">--°F</span>
+      <span id="bw-label" class="muted"></span>
+      <span class="board-weather-tip" id="bw-tip"></span>
     </div>
 
-    <!-- Menu grid -->
-    <div class="board-grid" id="menu-board-columns">
-      <div class="board-panel"><h3>Loading…</h3></div>
+    <div class="board-columns" id="menu-board-columns">
+      <article class="board-panel">
+        <h3>Loading menu…</h3>
+      </article>
     </div>
 
-  </div>
+  </main>
 
-  <!-- Scrolling ticker -->
-  <div class="ticker-wrap">
-    <div class="ticker-track" id="ticker-track">
+  <div class="board-ticker-wrap">
+    <div class="board-ticker-track" id="ticker-track">
       <span>Welcome to Reveille Bubble Tea</span>
       <span>Earn 10 reward points per dollar spent</span>
       <span>Spin the wheel daily for prizes and discounts</span>

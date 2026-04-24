@@ -434,10 +434,86 @@ td {
 .board-panel li:last-child {
   border-bottom: none;
 }
-.board-panel li strong {
+.board-panel .item-name { flex: 1; }
+.board-panel .item-price {
+  font-weight: 700;
   color: var(--accent-dark);
   white-space: nowrap;
 }
+.pop-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(158, 59, 53, 0.08);
+  color: var(--accent);
+  border: 1px solid rgba(158, 59, 53, 0.18);
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Menu board display chrome ───────────────────────────────── */
+.board-clock { text-align: right; }
+.clock-time {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-dark);
+  letter-spacing: 0.03em;
+}
+.clock-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.board-weather-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+.board-weather-temp {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+.board-weather-tip {
+  margin-left: auto;
+  color: var(--muted);
+  font-style: italic;
+}
+.board-ticker-wrap {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  overflow: hidden;
+}
+.board-ticker-track {
+  display: flex;
+  white-space: nowrap;
+  animation: board-ticker 40s linear infinite;
+}
+.board-ticker-track span {
+  padding: 0 60px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent-dark);
+}
+@keyframes board-ticker {
+  from { transform: translateX(100vw); }
+  to   { transform: translateX(-100%); }
+}
+
 @media (max-width: 1100px) {
   .portal-grid,
   .board-columns {

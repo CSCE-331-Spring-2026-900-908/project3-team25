@@ -70,8 +70,8 @@ async function loadMenuBoard() {
       grouped[item.category].push(item);
     });
 
-    columns.innerHTML = Object.entries(grouped).map(([category, items], panelIdx) => `
-      <article class="board-panel" style="animation-delay:${panelIdx * 0.08}s;">
+    columns.innerHTML = Object.entries(grouped).map(([category, items]) => `
+      <article class="board-panel">
         <h3>${CATEGORY_LABELS[category] || category.replace(/_/g,' ')}</h3>
         <ul>
           ${items.map(item => `
@@ -93,7 +93,7 @@ async function loadMenuBoard() {
       ticker.innerHTML += extras + ticker.innerHTML; // duplicate for seamless loop
     }
   } catch (_) {
-    columns.innerHTML = '<article class="board-panel"><p style="color:rgba(255,247,242,0.5);">Failed to load menu.</p></article>';
+    columns.innerHTML = '<article class="board-panel"><p class="muted">Failed to load menu.</p></article>';
   }
 }
 
