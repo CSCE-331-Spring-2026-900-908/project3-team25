@@ -325,9 +325,9 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
           <div>
             <h3 id="guest-login-title" style="margin:0;color:var(--accent-dark);font-size:1.7rem;">Sign in before checkout?</h3>
-            <p style="margin:6px 0 0;color:var(--muted);">Sign in to earn reward points, or continue as a guest.</p>
+            <p id="guest-login-subtitle" style="margin:6px 0 0;color:var(--muted);">Sign in to earn reward points, or continue as a guest.</p>
           </div>
-          <button id="guest-login-close" type="button" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);">✕</button>
+          <button id="guest-login-close" type="button" aria-label="Close sign-in popup" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);">✕</button>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
@@ -336,7 +336,7 @@
         </div>
 
         <div id="guest-login-qr-panel">
-          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.</p>
+          <p id="guest-login-qr-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.</p>
           <div style="display:flex;justify-content:center;margin-bottom:10px;">
             <img id="guest-login-qr-image" alt="Sign in QR code" style="width:220px;height:220px;border-radius:16px;border:1px solid var(--line);padding:10px;background:#fff;object-fit:contain;" />
           </div>
@@ -344,7 +344,7 @@
         </div>
 
         <div id="guest-login-google-panel" style="display:none;">
-          <p style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
+          <p id="guest-login-google-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
           <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
         </div>
 

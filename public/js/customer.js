@@ -157,7 +157,27 @@ const TRANSLATIONS = {
     transactionSaved: 'saved.',
     database: '(Database)',
     fallback: '(Fallback)',
-    pointsUnit: 'pts'
+    pointsUnit: 'pts',
+    signIn: 'Sign In',
+    signOut: 'Sign Out',
+    signInBeforeCheckout: 'Sign in before checkout?',
+    signInBeforeCheckoutSubtitle: 'Sign in to earn reward points, or continue as a guest.',
+    scanQrCode: 'Scan QR Code',
+    signInWithGoogle: 'Sign In with Google',
+    scanQrInstructions: 'Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.',
+    waitingForPhoneSignIn: 'Waiting for phone sign-in…',
+    googleKioskInstructions: 'Use Google on this kiosk to sign in before you pay.',
+    continueWithGoogle: 'Continue with Google',
+    continueAsGuest: 'Continue as Guest',
+    signInForRewards: 'Sign In for Rewards',
+    closeSignIn: 'Close sign-in popup',
+    signInQrAlt: 'Sign in QR code',
+    preparingSecureSignIn: 'Preparing secure sign-in…',
+    scanQrFinishGoogle: 'Scan the QR code with your phone, then finish Google sign-in there.',
+    signInCompleteConnecting: 'Sign-in complete. Connecting this kiosk…',
+    qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
+    couldNotCreateQr: 'Could not create QR sign-in.',
+    couldNotFinishKioskSignIn: 'Could not finish kiosk sign-in.'
   },
   es: {
     language: 'Idioma',
@@ -287,7 +307,27 @@ const TRANSLATIONS = {
     transactionSaved: 'guardada.',
     database: '(Base de datos)',
     fallback: '(Respaldo)',
-    pointsUnit: 'pts'
+    pointsUnit: 'pts',
+    signIn: 'Iniciar sesión',
+    signOut: 'Cerrar sesión',
+    signInBeforeCheckout: '¿Iniciar sesión antes de pagar?',
+    signInBeforeCheckoutSubtitle: 'Inicia sesión para ganar puntos de recompensa, o continúa como invitado.',
+    scanQrCode: 'Escanear código QR',
+    signInWithGoogle: 'Iniciar sesión con Google',
+    scanQrInstructions: 'Escanea este código con tu teléfono para iniciar sesión, y el quiosco continuará automáticamente en esta computadora.',
+    waitingForPhoneSignIn: 'Esperando inicio de sesión desde el teléfono…',
+    googleKioskInstructions: 'Usa Google en este quiosco para iniciar sesión antes de pagar.',
+    continueWithGoogle: 'Continuar con Google',
+    continueAsGuest: 'Continuar como invitado',
+    signInForRewards: 'Iniciar sesión para recompensas',
+    closeSignIn: 'Cerrar ventana de inicio de sesión',
+    signInQrAlt: 'Código QR para iniciar sesión',
+    preparingSecureSignIn: 'Preparando inicio de sesión seguro…',
+    scanQrFinishGoogle: 'Escanea el código QR con tu teléfono y luego termina el inicio de sesión con Google allí.',
+    signInCompleteConnecting: 'Inicio de sesión completo. Conectando este quiosco…',
+    qrExpired: 'Este código QR expiró. Vuelve a abrir la ventana de inicio de sesión para obtener uno nuevo.',
+    couldNotCreateQr: 'No se pudo crear el inicio de sesión con QR.',
+    couldNotFinishKioskSignIn: 'No se pudo terminar el inicio de sesión en el quiosco.'
   }
 };
 
@@ -455,6 +495,16 @@ function applyStaticTranslations() {
     if (el) el.placeholder = value;
   };
 
+  const setAriaLabel = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('aria-label', value);
+  };
+
+  const setAlt = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('alt', value);
+  };
+
   const languageSelect = document.getElementById('language-select');
   if (languageSelect) languageSelect.value = currentLanguage;
 
@@ -496,6 +546,21 @@ function applyStaticTranslations() {
   setText('edit-modal-save', t('saveChanges'));
   setText('modal-qty-label', t('qty'));
   setPlaceholder('promo-code-input', t('promoCodePlaceholder'));
+
+  // Sign-in / guest checkout modal
+  setText('guest-login-title', t('signInBeforeCheckout'));
+  setText('guest-login-subtitle', t('signInBeforeCheckoutSubtitle'));
+  setText('guest-login-tab-qr', t('scanQrCode'));
+  setText('guest-login-tab-google', t('signInWithGoogle'));
+  setText('guest-login-qr-instructions', t('scanQrInstructions'));
+  setText('guest-login-qr-status', t('waitingForPhoneSignIn'));
+  setText('guest-login-google-instructions', t('googleKioskInstructions'));
+  setText('guest-login-google-btn', t('continueWithGoogle'));
+  setText('guest-continue-btn', t('continueAsGuest'));
+  setText('guest-login-rewards-btn', t('signInForRewards'));
+  setText('kiosk-auth-btn', currentUser ? t('signOut') : t('signIn'));
+  setAriaLabel('guest-login-close', t('closeSignIn'));
+  setAlt('guest-login-qr-image', t('signInQrAlt'));
 
   if (!document.getElementById('confirmation-message')?.dataset.transactionMessage) {
     setText('confirmation-message', t('orderReceived'));
@@ -591,7 +656,7 @@ function clearGuestPairingPoller() {
 function updateKioskAuthButton() {
   const btn = document.getElementById('kiosk-auth-btn');
   if (!btn) return;
-  btn.textContent = currentUser ? 'Sign Out' : 'Sign In';
+  btn.textContent = currentUser ? t('signOut') : t('signIn');
 }
 
 function openGuestLoginOverlay(fromCheckout = false) {
@@ -635,14 +700,14 @@ async function startGuestPairing() {
   const status = document.getElementById('guest-login-qr-status');
   if (!img || !status) return;
   clearGuestPairingPoller();
-  status.textContent = 'Preparing secure sign-in…';
+  status.textContent = t('preparingSecureSignIn');
   try {
     const res = await fetch('/api/auth/pair/new?returnTo=' + encodeURIComponent('/customer.html'));
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Could not create QR sign-in.');
+    if (!res.ok) throw new Error(data.error || t('couldNotCreateQr'));
     guestLoginPairToken = data.token;
     img.src = data.qrUrl;
-    status.textContent = 'Scan the QR code with your phone, then finish Google sign-in there.';
+    status.textContent = t('scanQrFinishGoogle');
     guestLoginPoller = setInterval(checkGuestPairingStatus, 2000);
   } catch (err) {
     status.textContent = err.message;
@@ -657,10 +722,10 @@ async function checkGuestPairingStatus() {
     const data = await res.json();
     if (data.status === 'authorized') {
       clearGuestPairingPoller();
-      if (statusEl) statusEl.textContent = 'Sign-in complete. Connecting this kiosk…';
+      if (statusEl) statusEl.textContent = t('signInCompleteConnecting');
       const claimRes = await fetch(`/api/auth/pair-claim/${guestLoginPairToken}`, { method: 'POST' });
       const claimData = await claimRes.json();
-      if (!claimRes.ok) throw new Error(claimData.error || 'Could not finish kiosk sign-in.');
+      if (!claimRes.ok) throw new Error(claimData.error || t('couldNotFinishKioskSignIn'));
       await loadUser();
       closeGuestLoginOverlay();
       if (guestCheckoutRequested && customerOrder.length) {
@@ -674,7 +739,7 @@ async function checkGuestPairingStatus() {
     if (data.status === 'expired') {
       clearGuestPairingPoller();
       guestLoginPairToken = null;
-      if (statusEl) statusEl.textContent = 'This QR code expired. Please reopen the sign-in box to get a new one.';
+      if (statusEl) statusEl.textContent = t('qrExpired');
     }
   } catch (err) {
     if (statusEl) statusEl.textContent = err.message;
