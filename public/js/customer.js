@@ -1007,7 +1007,9 @@ function openDrinkModal(item) {
 
   document.getElementById('modal-drink-img').alt = displayName;
   document.getElementById('modal-drink-name').textContent = displayName;
-  document.getElementById('modal-drink-desc').textContent = ''; // description hidden per request
+  const descKey = `description_${item.name}`;
+  const descText = (TRANSLATIONS[currentLanguage]?.[descKey]) || item.description || '';
+  document.getElementById('modal-drink-desc').textContent = descText;
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
   document.getElementById('modal-size').value = 'Regular';
@@ -1022,24 +1024,9 @@ function openDrinkModal(item) {
   document.getElementById('drink-modal-overlay').classList.add('open');
   document.getElementById('modal-cancel-btn').focus();
 
-  // Load and display ingredients for this drink
+  // Hide ingredients section - description shown above instead
   const ingWrap = document.getElementById('modal-ingredients-wrap');
-  const ingList = document.getElementById('modal-ingredients-list');
-  if (ingWrap && ingList) {
-    ingList.textContent = '…';
-    ingWrap.style.display = 'block';
-    fetch('/api/public/menu-item/' + item.id + '/ingredients')
-      .then(r => r.ok ? r.json() : { ingredients: [] })
-      .then(data => {
-        const ings = data.ingredients || [];
-        if (ings.length) {
-          ingList.textContent = ings.join(', ');
-        } else {
-          ingWrap.style.display = 'none';
-        }
-      })
-      .catch(() => { ingWrap.style.display = 'none'; });
-  }
+  if (ingWrap) ingWrap.style.display = 'none';
 }
 
 function closeDrinkModal() {
