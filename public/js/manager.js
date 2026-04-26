@@ -292,8 +292,15 @@ async function saveMenuItem() {
   const method = id ? 'PUT' : 'POST';
   const url    = id ? `/api/menu-item/${id}` : '/api/menu-item';
   const res    = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, category:cat, basePrice:price }) });
-  if (res.ok) { closeMenuModal(); loadMenuEditor(); } 
-  else { const d = await res.json(); alert('Error: ' + (d.error || 'Save failed.')); }
+  if (res.ok) {
+    const data = await res.json();
+    closeMenuModal();
+    await loadMenuEditor();
+    // If this was a NEW item, open ingredients editor immediately
+    if (!id && data.id) {
+      openIngModal(data.id, name);
+    }
+  } else { const d = await res.json(); alert('Error: ' + (d.error || 'Save failed.')); }
 }
 
 async function toggleMenuActive(id, btn) {

@@ -228,6 +228,19 @@
     document.addEventListener("focusin", (event) => {
       const el = getTrackedElement(event.target);
       if (!voiceEnabled || !el) return;
+
+      // For dropdowns: announce label AND all available options clearly
+      if ((el.tagName || "").toLowerCase() === "select") {
+        const label = getElementLabel(el);
+        const opts = Array.from(el.options).map(o => normalizeText(o.textContent)).filter(Boolean);
+        const currentVal = normalizeText(el.options[el.selectedIndex]?.textContent || "");
+        const msg = opts.length
+          ? label + ". Current: " + currentVal + ". Options: " + opts.join(", ") + "."
+          : label;
+        announce(msg, true);
+        return;
+      }
+
       announce(describeElement(el), true);
     });
   }
@@ -294,7 +307,11 @@
       if (!voiceEnabled) return;
 
       const selected = el.options[el.selectedIndex];
-      if (selected) speak(normalizeText(selected.textContent));
+      if (selected) {
+        const label = getElementLabel(el);
+        const val = normalizeText(selected.textContent);
+        speak(label + " set to " + val);
+      }
     });
   }
 

@@ -1294,18 +1294,24 @@ input[type="range"] {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+  overflow: hidden;
+  border-radius: 14px 14px 0 0;
 }
 
 .drink-image {
   width: 100%;
-  max-width: 200px;
-  height: 150px;
-  background-size: contain;
+  max-width: 100%;
+  height: 170px;
+  background-size: cover;
   background-repeat: no-repeat;
-  background-position: center;
-  background-color: #fffaf7;
-  background-blend-mode: multiply;
+  background-position: center top;
+  background-color: #f5eee9;
+  transition: transform 0.3s ease;
+}
+
+.menu-card:hover .drink-image {
+  transform: scale(1.04);
 }
 /* ===== FINAL ACCESSIBILITY / MUSIC TOOLBAR ===== */
 
@@ -1561,11 +1567,29 @@ body.voice-guide-enabled
   cursor: pointer;
   border-radius: 14px;
   overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.menu-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(158,59,53,0.13);
 }
 .menu-card .drink-image-wrap {
-  border-radius: 10px 10px 0 0;
+  border-radius: 14px 14px 0 0;
   overflow: hidden;
+  flex-shrink: 0;
 }
+.menu-card .topline,
+.menu-card h3,
+.menu-card > p,
+.menu-card .price-line {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.menu-card .topline  { padding-top: 12px; }
+.menu-card .price-line { padding-bottom: 14px; }
 
 /* ── Rewards Bar (top of kiosk) ───────────────────────────────── */
 .rewards-topbar {
@@ -2039,3 +2063,126 @@ body.voice-guide-enabled
 .assistant-form input {
   flex: 1;
 }
+/* ═══════════════════════════════════════════════════════════════
+   LIVENESS, POLISH & FIXES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Animated Popular badge ─────────────────────────────────── */
+@keyframes popularPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(158,59,53,0.35); }
+  60%  { box-shadow: 0 0 0 6px rgba(158,59,53,0); }
+  100% { box-shadow: 0 0 0 0 rgba(158,59,53,0); }
+}
+.tag {
+  animation: popularPulse 2.5s ease-out infinite;
+  font-size: 0.75rem !important;
+  padding: 4px 10px !important;
+  color: var(--accent-dark);
+}
+
+/* ── Live activity ticker ────────────────────────────────────── */
+.live-ticker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 7px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  max-width: 420px;
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: liveBlink 1.4s ease-in-out infinite;
+}
+@keyframes liveBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+.live-ticker-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Seasonal tab NEW badge ──────────────────────────────────── */
+.tab-btn[data-category="seasonal"] {
+  position: relative;
+}
+.tab-btn[data-category="seasonal"]::after {
+  content: "NEW";
+  font-size: 0.5rem;
+  font-weight: 800;
+  background: var(--accent);
+  color: white;
+  border-radius: 4px;
+  padding: 1px 4px;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  letter-spacing: 0.04em;
+}
+
+/* ── "What's Inside" in modal ────────────────────────────────── */
+#modal-ingredients-wrap {
+  border-left: 3px solid var(--accent) !important;
+  background: rgba(158,59,53,0.03) !important;
+}
+#modal-ingredients-list {
+  font-size: 0.83rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── Menu card description text ──────────────────────────────── */
+.menu-card > p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 3px 0 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Inventory status badges ─────────────────────────────────── */
+.badge-low {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.badge-ok {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── Smooth order confirm animation ──────────────────────────── */
+@keyframes orderConfirmIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.confirm-screen-inner {
+  animation: orderConfirmIn 0.35s ease forwards;
+}
+
+/* ── Fade-in for weather/ticker area ─────────────────────────── */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.live-ticker { animation: fadeInDown 0.5s ease; }

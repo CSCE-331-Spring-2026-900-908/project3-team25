@@ -142,10 +142,11 @@ function parseCsv(filePath) {
 }
 
 const DESCRIPTIONS = {
-  milk_tea: 'Creamy tea-based drink with optional toppings and sweetness customization.',
-  tea: 'Refreshing brewed tea with a lighter flavor profile.',
-  fruit_tea: 'Fruity green tea served cold with vibrant flavors.',
-  coffee: 'Coffee-forward milk tea blend for stronger energy and flavor.'
+  milk_tea: 'Creamy tea-based drink with milk, optional toppings, and sweetness customization.',
+  tea: 'Refreshing brewed tea with a lighter, clean flavor profile.',
+  fruit_tea: 'Fruity green tea served cold with vibrant flavors and real fruit.',
+  coffee: 'Coffee-forward milk tea blend for a stronger energy and flavor boost.',
+  seasonal: 'Limited-time seasonal specialty — available while supplies last!'
 };
 
 const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
@@ -180,10 +181,25 @@ function lowStock(items) {
     .map(i => ({ ...i, status: i.quantityOnHand <= i.reorderThreshold ? 'low' : 'ok' }));
 }
 
+async function getPopularIds() {
+  try {
+    if (!hasDbConfig()) return [2,4,9,10,14];
+    const r = await queryDb(
+      `SELECT productid, COUNT(*) AS sold FROM transactionitem
+       GROUP BY productid ORDER BY sold DESC LIMIT 5`
+    );
+    if (r.rows.length > 0) return r.rows.map(row => Number(row.productid));
+  } catch(_) {}
+  return [2,4,9,10,14]; // fallback if table empty
+}
+
 async function getMenuItems() {
   if (hasDbConfig()) {
-    const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price FROM product WHERE is_active=true ORDER BY category,name`);
-    return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), popular: [2,4,9,10,14].includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
+    const [r, popularIds] = await Promise.all([
+      queryDb(`SELECT productid AS id, name, category, baseprice AS price FROM product WHERE is_active=true ORDER BY category,name`),
+      getPopularIds()
+    ]);
+    return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), popular: popularIds.includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
   }
   return csvMenu;
 }
@@ -213,13 +229,14 @@ async function getDashboardData() {
 }
 
 // SPIN prizes
+// segmentIndex MUST match SPIN_SEGMENTS order in customer.js
 const SPIN_PRIZES = [
-  { label:'50% Off One Drink', type:'percent_off', value:50, weight:20 },
-  { label:'Free Topping', type:'free_topping', value:0, weight:30 },
-  { label:'$1 Off Your Order', type:'flat_off', value:1, weight:25 },
-  { label:'Free Small Drink', type:'free_drink', value:0, weight:10 },
-  { label:'Buy One Get One', type:'percent_off', value:50, weight:5 },
-  { label:'25% Off Order', type:'percent_off', value:25, weight:10 }
+  { label:'50% Off One Drink', type:'percent_off', value:50, weight:20, segmentIndex:0 },
+  { label:'Free Topping',      type:'free_topping', value:0, weight:30, segmentIndex:1 },
+  { label:'$1 Off Your Order', type:'flat_off',     value:1, weight:25, segmentIndex:2 },
+  { label:'Free Small Drink',  type:'free_drink',   value:0, weight:10, segmentIndex:3 },
+  { label:'Buy One Get One',   type:'percent_off', value:50, weight:5,  segmentIndex:4 },
+  { label:'25% Off Order',     type:'percent_off', value:25, weight:10, segmentIndex:5 }
 ];
 function randomPrize() {
   const total = SPIN_PRIZES.reduce((s,p)=>s+p.weight,0);
@@ -524,6 +541,21 @@ app.post('/api/checkout', async (req, res) => {
         const txr = await client.query(`INSERT INTO transactions (cashierid,transactiontime,totalamount,paymentmethod,status) VALUES ($1,NOW(),$2,$3,'completed') RETURNING transactionid,transactiontime,totalamount,paymentmethod,status`, [cashierId, totalAmount, String(paymentMethod).toLowerCase()]);
         const tx = txr.rows[0];
         for (const item of normalized) { await client.query(`INSERT INTO transactionitem (transactionid,productid,quantity,unitprice) VALUES ($1,$2,$3,$4)`, [tx.transactionid, item.productId, item.quantity, item.unitPrice]); }
+
+        // ── Deduct inventory based on ingredients used per item sold ──
+        for (const item of normalized) {
+          const ings = await client.query(
+            `SELECT inventoryid, amountused FROM productingredient WHERE productid = $1`,
+            [item.productId]
+          );
+          for (const ing of ings.rows) {
+            const deduct = Number(ing.amountused) * item.quantity;
+            await client.query(
+              `UPDATE inventory SET quantityonhand = GREATEST(0, quantityonhand - $1) WHERE inventoryid = $2`,
+              [deduct, ing.inventoryid]
+            );
+          }
+        }
 
         let pointsEarned = 0, newBalance = 0;
         if (userId && source === 'customer') {
@@ -1099,6 +1131,27 @@ app.delete('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
   try {
     await queryDb(`UPDATE product SET is_active=false WHERE productid=$1`, [Number(req.params.id)]);
     res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public endpoint — lets customer kiosk show what's inside each drink (no auth needed)
+app.get('/api/public/menu-item/:id/ingredients', async (req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(
+        `SELECT i.itemname AS name FROM productingredient pi
+         JOIN inventory i ON i.inventoryid = pi.inventoryid
+         WHERE pi.productid = $1 ORDER BY i.itemname`,
+        [Number(req.params.id)]
+      );
+      return res.json({ ingredients: r.rows.map(r => r.name) });
+    }
+    const pi = parseCsv(path.join(dataDir,'productingredient.csv'));
+    const inv = parseCsv(path.join(dataDir,'inventory.csv'));
+    const invMap = new Map(inv.map(i => [Number(i.inventoryid), i.itemname]));
+    const names = pi.filter(r => Number(r.productid) === Number(req.params.id))
+      .map(r => invMap.get(Number(r.inventoryid))).filter(Boolean);
+    res.json({ ingredients: names });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

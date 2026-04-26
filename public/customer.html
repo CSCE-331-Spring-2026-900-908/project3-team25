@@ -23,6 +23,10 @@
           <span class="drink-modal-price" id="modal-drink-price">$0.00</span>
         </div>
         <p class="drink-modal-desc" id="modal-drink-desc"></p>
+        <div id="modal-ingredients-wrap" style="margin:8px 0 12px;padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid var(--accent);border:1px solid var(--line);display:none;">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:4px;">🧪 What's Inside</div>
+          <div id="modal-ingredients-list" style="font-size:0.85rem;color:var(--text);line-height:1.5;"></div>
+        </div>
 
         <div class="drink-modal-options">
           <div>
@@ -235,6 +239,11 @@
           <p class="muted">Loading weather…</p>
         </div>
 
+        <div id="live-ticker" class="live-ticker" style="margin-bottom:14px;display:none;">
+          <span class="live-dot"></span>
+          <span class="live-ticker-text" id="live-ticker-text">Live orders coming in…</span>
+        </div>
+
         <div class="mini-top" style="margin-bottom:16px;">
           <h2 id="menu-title" style="margin:0;">Choose your drink</h2>
           <span class="badge" id="customer-item-count">0 items</span>
@@ -363,19 +372,21 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
-          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">Scan QR Code</button>
-          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
+          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">How It Works</button>
+          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
         </div>
 
-        <div id="guest-login-qr-panel">
-          <p id="guest-login-qr-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.</p>
-          <div style="display:flex;justify-content:center;margin-bottom:10px;">
-            <img id="guest-login-qr-image" alt="Sign in QR code" style="width:220px;height:220px;border-radius:16px;border:1px solid var(--line);padding:10px;background:#fff;object-fit:contain;" />
+        <div id="guest-login-qr-panel" style="display:none;">
+          <div style="text-align:center;padding:20px 0;">
+            <div style="font-size:2.5rem;margin-bottom:12px;">🧋</div>
+            <p style="margin:0 0 10px;font-weight:700;color:var(--accent-dark);">Why Sign In?</p>
+            <p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem;">Earn <strong>10 points</strong> for every dollar you spend.</p>
+            <p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem;">Spin the <strong>Reward Wheel</strong> once a day for free drinks & discounts.</p>
+            <p style="margin:0;color:var(--muted);font-size:0.9rem;">Redeem points for <strong>free drinks, toppings & more!</strong></p>
           </div>
-          <p id="guest-login-qr-status" style="margin:0;color:var(--muted);text-align:center;font-size:0.9rem;">Waiting for phone sign-in…</p>
         </div>
 
-        <div id="guest-login-google-panel" style="display:none;">
+        <div id="guest-login-google-panel">
           <p id="guest-login-google-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
           <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
         </div>

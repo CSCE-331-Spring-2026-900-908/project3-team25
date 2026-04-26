@@ -337,21 +337,34 @@ function t(key) {
 
 // ─── Image map ────────────────────────────────────────────────────────────────
 const IMAGE_MAP = {
-  'Classic Milk Tea': '/boba/Classic-Milk-Tea.PNG',
-  'Brown Sugar Milk Tea': '/boba/Brown-Sugar-Milk-Tea.PNG',
-  'Taro Milk Tea': '/boba/Taro-Milk-Tea.PNG',
-  'Matcha Milk Tea': '/boba/Matcha-Milk-Tea.PNG',
-  'Thai Tea': '/boba/Thai-Milk-Tea.PNG',
-  'Honey Green Tea': '/boba/Honey-Green-Tea.PNG',
-  'Wintermelon Milk Tea': '/boba/Wintermelon-Milk-Tea.PNG',
-  'Oolong Milk Tea': '/boba/Ooglong-Tea.png',
-  'Coffee Milk Tea': '/boba/Coffee-Milk-Tea.png',
-  'Lychee Green Tea': '/boba/Lychee.png',
-  'Mango Green Tea': '/boba/Mango.png',
-  'Peach Green Tea': '/boba/Peach.png',
-  'Strawberry Green Tea': '/boba/Strawberry-.png',
-  'Jasmine Green Tea': '/boba/Sonny-Boba.png',
-  'Black Tea Lemonade': '/boba/Sonny-Boba.png'
+  // ── Milk Tea ──────────────────────────────────────────────
+  'Classic Milk Tea':         '/boba/Classic-Milk-Tea.PNG',
+  'Brown Sugar Milk Tea':     '/boba/Brown-Sugar-Milk-Tea.PNG',
+  'Taro Milk Tea':            '/boba/Taro-Milk-Tea.PNG',
+  'Matcha Milk Tea':          '/boba/Matcha-Milk-Tea.PNG',
+  'Thai Tea':                 '/boba/Thai-Milk-Tea.PNG',
+  'Wintermelon Milk Tea':     '/boba/Wintermelon-Milk-Tea.PNG',
+  'Oolong Milk Tea':          '/boba/Ooglong-Tea.png',
+  'Hokkaido Milk Tea':        '/boba/Classic-Milk-Tea.PNG',
+  'Oat Milk Brown Sugar Tea': '/boba/Brown-Sugar-Milk-Tea.PNG',
+  // ── Tea ───────────────────────────────────────────────────
+  'Honey Green Tea':          '/boba/Honey-Green-Tea.PNG',
+  'Jasmine Green Tea':        '/boba/Jasmine-Green-Tea.png',
+  'Black Tea Lemonade':       '/boba/Black-Tea-Lemonade.png',
+  'Yuzu Lemonade':            '/boba/Black-Tea-Lemonade.png',
+  // ── Fruit Tea ─────────────────────────────────────────────
+  'Lychee Green Tea':         '/boba/Lychee.png',
+  'Mango Green Tea':          '/boba/Mango.png',
+  'Peach Green Tea':          '/boba/Peach.png',
+  'Strawberry Green Tea':     '/boba/Strawberry-.png',
+  'Passion Fruit Tea':        '/boba/Peach.png',
+  'Kumquat Green Tea':        '/boba/Lychee.png',
+  'Mango Coconut Jelly Tea':  '/boba/Mango.png',
+  // ── Coffee ────────────────────────────────────────────────
+  'Coffee Milk Tea':          '/boba/Coffee-Milk-Tea.png',
+  // ── Seasonal ──────────────────────────────────────────────
+  'Watermelon Slush':         '/boba/Strawberry-.png',
+  'Osmanthus Oolong':         '/boba/Honey-Green-Tea.PNG',
 };
 
 function getDrinkImg(name) {
@@ -365,13 +378,15 @@ function translateCategoryName(category) {
       milk_tea: 'Milk Tea',
       tea: 'Tea',
       fruit_tea: 'Fruit Tea',
-      coffee: 'Coffee'
+      coffee: 'Coffee',
+      seasonal: '🍃 Seasonal'
     },
     es: {
       milk_tea: 'Té con leche',
       tea: 'Té',
       fruit_tea: 'Té frutal',
-      coffee: 'Café'
+      coffee: 'Café',
+      seasonal: '🍃 Temporada'
     }
   };
 
@@ -666,8 +681,7 @@ function openGuestLoginOverlay(fromCheckout = false) {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   overlay.classList.add('open');
-  switchGuestLoginTab('qr');
-  startGuestPairing();
+  switchGuestLoginTab('google'); // Default to Google — QR pairing is unreliable on Render
 }
 
 function closeGuestLoginOverlay() {
@@ -851,6 +865,7 @@ function renderMenu() {
         <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
+      ${item.description ? `<p style="margin:2px 0 0;font-size:0.79rem;color:var(--muted);line-height:1.35;">${item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
         <span class="price">$${Number(item.price).toFixed(2)}</span>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
@@ -916,6 +931,25 @@ function openDrinkModal(item) {
 
   document.getElementById('drink-modal-overlay').classList.add('open');
   document.getElementById('modal-cancel-btn').focus();
+
+  // Load and display ingredients for this drink
+  const ingWrap = document.getElementById('modal-ingredients-wrap');
+  const ingList = document.getElementById('modal-ingredients-list');
+  if (ingWrap && ingList) {
+    ingList.textContent = '…';
+    ingWrap.style.display = 'block';
+    fetch('/api/public/menu-item/' + item.id + '/ingredients')
+      .then(r => r.ok ? r.json() : { ingredients: [] })
+      .then(data => {
+        const ings = data.ingredients || [];
+        if (ings.length) {
+          ingList.textContent = ings.join(', ');
+        } else {
+          ingWrap.style.display = 'none';
+        }
+      })
+      .catch(() => { ingWrap.style.display = 'none'; });
+  }
 }
 
 function closeDrinkModal() {
@@ -1361,13 +1395,14 @@ document.getElementById('rewards-modal-overlay').addEventListener('click', e => 
 });
 
 // ─── Spin Wheel ───────────────────────────────────────────────────────────────
+// segmentIndex MUST match server.js SPIN_PRIZES segmentIndex values
 const SPIN_SEGMENTS = [
-  { label: '50% Off\nOne Drink', color: '#9e3b35' },
-  { label: 'Free\nTopping', color: '#c05a4a' },
-  { label: '$1 Off\nYour Order', color: '#d07a5a' },
-  { label: 'Free\nSmall Drink', color: '#b84d3e' },
-  { label: 'Buy One\nGet One', color: '#a04040' },
-  { label: '25% Off\nOrder', color: '#cc6655' }
+  { label: '50% Off\nOne Drink', color: '#9e3b35', segmentIndex: 0 },
+  { label: 'Free\nTopping',      color: '#c05a4a', segmentIndex: 1 },
+  { label: '$1 Off\nYour Order', color: '#d07a5a', segmentIndex: 2 },
+  { label: 'Free\nSmall Drink',  color: '#b84d3e', segmentIndex: 3 },
+  { label: 'Buy One\nGet One',   color: '#a04040', segmentIndex: 4 },
+  { label: '25% Off\nOrder',     color: '#cc6655', segmentIndex: 5 }
 ];
 
 let spinAngle = 0;
@@ -1485,7 +1520,8 @@ function tryFinishSpin() {
 
   if (spinResult) {
     const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
-    const segIdx = SPIN_SEGMENTS.findIndex(
+    // Use segmentIndex from server for accurate wheel snap
+    const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
       s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
     );
     if (segIdx >= 0) {
@@ -1755,8 +1791,7 @@ document.getElementById('guest-login-overlay')?.addEventListener('click', event 
   if (event.target.id === 'guest-login-overlay') closeGuestLoginOverlay();
 });
 document.getElementById('guest-login-tab-qr')?.addEventListener('click', () => {
-  switchGuestLoginTab('qr');
-  if (!guestLoginPairToken) startGuestPairing();
+  switchGuestLoginTab('qr'); // Shows explainer panel
 });
 document.getElementById('guest-login-tab-google')?.addEventListener('click', () => switchGuestLoginTab('google'));
 document.getElementById('guest-login-google-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
@@ -1972,3 +2007,43 @@ async function init() {
 }
 
 init();
+// ─── Live Activity Ticker ──────────────────────────────────────────────────────
+const TICKER_MESSAGES = [
+  '🧋 Someone just ordered a Brown Sugar Milk Tea!',
+  '⭐ A customer earned 60 reward points!',
+  '🏆 Mango Green Tea is trending right now!',
+  '🎉 A free topping coupon was just redeemed!',
+  '🧊 Someone went with no ice — bold choice!',
+  '🌟 Matcha Milk Tea has been popular today!',
+  '🎡 A customer just spun the reward wheel!',
+  '💚 Taro Milk Tea — a fan favorite!',
+  '🫧 Extra boba on a Strawberry Green Tea!',
+  '☕ Coffee Milk Tea for the afternoon crowd!',
+  '🏅 50+ orders completed today!',
+  '🍑 Peach Green Tea flying out the door!',
+  '🌿 Seasonal specials are going fast!',
+  '🎁 Someone redeemed a free drink reward!',
+];
+
+let tickerIdx = 0;
+
+function startLiveTicker() {
+  const ticker = document.getElementById('live-ticker');
+  const text   = document.getElementById('live-ticker-text');
+  if (!ticker || !text) return;
+  ticker.style.display = 'flex';
+
+  function showNext() {
+    text.style.opacity = '0';
+    text.style.transition = 'opacity 0.4s';
+    setTimeout(() => {
+      text.textContent = TICKER_MESSAGES[tickerIdx % TICKER_MESSAGES.length];
+      tickerIdx++;
+      text.style.opacity = '1';
+    }, 400);
+  }
+  showNext();
+  setInterval(showNext, 5000);
+}
+
+setTimeout(startLiveTicker, 2000);
