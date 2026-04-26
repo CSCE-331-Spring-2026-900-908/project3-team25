@@ -845,7 +845,7 @@ async function loadLoginLog() {
                 </span>
               </td>
               <td style="padding:10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:0.82rem;">
-                ${new Date(row.logged_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                ${row.logged_at_str || new Date(row.logged_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
               </td>
             </tr>`).join('')}
         </tbody>

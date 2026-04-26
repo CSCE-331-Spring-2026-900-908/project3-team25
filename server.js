@@ -146,7 +146,7 @@ const DESCRIPTIONS = {
   tea: 'Refreshing brewed tea with a lighter, clean flavor profile.',
   fruit_tea: 'Fruity green tea served cold with vibrant flavors and real fruit.',
   coffee: 'Coffee-forward milk tea blend for a stronger energy and flavor boost.',
-  seasonal: 'Limited-time seasonal specialty — available while supplies last!'
+  seasonal: 'Crafted with seasonal ingredients — fresh, vibrant, and available now.'
 };
 
 const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
@@ -1425,6 +1425,8 @@ app.get('/api/staff-log', async (req, res) => {
   try {
     const r = await queryDb(`
       SELECT sl.log_id, sl.staff_id, sl.staff_type, sl.action,
+             to_char(sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago',
+                     'Mon DD, YYYY HH12:MI AM') AS logged_at_str,
              (sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS logged_at,
              CASE sl.staff_type
                WHEN 'cashier' THEN c.firstname || ' ' || c.lastname
@@ -1434,7 +1436,7 @@ app.get('/api/staff-log', async (req, res) => {
       FROM staff_login_log sl
       LEFT JOIN cashier c ON sl.staff_type='cashier' AND c.cashierid=sl.staff_id
       LEFT JOIN manager m ON sl.staff_type='manager' AND m.managerid=sl.staff_id
-      ORDER BY sl.logged_at DESC LIMIT 20`);
+      ORDER BY sl.logged_at DESC LIMIT 200`);
     res.json({ log: r.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

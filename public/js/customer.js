@@ -424,9 +424,31 @@ const IMAGE_MAP = {
   'Mango Coconut Jelly Tea':  '/boba/Mango.png',
   // ── Coffee ────────────────────────────────────────────────
   'Coffee Milk Tea':          '/boba/Coffee-Milk-Tea.png',
+  'Vietnamese Iced Coffee':   '/boba/Coffee-Milk-Tea.png',
+  'Espresso Milk Tea':        '/boba/Coffee-Milk-Tea.png',
+  'Mocha Boba':               '/boba/Coffee-Milk-Tea.png',
+  'Caramel Coffee Milk Tea':  '/boba/Coffee-Milk-Tea.png',
+  // ── New Milk Tea ──────────────────────────────────────────
+  'Coconut Milk Tea':         '/boba/Classic-Milk-Tea.PNG',
+  'Oreo Milk Tea':            '/boba/Brown-Sugar-Milk-Tea.PNG',
+  // ── New Tea ───────────────────────────────────────────────
+  'Kumquat Green Tea':        '/boba/Honey-Green-Tea.PNG',
+  'Peppermint Herbal Tea':    '/boba/Honey-Green-Tea.PNG',
+  'Chrysanthemum Tea':        '/boba/Honey-Green-Tea.PNG',
+  // ── New Fruit Tea ─────────────────────────────────────────
+  'Watermelon Fruit Tea':     '/boba/Strawberry-.png',
+  'Dragonfruit Green Tea':    '/boba/Strawberry-.png',
+  'Kiwi Green Tea':           '/boba/Peach.png',
   // ── Seasonal ──────────────────────────────────────────────
   'Watermelon Slush':         '/boba/Strawberry-.png',
   'Osmanthus Oolong':         '/boba/Honey-Green-Tea.PNG',
+  'Mango Coconut Jelly Tea':  '/boba/Mango.png',
+  'Brown Sugar Pearl Latte':  '/boba/Brown-Sugar-Milk-Tea.PNG',
+  // ── Smoothie ──────────────────────────────────────────────
+  'Mango Smoothie':           '/boba/Mango.png',
+  'Strawberry Smoothie':      '/boba/Strawberry-.png',
+  'Taro Smoothie':            '/boba/Taro-Milk-Tea.PNG',
+  'Matcha Smoothie':          '/boba/Matcha-Milk-Tea.PNG',
 };
 
 function getDrinkImg(name) {
@@ -439,7 +461,9 @@ function translateCategoryName(category) {
     milk_tea: 'Milk Tea',
     tea: 'Tea',
     fruit_tea: 'Fruit Tea',
-    coffee: 'Coffee'
+    coffee: 'Coffee',
+    seasonal: '🍃 Seasonal',
+    smoothie: '🥤 Smoothie'
   };
 
   const englishText = englishMap[category] || category.replace(/_/g, ' ');
@@ -931,7 +955,6 @@ function renderMenu() {
         <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
-      ${item.description ? `<p style="margin:2px 0 0;font-size:0.79rem;color:var(--muted);line-height:1.35;">${item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
         <span class="price">$${Number(item.price).toFixed(2)}</span>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
@@ -983,8 +1006,7 @@ function openDrinkModal(item) {
 
   document.getElementById('modal-drink-img').alt = displayName;
   document.getElementById('modal-drink-name').textContent = displayName;
-  document.getElementById('modal-drink-desc').textContent =
-  TRANSLATIONS[currentLanguage]?.[`description_${item.name}`] || item.description || '';
+  document.getElementById('modal-drink-desc').textContent = ''; // description hidden per request
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
   document.getElementById('modal-size').value = 'Regular';
@@ -2144,6 +2166,54 @@ const TICKER_MESSAGES = {
     '🍑 ¡El Té Verde de Durazno volando por la puerta!',
     '🌿 ¡Las especialidades de temporada se agotan rápido!',
     '🎁 ¡Alguien canjeó una recompensa de bebida gratis!',
+  ],
+  zh: [
+    '🧋 刚刚有人点了黑糖奶茶！',
+    '⭐ 一位顾客获得了60个奖励积分！',
+    '🏆 芒果绿茶现在正在流行！',
+    '🎉 刚刚有人兑换了免费配料券！',
+    '🧊 有人选择了无冰——真大胆！',
+    '🌟 抹茶奶茶今天很受欢迎！',
+    '🎡 有顾客刚刚转动了奖励转盘！',
+    '💚 芋头奶茶——粉丝最爱！',
+    '🫧 草莓绿茶加了额外的珍珠！',
+    '☕ 下午时段的咖啡奶茶！',
+    '🏅 今天已完成50多份订单！',
+    '🍑 蜜桃绿茶卖得超快！',
+    '🌿 季节特饮正在热卖！',
+    '🎁 有人兑换了免费饮品奖励！',
+  ],
+  ar: [
+    '🧋 طلب شخص ما للتو شاي حليب بالسكر البني!',
+    '⭐ كسب أحد العملاء 60 نقطة مكافأة!',
+    '🏆 شاي المانجو الأخضر رائج الآن!',
+    '🎉 تم استبدال كوبون إضافات مجانية للتو!',
+    '🧊 اختار شخص ما بدون ثلج — اختيار جريء!',
+    '🌟 شاي حليب الماتشا كان شعبياً اليوم!',
+    '🎡 دار عميل على عجلة المكافآت للتو!',
+    '💚 شاي حليب التارو — المفضل لدى المعجبين!',
+    '🫧 بوبا إضافية على شاي الفراولة الأخضر!',
+    '☕ شاي حليب القهوة لجمهور ما بعد الظهر!',
+    '🏅 أكثر من 50 طلباً منجزاً اليوم!',
+    '🍑 شاي الخوخ الأخضر يطير من الباب!',
+    '🌿 مشروبات الموسم تنتهي بسرعة!',
+    '🎁 استبدل شخص ما مكافأة مشروب مجاني!',
+  ],
+  vi: [
+    '🧋 Ai đó vừa đặt Trà Sữa Đường Đen!',
+    '⭐ Một khách hàng vừa kiếm được 60 điểm thưởng!',
+    '🏆 Trà Xanh Xoài đang thịnh hành ngay lúc này!',
+    '🎉 Một phiếu giảm giá topping miễn phí vừa được đổi!',
+    '🧊 Ai đó chọn không đá — lựa chọn dũng cảm!',
+    '🌟 Trà Sữa Matcha rất phổ biến hôm nay!',
+    '🎡 Một khách hàng vừa quay vòng quay thưởng!',
+    '💚 Trà Sữa Khoai Môn — món yêu thích của mọi người!',
+    '🫧 Thêm trân châu vào Trà Xanh Dâu Tây!',
+    '☕ Trà Sữa Cà Phê cho buổi chiều!',
+    '🏅 Hơn 50 đơn hàng đã hoàn thành hôm nay!',
+    '🍑 Trà Xanh Đào đang bán chạy!',
+    '🌿 Đặc sản theo mùa đang cháy hàng!',
+    '🎁 Ai đó vừa đổi phần thưởng đồ uống miễn phí!',
   ]
 };
 
