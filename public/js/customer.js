@@ -955,6 +955,7 @@ function renderMenu() {
         <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
+      ${item.description ? `<p>${TRANSLATIONS[currentLanguage][`description_${item.name}`] || item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
         <span class="price">$${Number(item.price).toFixed(2)}</span>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
