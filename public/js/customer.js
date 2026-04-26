@@ -11,6 +11,15 @@ let guestLoginPoller = null;
 let guestCheckoutRequested = false;
 
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
+const LANGUAGE_CODES = {
+  en: 'en-US',
+  es: 'es-MX',
+  zh: 'zh-CN',
+  ar: 'ar-SA',
+  vi: 'vi-VN'
+};
+
+const translationCache = JSON.parse(localStorage.getItem('laraTranslationCache') || '{}');
 
 // Reward / promo applied at checkout
 let appliedRewardId = null;
@@ -335,6 +344,59 @@ function t(key) {
   return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
 }
 
+async function translateWithLara(text) {
+  if (!text || currentLanguage === 'en') return text;
+
+  const targetLanguage = LANGUAGE_CODES[currentLanguage] || currentLanguage;
+  const cacheKey = `${targetLanguage}:${text}`;
+
+  if (translationCache[cacheKey]) {
+    return translationCache[cacheKey];
+  }
+
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        sourceLanguage: 'en-US',
+        targetLanguage
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Translation failed');
+    }
+
+    translationCache[cacheKey] = data.translatedText;
+    localStorage.setItem('laraTranslationCache', JSON.stringify(translationCache));
+
+    return data.translatedText;
+  } catch (err) {
+    console.error('Lara translation failed:', err);
+    return text;
+  }
+}
+
+async function ensureLanguageLoaded() {
+  if (currentLanguage === 'en') return;
+
+  if (!TRANSLATIONS[currentLanguage]) {
+    TRANSLATIONS[currentLanguage] = {};
+  }
+
+  const keys = Object.keys(TRANSLATIONS.en);
+
+  await Promise.all(keys.map(async key => {
+    if (!TRANSLATIONS[currentLanguage][key]) {
+      TRANSLATIONS[currentLanguage][key] = await translateWithLara(TRANSLATIONS.en[key]);
+    }
+  }));
+}
+
 // ─── Image map ────────────────────────────────────────────────────────────────
 const IMAGE_MAP = {
   'Classic Milk Tea': '/boba/Classic-Milk-Tea.PNG',
@@ -360,63 +422,58 @@ function getDrinkImg(name) {
 
 // ─── Translation helpers ─────────────────────────────────────────────────────
 function translateCategoryName(category) {
-  const map = {
-    en: {
-      milk_tea: 'Milk Tea',
-      tea: 'Tea',
-      fruit_tea: 'Fruit Tea',
-      coffee: 'Coffee'
-    },
-    es: {
-      milk_tea: 'Té con leche',
-      tea: 'Té',
-      fruit_tea: 'Té frutal',
-      coffee: 'Café'
-    }
+  const englishMap = {
+    milk_tea: 'Milk Tea',
+    tea: 'Tea',
+    fruit_tea: 'Fruit Tea',
+    coffee: 'Coffee'
   };
 
-  return map[currentLanguage]?.[category] || category.replace(/_/g, ' ');
+  const englishText = englishMap[category] || category.replace(/_/g, ' ');
+  return TRANSLATIONS[currentLanguage]?.[`category_${category}`] || englishText;
+}
+
+async function ensureCategoryTranslations() {
+  if (currentLanguage === 'en') return;
+
+  const categories = {
+    milk_tea: 'Milk Tea',
+    tea: 'Tea',
+    fruit_tea: 'Fruit Tea',
+    coffee: 'Coffee'
+  };
+
+  await Promise.all(Object.entries(categories).map(async ([key, englishText]) => {
+    const translationKey = `category_${key}`;
+
+    if (!TRANSLATIONS[currentLanguage][translationKey]) {
+      TRANSLATIONS[currentLanguage][translationKey] = await translateWithLara(englishText);
+    }
+  }));
 }
 
 function translateDrinkName(name) {
-  const map = {
-    en: {
-      'Classic Milk Tea': 'Classic Milk Tea',
-      'Brown Sugar Milk Tea': 'Brown Sugar Milk Tea',
-      'Taro Milk Tea': 'Taro Milk Tea',
-      'Matcha Milk Tea': 'Matcha Milk Tea',
-      'Thai Tea': 'Thai Tea',
-      'Honey Green Tea': 'Honey Green Tea',
-      'Wintermelon Milk Tea': 'Wintermelon Milk Tea',
-      'Oolong Milk Tea': 'Oolong Milk Tea',
-      'Coffee Milk Tea': 'Coffee Milk Tea',
-      'Lychee Green Tea': 'Lychee Green Tea',
-      'Mango Green Tea': 'Mango Green Tea',
-      'Peach Green Tea': 'Peach Green Tea',
-      'Strawberry Green Tea': 'Strawberry Green Tea',
-      'Jasmine Green Tea': 'Jasmine Green Tea',
-      'Black Tea Lemonade': 'Black Tea Lemonade'
-    },
-    es: {
-      'Classic Milk Tea': 'Té con leche clásico',
-      'Brown Sugar Milk Tea': 'Té con leche con azúcar morena',
-      'Taro Milk Tea': 'Té con leche de taro',
-      'Matcha Milk Tea': 'Té con leche de matcha',
-      'Thai Tea': 'Té tailandés',
-      'Honey Green Tea': 'Té verde con miel',
-      'Wintermelon Milk Tea': 'Té con leche de melón de invierno',
-      'Oolong Milk Tea': 'Té con leche oolong',
-      'Coffee Milk Tea': 'Té con leche de café',
-      'Lychee Green Tea': 'Té verde de lichi',
-      'Mango Green Tea': 'Té verde de mango',
-      'Peach Green Tea': 'Té verde de durazno',
-      'Strawberry Green Tea': 'Té verde de fresa',
-      'Jasmine Green Tea': 'Té verde de jazmín',
-      'Black Tea Lemonade': 'Limonada de té negro'
-    }
-  };
+  return TRANSLATIONS[currentLanguage]?.[`drink_${name}`] || name;
+}
 
-  return map[currentLanguage]?.[name] || name;
+async function ensureDrinkTranslations() {
+  if (currentLanguage === 'en') return;
+
+  await Promise.all(customerMenu.map(async item => {
+    const key = `drink_${item.name}`;
+
+    if (!TRANSLATIONS[currentLanguage][key]) {
+      TRANSLATIONS[currentLanguage][key] = await translateWithLara(item.name);
+    }
+
+    if (item.description) {
+      const descKey = `description_${item.name}`;
+
+      if (!TRANSLATIONS[currentLanguage][descKey]) {
+        TRANSLATIONS[currentLanguage][descKey] = await translateWithLara(item.description);
+      }
+    }
+  }));
 }
 
 function translateSelectionValue(value) {
@@ -484,6 +541,12 @@ function updateSelectOptionsText() {
 
 function applyStaticTranslations() {
   document.documentElement.lang = currentLanguage;
+
+    // Keep the kiosk layout the same for every language.
+    // Arabic text will still render correctly, but the whole UI will not flip.
+    document.documentElement.dir = 'ltr';
+    document.body.dir = 'ltr';
+    document.body.classList.toggle('arabic-text', currentLanguage === 'ar');
 
   const setText = (id, value) => {
     const el = document.getElementById(id);
@@ -902,7 +965,8 @@ function openDrinkModal(item) {
 
   document.getElementById('modal-drink-img').alt = displayName;
   document.getElementById('modal-drink-name').textContent = displayName;
-  document.getElementById('modal-drink-desc').textContent = item.description || '';
+  document.getElementById('modal-drink-desc').textContent =
+  TRANSLATIONS[currentLanguage]?.[`description_${item.name}`] || item.description || '';
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
   document.getElementById('modal-size').value = 'Regular';
@@ -1731,9 +1795,20 @@ document.getElementById('open-spin-topbar-btn')?.addEventListener('click', openS
 document.getElementById('open-spin-btn')?.addEventListener('click', openSpinModal);
 
 // Language selector
-document.getElementById('language-select')?.addEventListener('change', e => {
+document.getElementById('language-select')?.addEventListener('change', async e => {
   currentLanguage = e.target.value;
   localStorage.setItem('kioskLanguage', currentLanguage);
+
+  showToast(currentLanguage === 'en' ? 'Language changed' : 'Translating...');
+
+  if (!TRANSLATIONS[currentLanguage]) {
+    TRANSLATIONS[currentLanguage] = {};
+  }
+
+  await ensureLanguageLoaded();
+  await ensureCategoryTranslations();
+  await ensureDrinkTranslations();
+
   applyStaticTranslations();
 
   if (currentUser) {
