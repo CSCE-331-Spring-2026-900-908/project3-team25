@@ -379,14 +379,16 @@ function translateCategoryName(category) {
       tea: 'Tea',
       fruit_tea: 'Fruit Tea',
       coffee: 'Coffee',
-      seasonal: '🍃 Seasonal'
+      seasonal: 'Seasonal',
+      topping: 'Toppings'
     },
     es: {
       milk_tea: 'Té con leche',
       tea: 'Té',
       fruit_tea: 'Té frutal',
       coffee: 'Café',
-      seasonal: '🍃 Temporada'
+      seasonal: 'Temporada',
+      topping: 'Coberturas'
     }
   };
 
