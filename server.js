@@ -846,17 +846,65 @@ function getDrinkSuggestion(temp, code) {
   return 'Cooler weather — milk teas and richer flavors are a great pick.';
 }
 
-app.get('/api/translate', async (req, res) => {
-  const text = String(req.query.text||'').trim();
-  const target = String(req.query.target||'es').trim();
-  if (!text) return res.status(400).json({ error:'Text required.' });
+app.post('/api/translate', async (req, res) => {
   try {
-    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${encodeURIComponent(target)}`);
-    const d = await r.json();
-    const tt = d.responseData?.translatedText;
-    if (!tt) return res.status(502).json({ error:'Translation failed.' });
-    res.json({ translatedText:tt, target });
-  } catch(e) { res.status(500).json({ error:'Translation unavailable.' }); }
+    const {
+      text,
+      sourceLanguage = 'en-US',
+      targetLanguage
+    } = req.body || {};
+
+    if (!text || !String(text).trim()) {
+      return res.status(400).json({ error: 'Text required.' });
+    }
+
+    if (!targetLanguage) {
+      return res.status(400).json({ error: 'targetLanguage required.' });
+    }
+
+    if (!process.env.LARA_ACCESS_KEY_ID || !process.env.LARA_ACCESS_KEY_SECRET) {
+      return res.status(500).json({
+        error: 'Lara Translate credentials are missing from .env.'
+      });
+    }
+
+    const { Credentials, Translator } = await import('@translated/lara');
+
+    const credentials = new Credentials(
+      process.env.LARA_ACCESS_KEY_ID,
+      process.env.LARA_ACCESS_KEY_SECRET
+    );
+
+    const lara = new Translator(credentials);
+
+    const result = await lara.translate(
+      String(text),
+      sourceLanguage,
+      targetLanguage,
+      {
+        instructions: [
+          'Translate this for a boba tea shop self-order kiosk. Translate menu item names, drink names, toppings, sweetness levels, category names, buttons, and customer-facing UI text. Do not leave drink names in English unless the word is a brand name. Keep the wording short, natural, and customer-friendly.'
+        ],
+        style: 'fluid',
+        contentType: 'text/plain',
+        timeoutInMillis: 5000
+      }
+    );
+
+    res.json({
+      originalText: text,
+      translatedText: result.translation,
+      sourceLanguage,
+      targetLanguage,
+      source: 'lara'
+    });
+  } catch (e) {
+    console.error('Lara translation error:', e);
+    res.status(500).json({
+      error: 'Translation unavailable.',
+      details: e.message
+    });
+  }
 });
 
 app.post('/api/auth/mock-login', (req, res) => {
