@@ -274,10 +274,13 @@
         card.querySelector(".price-line .price")?.textContent ||
         ""
       );
+      const desc  = normalizeText(card.querySelector("p")?.textContent || "");
 
       card.setAttribute("tabindex", "0");
       card.setAttribute("role", "button");
-      card.setAttribute("aria-label", price ? `${title}, ${price}` : title);
+      // Include description in aria-label so voice guide reads it
+      const label = [title, price, desc].filter(Boolean).join(". ");
+      card.setAttribute("aria-label", label);
     });
 
     document.querySelectorAll(".payment-option").forEach((btn) => {
@@ -332,7 +335,28 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+
+  // ── Read description when drink modal opens ──────────────────
+  function watchModalOpen() {
+    const modalOverlay = document.getElementById('drink-modal-overlay');
+    if (!modalOverlay) return;
+    const observer = new MutationObserver(() => {
+      if (!voiceEnabled) return;
+      if (modalOverlay.classList.contains('open')) {
+        const name  = normalizeText(document.getElementById('modal-drink-name')?.textContent || '');
+        const price = normalizeText(document.getElementById('modal-drink-price')?.textContent || '');
+        const desc  = normalizeText(document.getElementById('modal-drink-desc')?.textContent || '');
+        const ings  = normalizeText(document.getElementById('modal-ingredients-list')?.textContent || '');
+        const parts = [name, price, desc];
+        if (ings && ings !== '…') parts.push('Ingredients: ' + ings);
+        parts.push('Use the dropdowns below to customize sweetness, ice level, size, and topping.');
+        setTimeout(() => speak(parts.filter(Boolean).join('. ')), 300);
+      }
+    });
+    observer.observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
     getLiveRegion();
     loadVoices();
     updateVoiceButton();
@@ -342,6 +366,7 @@
     wireClickSpeech();
     wireSelectSpeech();
     wireKeyboardActivation();
+    watchModalOpen();
   });
 
   if ("speechSynthesis" in window) {

@@ -203,10 +203,15 @@ function openAddMenuModal() {
   document.getElementById('menu-name').value      = '';
   document.getElementById('menu-category').value  = 'milk_tea';
   document.getElementById('menu-price').value     = '';
+  // Hide inline ingredients — will show after item is saved
+  const ingSection = document.getElementById('menu-modal-ing-section');
+  if (ingSection) ingSection.style.display = 'none';
+  const saveBtn = document.getElementById('menu-modal-save-btn');
+  if (saveBtn) saveBtn.textContent = 'Save & Add Ingredients →';
   document.getElementById('menu-modal').classList.add('open');
 }
 
-function openEditMenuModal(id) {
+async function openEditMenuModal(id) {
   const item = allMenuItems.find(i => (i.id||i.productid) === id);
   if (!item) return;
   document.getElementById('menu-modal-title').textContent = 'Edit Menu Item';
@@ -214,6 +219,15 @@ function openEditMenuModal(id) {
   document.getElementById('menu-name').value      = item.name;
   document.getElementById('menu-category').value  = item.category;
   document.getElementById('menu-price').value     = item.price || item.baseprice;
+  // Show inline ingredients section for edit
+  const ingSection = document.getElementById('menu-modal-ing-section');
+  if (ingSection) {
+    ingSection.style.display = 'block';
+    ingProductId = id;
+    await loadInlineIngredients(id);
+  }
+  const saveBtn = document.getElementById('menu-modal-save-btn');
+  if (saveBtn) saveBtn.textContent = 'Save Changes';
   document.getElementById('menu-modal').classList.add('open');
 }
 
@@ -294,11 +308,23 @@ async function saveMenuItem() {
   const res    = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, category:cat, basePrice:price }) });
   if (res.ok) {
     const data = await res.json();
-    closeMenuModal();
-    await loadMenuEditor();
-    // If this was a NEW item, open ingredients editor immediately
     if (!id && data.id) {
-      openIngModal(data.id, name);
+      // NEW item — show inline ingredients section without closing modal
+      await loadMenuEditor();
+      document.getElementById('menu-modal-id').value = data.id;
+      document.getElementById('menu-modal-title').textContent = `Add Ingredients — ${name}`;
+      ingProductId = data.id;
+      const ingSection = document.getElementById('menu-modal-ing-section');
+      if (ingSection) {
+        ingSection.style.display = 'block';
+        document.getElementById('menu-modal-ing-rows').innerHTML = '';
+        addIngredientRowInline(); // start with one empty row
+      }
+      const saveBtn = document.getElementById('menu-modal-save-btn');
+      if (saveBtn) saveBtn.style.display = 'none'; // hide Save button, use Save Ingredients instead
+    } else {
+      closeMenuModal();
+      await loadMenuEditor();
     }
   } else { const d = await res.json(); alert('Error: ' + (d.error || 'Save failed.')); }
 }
@@ -317,6 +343,63 @@ async function deleteMenuItem(id, name) {
   else alert('Could not delete item.');
 }
 
+
+// ── Inline ingredients (inside menu modal) ──────────────────────────────────
+async function loadInlineIngredients(productId) {
+  const rows = document.getElementById('menu-modal-ing-rows');
+  if (!rows) return;
+  rows.innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading…</p>';
+  try {
+    const res  = await fetch(`/api/menu-item/${productId}/ingredients`);
+    const data = res.ok ? await res.json() : { ingredients: [] };
+    rows.innerHTML = '';
+    (data.ingredients || []).forEach(ing => addIngredientRowInline(ing.inventoryid, ing.amountused));
+    if (!(data.ingredients || []).length) addIngredientRowInline();
+  } catch(_) { rows.innerHTML = '<p class="muted">Failed to load.</p>'; }
+}
+
+function addIngredientRowInline(invId = '', amount = '') {
+  const rows = document.getElementById('menu-modal-ing-rows');
+  if (!rows || !allInventory.length) return;
+  const row = document.createElement('div');
+  row.style = 'display:flex;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <select style="flex:2;padding:7px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.85rem;">
+      <option value="">— Select ingredient —</option>
+      ${allInventory.map(i => `<option value="${i.id}" ${Number(i.id)===Number(invId)?'selected':''}>${i.itemName} (${i.unit})</option>`).join('')}
+    </select>
+    <input type="number" placeholder="Amount" value="${amount}" min="0" step="0.01"
+      style="width:90px;padding:7px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.85rem;" />
+    <button type="button" onclick="this.parentElement.remove()"
+      style="background:none;border:none;color:#dc2626;font-size:1.1rem;cursor:pointer;padding:4px;">✕</button>`;
+  rows.appendChild(row);
+}
+
+async function saveInlineIngredients() {
+  if (!ingProductId) return;
+  const rows  = document.getElementById('menu-modal-ing-rows');
+  const ingredients = [];
+  rows.querySelectorAll('div').forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    const inventoryId = Number(sel?.value);
+    const amountUsed  = Number(inp?.value);
+    if (inventoryId && amountUsed > 0) ingredients.push({ inventoryId, amountUsed });
+  });
+  const res = await fetch(`/api/menu-item/${ingProductId}/ingredients`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ingredients })
+  });
+  if (res.ok) {
+    closeMenuModal();
+    loadMenuEditor();
+  } else {
+    alert('Could not save ingredients.');
+  }
+}
+
+window.addIngredientRowInline  = addIngredientRowInline;
+window.saveInlineIngredients   = saveInlineIngredients;
 window.openAddMenuModal    = openAddMenuModal;
 window.openEditMenuModal   = openEditMenuModal;
 window.closeMenuModal      = closeMenuModal;

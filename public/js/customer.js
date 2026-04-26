@@ -681,7 +681,8 @@ function openGuestLoginOverlay(fromCheckout = false) {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   overlay.classList.add('open');
-  switchGuestLoginTab('google'); // Default to Google — QR pairing is unreliable on Render
+  switchGuestLoginTab('qr');
+  startGuestPairing(); // Generate real QR code for phone sign-in
 }
 
 function closeGuestLoginOverlay() {
@@ -721,6 +722,10 @@ async function startGuestPairing() {
     if (!res.ok) throw new Error(data.error || t('couldNotCreateQr'));
     guestLoginPairToken = data.token;
     img.src = data.qrUrl;
+    img.onload = () => {
+      const loading = document.getElementById('guest-login-qr-loading');
+      if (loading) loading.style.display = 'none';
+    };
     status.textContent = t('scanQrFinishGoogle');
     guestLoginPoller = setInterval(checkGuestPairingStatus, 2000);
   } catch (err) {
@@ -918,12 +923,16 @@ function openDrinkModal(item) {
   document.getElementById('modal-drink-img').alt = displayName;
   document.getElementById('modal-drink-name').textContent = displayName;
   document.getElementById('modal-drink-desc').textContent = item.description || '';
-  document.getElementById('modal-sweetness').value = 'Regular Sugar';
-  document.getElementById('modal-ice').value = 'Regular Ice';
-  document.getElementById('modal-size').value = 'Regular';
-  document.getElementById('modal-topping').value = 'None';
-
-  updateSelectOptionsText();
+  updateSelectOptionsText(); // translate options FIRST
+  // Set defaults by index so they work in any language
+  const sw = document.getElementById('modal-sweetness');
+  const ic = document.getElementById('modal-ice');
+  const sz = document.getElementById('modal-size');
+  const tp = document.getElementById('modal-topping');
+  if (sw) sw.selectedIndex = 2; // Regular Sugar (index 2)
+  if (ic) ic.selectedIndex = 2; // Regular Ice   (index 2)
+  if (sz) sz.selectedIndex = 0; // Regular       (index 0)
+  if (tp) tp.selectedIndex = 0; // None          (index 0)
   document.getElementById('modal-cancel-btn').textContent = t('cancel');
 
   updateModalQty();
@@ -979,10 +988,10 @@ function updateModalPrice() {
 function addModalItemToOrder() {
   if (!modalItem) return;
   const selections = {
-    sweetness: document.getElementById('modal-sweetness').value,
-    ice: document.getElementById('modal-ice').value,
-    size: document.getElementById('modal-size').value,
-    topping: document.getElementById('modal-topping').value
+    sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('modal-sweetness').selectedIndex] || 'Regular Sugar',
+    ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('modal-ice').selectedIndex] || 'Regular Ice',
+    size:      ['Regular','Large'][document.getElementById('modal-size').selectedIndex] || 'Regular',
+    topping:   ['None','Extra Boba'][document.getElementById('modal-topping').selectedIndex] || 'None'
   };
   const extra = extraPrice(selections.size, selections.topping);
   const unitPrice = Number(modalItem.price) + extra;
@@ -1535,14 +1544,27 @@ function tryFinishSpin() {
     codeEl.textContent = spinResult.code ? `${t('code')}: ${spinResult.code}` : '';
     result.classList.add('show');
 
-    if (spinResult.code) {
-      appliedPromoCode = spinResult.code;
-      appliedPromoLabel = spinResult.prize?.label || 'Promo';
-      spinPrizeDetails = spinResult.prize || null;
-      discountAmount = 0;
+    if (spinResult.prize) {
+      // Auto-apply discount immediately — no code entry needed
+      appliedPromoCode = spinResult.code || 'SPIN-AUTO';
+      appliedPromoLabel = spinResult.prize.label || 'Prize';
+      spinPrizeDetails = spinResult.prize;
+      // Calculate discount right now based on prize type
+      const prize = spinResult.prize;
+      const subtotal = calcSubtotal();
+      if (prize.type === 'percent_off') {
+        discountAmount = Number(((subtotal * Number(prize.value)) / 100).toFixed(2));
+      } else if (prize.type === 'free_drink') {
+        discountAmount = customerOrder.length ? Number(Math.min(...customerOrder.map(i => i.unitPrice)).toFixed(2)) : 0;
+      } else if (prize.type === 'free_topping') {
+        discountAmount = 0.75;
+      } else if (prize.type === 'flat_off') {
+        discountAmount = Math.min(subtotal, Number(prize.value) || 0);
+      }
+      discountAmount = Math.min(discountAmount, subtotal);
     }
 
-    showToast(`${t('youWon')}: ${spinResult.prize?.label}!`);
+    showToast(`${t('youWon')}: ${spinResult.prize?.label}! ✅ Applied to your order!`);
   }
 
   const btn = document.getElementById('spin-btn');
@@ -1611,12 +1633,24 @@ function openEditModal(index) {
   editingIndex = index;
 
   document.getElementById('edit-modal-title').textContent = item.name;
-  document.getElementById('edit-sweetness').value = item.selections.sweetness;
-  document.getElementById('edit-ice').value = item.selections.ice;
-  document.getElementById('edit-size').value = item.selections.size;
-  document.getElementById('edit-topping').value = item.selections.topping;
+  updateSelectOptionsText(); // translate options FIRST
 
-  updateSelectOptionsText();
+  // Map stored English selections to the correct option index
+  const sweetnessMap = ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'];
+  const iceMap       = ['No Ice','Light Ice','Regular Ice','Extra Ice'];
+  const sizeMap      = ['Regular','Large'];
+  const toppingMap   = ['None','Extra Boba'];
+
+  function setByVal(id, map, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const idx = map.indexOf(val);
+    el.selectedIndex = idx >= 0 ? idx : 0;
+  }
+  setByVal('edit-sweetness', sweetnessMap, item.selections.sweetness);
+  setByVal('edit-ice',       iceMap,       item.selections.ice);
+  setByVal('edit-size',      sizeMap,      item.selections.size);
+  setByVal('edit-topping',   toppingMap,   item.selections.topping);
 
   document.getElementById('edit-modal-overlay').classList.remove('hidden');
   document.getElementById('edit-modal-overlay').classList.add('open');
@@ -1631,10 +1665,10 @@ document.getElementById('edit-modal-save').addEventListener('click', () => {
   if (editingIndex < 0) return;
   const item = customerOrder[editingIndex];
   const newSel = {
-    sweetness: document.getElementById('edit-sweetness').value,
-    ice: document.getElementById('edit-ice').value,
-    size: document.getElementById('edit-size').value,
-    topping: document.getElementById('edit-topping').value
+    sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('edit-sweetness').selectedIndex] || document.getElementById('edit-sweetness').value,
+    ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('edit-ice').selectedIndex] || document.getElementById('edit-ice').value,
+    size:      ['Regular','Large'][document.getElementById('edit-size').selectedIndex] || document.getElementById('edit-size').value,
+    topping:   ['None','Extra Boba'][document.getElementById('edit-topping').selectedIndex] || document.getElementById('edit-topping').value
   };
   const extra = extraPrice(newSel.size, newSel.topping);
   const unitPrice = Number(item.price) + extra;
@@ -1791,7 +1825,8 @@ document.getElementById('guest-login-overlay')?.addEventListener('click', event 
   if (event.target.id === 'guest-login-overlay') closeGuestLoginOverlay();
 });
 document.getElementById('guest-login-tab-qr')?.addEventListener('click', () => {
-  switchGuestLoginTab('qr'); // Shows explainer panel
+  switchGuestLoginTab('qr');
+  if (!guestLoginPairToken) startGuestPairing();
 });
 document.getElementById('guest-login-tab-google')?.addEventListener('click', () => switchGuestLoginTab('google'));
 document.getElementById('guest-login-google-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
@@ -2008,22 +2043,40 @@ async function init() {
 
 init();
 // ─── Live Activity Ticker ──────────────────────────────────────────────────────
-const TICKER_MESSAGES = [
-  '🧋 Someone just ordered a Brown Sugar Milk Tea!',
-  '⭐ A customer earned 60 reward points!',
-  '🏆 Mango Green Tea is trending right now!',
-  '🎉 A free topping coupon was just redeemed!',
-  '🧊 Someone went with no ice — bold choice!',
-  '🌟 Matcha Milk Tea has been popular today!',
-  '🎡 A customer just spun the reward wheel!',
-  '💚 Taro Milk Tea — a fan favorite!',
-  '🫧 Extra boba on a Strawberry Green Tea!',
-  '☕ Coffee Milk Tea for the afternoon crowd!',
-  '🏅 50+ orders completed today!',
-  '🍑 Peach Green Tea flying out the door!',
-  '🌿 Seasonal specials are going fast!',
-  '🎁 Someone redeemed a free drink reward!',
-];
+const TICKER_MESSAGES = {
+  en: [
+    '🧋 Someone just ordered a Brown Sugar Milk Tea!',
+    '⭐ A customer earned 60 reward points!',
+    '🏆 Mango Green Tea is trending right now!',
+    '🎉 A free topping coupon was just redeemed!',
+    '🧊 Someone went with no ice — bold choice!',
+    '🌟 Matcha Milk Tea has been popular today!',
+    '🎡 A customer just spun the reward wheel!',
+    '💚 Taro Milk Tea — a fan favorite!',
+    '🫧 Extra boba on a Strawberry Green Tea!',
+    '☕ Coffee Milk Tea for the afternoon crowd!',
+    '🏅 50+ orders completed today!',
+    '🍑 Peach Green Tea flying out the door!',
+    '🌿 Seasonal specials are going fast!',
+    '🎁 Someone redeemed a free drink reward!',
+  ],
+  es: [
+    '🧋 ¡Alguien acaba de pedir un Té con Leche de Azúcar Morena!',
+    '⭐ ¡Un cliente ganó 60 puntos de recompensa!',
+    '🏆 ¡El Té Verde de Mango está de tendencia ahora!',
+    '🎉 ¡Se acaba de canjear un cupón de topping gratis!',
+    '🧊 ¡Alguien eligió sin hielo — ¡decisión valiente!',
+    '🌟 ¡El Té con Leche de Matcha ha sido popular hoy!',
+    '🎡 ¡Un cliente giró la ruleta de recompensas!',
+    '💚 Té con Leche de Taro — ¡un favorito de los fans!',
+    '🫧 ¡Boba extra en un Té Verde de Fresa!',
+    '☕ ¡Té con Leche de Café para la multitud de la tarde!',
+    '🏅 ¡50+ pedidos completados hoy!',
+    '🍑 ¡El Té Verde de Durazno volando por la puerta!',
+    '🌿 ¡Las especialidades de temporada se agotan rápido!',
+    '🎁 ¡Alguien canjeó una recompensa de bebida gratis!',
+  ]
+};
 
 let tickerIdx = 0;
 
@@ -2037,7 +2090,8 @@ function startLiveTicker() {
     text.style.opacity = '0';
     text.style.transition = 'opacity 0.4s';
     setTimeout(() => {
-      text.textContent = TICKER_MESSAGES[tickerIdx % TICKER_MESSAGES.length];
+      const msgs = TICKER_MESSAGES[currentLanguage] || TICKER_MESSAGES.en;
+      text.textContent = msgs[tickerIdx % msgs.length];
       tickerIdx++;
       text.style.opacity = '1';
     }, 400);

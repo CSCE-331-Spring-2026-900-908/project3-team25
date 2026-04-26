@@ -145,14 +145,24 @@
         </div>
         <div class="form-group"><label>Base Price ($)</label><input type="number" id="menu-price" step="0.01" min="0" placeholder="5.99" /></div>
       </div>
+      <!-- Ingredients section shown inline when editing, hidden for new items until saved -->
+      <div id="menu-modal-ing-section" style="display:none;margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <label style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Ingredients</label>
+          <button class="action-btn" type="button" onclick="addIngredientRowInline()">+ Add Ingredient</button>
+        </div>
+        <div id="menu-modal-ing-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;max-height:220px;overflow-y:auto;"></div>
+        <button class="action-btn primary" type="button" onclick="saveInlineIngredients()" style="width:100%;">Save Ingredients</button>
+      </div>
+
       <div class="modal-actions">
         <button class="action-btn" onclick="closeMenuModal()">Cancel</button>
-        <button class="action-btn primary" onclick="saveMenuItem()">Save</button>
+        <button class="action-btn primary" id="menu-modal-save-btn" onclick="saveMenuItem()">Save & Add Ingredients →</button>
       </div>
     </div>
   </div>
 
-  <!-- Ingredients Modal -->
+  <!-- Ingredients Modal (keep for standalone use) -->
   <div class="modal-overlay" id="ing-modal">
     <div class="modal-box" style="max-width:520px;">
       <h3 id="ing-modal-title">Ingredients</h3>

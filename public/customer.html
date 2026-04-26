@@ -372,21 +372,30 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
-          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">How It Works</button>
-          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
+          <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">📱 Scan QR Code</button>
+          <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
         </div>
 
-        <div id="guest-login-qr-panel" style="display:none;">
-          <div style="text-align:center;padding:20px 0;">
-            <div style="font-size:2.5rem;margin-bottom:12px;">🧋</div>
-            <p style="margin:0 0 10px;font-weight:700;color:var(--accent-dark);">Why Sign In?</p>
-            <p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem;">Earn <strong>10 points</strong> for every dollar you spend.</p>
-            <p style="margin:0 0 8px;color:var(--muted);font-size:0.9rem;">Spin the <strong>Reward Wheel</strong> once a day for free drinks & discounts.</p>
-            <p style="margin:0;color:var(--muted);font-size:0.9rem;">Redeem points for <strong>free drinks, toppings & more!</strong></p>
+        <div id="guest-login-qr-panel">
+          <p id="guest-login-qr-instructions" style="margin:0 0 12px;color:var(--muted);text-align:center;font-size:0.9rem;">
+            📱 Scan with your phone → sign in with Google → kiosk updates automatically
+          </p>
+          <div style="display:flex;justify-content:center;margin-bottom:10px;">
+            <div style="position:relative;">
+              <img id="guest-login-qr-image" alt="Sign in QR code"
+                style="width:200px;height:200px;border-radius:12px;border:2px solid var(--line);padding:8px;background:#fff;object-fit:contain;display:block;" />
+              <div id="guest-login-qr-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.9);border-radius:12px;">
+                <span style="font-size:0.85rem;color:var(--muted);">Generating QR…</span>
+              </div>
+            </div>
+          </div>
+          <p id="guest-login-qr-status" style="margin:0;color:var(--muted);text-align:center;font-size:0.85rem;">Waiting for phone sign-in…</p>
+          <div style="text-align:center;margin-top:10px;">
+            <button type="button" onclick="startGuestPairing()" style="background:none;border:none;color:var(--accent-dark);font:inherit;font-size:0.8rem;cursor:pointer;text-decoration:underline;">↺ Refresh QR Code</button>
           </div>
         </div>
 
-        <div id="guest-login-google-panel">
+        <div id="guest-login-google-panel" style="display:none;">
           <p id="guest-login-google-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
           <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
         </div>
