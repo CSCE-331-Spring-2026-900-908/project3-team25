@@ -125,9 +125,9 @@ const TRANSLATIONS = {
     couldNotValidateCode: 'Could not validate code.',
     applyRewardLabel: 'Apply a Reward',
     ptsAvailable: 'pts available',
-    selectReward: '— Select a reward —',
+    selectReward: 'Select a reward',
     keepOrdering: 'keep ordering to unlock rewards!',
-    earnPointsPrompt: 'Earn 10 pts per dollar — start ordering to earn rewards!',
+    earnPointsPrompt: 'Earn 10 pts per dollar, start ordering to earn rewards!',
     ptsNeeded: 'pts needed',
     needMore: 'need',
     more: 'more',
@@ -275,9 +275,9 @@ const TRANSLATIONS = {
     couldNotValidateCode: 'No se pudo validar el código.',
     applyRewardLabel: 'Aplicar una recompensa',
     ptsAvailable: 'pts disponibles',
-    selectReward: '— Selecciona una recompensa —',
+    selectReward: 'Selecciona una recompensa',
     keepOrdering: 'sigue ordenando para desbloquear recompensas.',
-    earnPointsPrompt: 'Gana 10 pts por dólar — empieza a ordenar para ganar recompensas.',
+    earnPointsPrompt: 'Gana 10 pts por dólar, empieza a ordenar para ganar recompensas.',
     ptsNeeded: 'pts necesarios',
     needMore: 'faltan',
     more: 'más',
@@ -305,10 +305,10 @@ const TRANSLATIONS = {
     weatherThunderstorm: 'Tormenta eléctrica',
     weatherThunderstormHail: 'Tormenta eléctrica con granizo',
     weatherMixedConditions: 'Condiciones mixtas',
-    rainyDaySuggestion: 'Día lluvioso — los tés con leche son perfectos.',
-    hotDaySuggestion: 'Día caluroso — los tés frutales y el hielo extra son ideales.',
-    niceWeatherSuggestion: 'Buen clima — los tés frutales o los tés con leche clásicos quedan muy bien.',
-    coolWeatherSuggestion: 'Clima fresco — los tés con leche y sabores más intensos son ideales.',
+    rainyDaySuggestion: 'Día lluvioso, los tés con leche son perfectos.',
+    hotDaySuggestion: 'Día caluroso, los tés frutales y el hielo extra son ideales.',
+    niceWeatherSuggestion: 'Buen clima, los tés frutales o los tés con leche clásicos quedan muy bien.',
+    coolWeatherSuggestion: 'Clima fresco, los tés con leche y sabores más intensos son ideales.',
     feelsLike: 'Se siente como',
     windMph: 'mph de viento',
     promoCodePlaceholder: 'Código promocional (ej. RBT-ABC123)',
@@ -462,8 +462,8 @@ function translateCategoryName(category) {
     tea: 'Tea',
     fruit_tea: 'Fruit Tea',
     coffee: 'Coffee',
-    seasonal: '🍃 Seasonal',
-    smoothie: '🥤 Smoothie'
+    seasonal: 'Seasonal',
+    smoothie: 'Smoothie'
   };
 
   const englishText = englishMap[category] || category.replace(/_/g, ' ');
@@ -1063,7 +1063,7 @@ function updateModalPrice() {
   const unit = Number(modalItem.price) + extra;
   const total = unit * modalQty;
   document.getElementById('modal-drink-price').textContent = `$${unit.toFixed(2)}`;
-  document.getElementById('modal-add-btn').textContent = `${t('addToOrder')} — $${total.toFixed(2)}`;
+  document.getElementById('modal-add-btn').textContent = `${t('addToOrder')} $${total.toFixed(2)}`;
 }
 
 function addModalItemToOrder() {
@@ -1260,7 +1260,7 @@ async function loadCheckoutRewardsPanel() {
       }
     } else {
       wrap.innerHTML = `<p class="muted" style="font-size:0.83rem;margin:0 0 6px;">
-        ${userPts > 0 ? `${userPts} ${t('pointsUnit')} — ${t('keepOrdering')}` : t('earnPointsPrompt')}
+        ${userPts > 0 ? `${userPts} ${t('pointsUnit')}, ${t('keepOrdering')}` : t('earnPointsPrompt')}
       </p>`;
     }
 
@@ -1453,7 +1453,7 @@ async function openRewardsModal() {
         appliedPromoCode = null;
         appliedPromoLabel = '';
         calcRewardDiscount(btn.dataset.type, Number(btn.dataset.value || 0));
-        showToast(`${btn.dataset.label} ${t('applied')} — -$${discountAmount.toFixed(2)}`);
+        showToast(`${btn.dataset.label} ${t('applied')} -$${discountAmount.toFixed(2)}`);
         closeRewardsModal();
         renderAppliedDiscount();
         renderTotals();
@@ -2137,83 +2137,83 @@ init();
 // ─── Live Activity Ticker ──────────────────────────────────────────────────────
 const TICKER_MESSAGES = {
   en: [
-    '🧋 Someone just ordered a Brown Sugar Milk Tea!',
+    'Someone just ordered a Brown Sugar Milk Tea!',
     '⭐ A customer earned 60 reward points!',
     '🏆 Mango Green Tea is trending right now!',
     '🎉 A free topping coupon was just redeemed!',
-    '🧊 Someone went with no ice — bold choice!',
+    'Someone went with no ice, bold choice!',
     '🌟 Matcha Milk Tea has been popular today!',
     '🎡 A customer just spun the reward wheel!',
-    '💚 Taro Milk Tea — a fan favorite!',
+    'Taro Milk Tea, a fan favorite!',
     '🫧 Extra boba on a Strawberry Green Tea!',
-    '☕ Coffee Milk Tea for the afternoon crowd!',
+    'Coffee Milk Tea for the afternoon crowd!',
     '🏅 50+ orders completed today!',
     '🍑 Peach Green Tea flying out the door!',
-    '🌿 Seasonal specials are going fast!',
+    'Seasonal specials are going fast!',
     '🎁 Someone redeemed a free drink reward!',
   ],
   es: [
-    '🧋 ¡Alguien acaba de pedir un Té con Leche de Azúcar Morena!',
+    '¡Alguien acaba de pedir un Té con Leche de Azúcar Morena!',
     '⭐ ¡Un cliente ganó 60 puntos de recompensa!',
     '🏆 ¡El Té Verde de Mango está de tendencia ahora!',
     '🎉 ¡Se acaba de canjear un cupón de topping gratis!',
-    '🧊 ¡Alguien eligió sin hielo — ¡decisión valiente!',
+    '¡Alguien eligió sin hielo, ¡decisión valiente!',
     '🌟 ¡El Té con Leche de Matcha ha sido popular hoy!',
     '🎡 ¡Un cliente giró la ruleta de recompensas!',
-    '💚 Té con Leche de Taro — ¡un favorito de los fans!',
+    'Té con Leche de Taro, ¡un favorito de los fans!',
     '🫧 ¡Boba extra en un Té Verde de Fresa!',
-    '☕ ¡Té con Leche de Café para la multitud de la tarde!',
+    '¡Té con Leche de Café para la multitud de la tarde!',
     '🏅 ¡50+ pedidos completados hoy!',
     '🍑 ¡El Té Verde de Durazno volando por la puerta!',
-    '🌿 ¡Las especialidades de temporada se agotan rápido!',
+    '¡Las especialidades de temporada se agotan rápido!',
     '🎁 ¡Alguien canjeó una recompensa de bebida gratis!',
   ],
   zh: [
-    '🧋 刚刚有人点了黑糖奶茶！',
+    '刚刚有人点了黑糖奶茶！',
     '⭐ 一位顾客获得了60个奖励积分！',
     '🏆 芒果绿茶现在正在流行！',
     '🎉 刚刚有人兑换了免费配料券！',
-    '🧊 有人选择了无冰——真大胆！',
+    '有人选择了无冰，真大胆！',
     '🌟 抹茶奶茶今天很受欢迎！',
     '🎡 有顾客刚刚转动了奖励转盘！',
-    '💚 芋头奶茶——粉丝最爱！',
+    '芋头奶茶，粉丝最爱！',
     '🫧 草莓绿茶加了额外的珍珠！',
-    '☕ 下午时段的咖啡奶茶！',
+    '下午时段的咖啡奶茶！',
     '🏅 今天已完成50多份订单！',
     '🍑 蜜桃绿茶卖得超快！',
-    '🌿 季节特饮正在热卖！',
+    '季节特饮正在热卖！',
     '🎁 有人兑换了免费饮品奖励！',
   ],
   ar: [
-    '🧋 طلب شخص ما للتو شاي حليب بالسكر البني!',
+    'طلب شخص ما للتو شاي حليب بالسكر البني!',
     '⭐ كسب أحد العملاء 60 نقطة مكافأة!',
     '🏆 شاي المانجو الأخضر رائج الآن!',
     '🎉 تم استبدال كوبون إضافات مجانية للتو!',
-    '🧊 اختار شخص ما بدون ثلج — اختيار جريء!',
+    'اختار شخص ما بدون ثلج، اختيار جريء!',
     '🌟 شاي حليب الماتشا كان شعبياً اليوم!',
     '🎡 دار عميل على عجلة المكافآت للتو!',
-    '💚 شاي حليب التارو — المفضل لدى المعجبين!',
+    'شاي حليب التارو، المفضل لدى المعجبين!',
     '🫧 بوبا إضافية على شاي الفراولة الأخضر!',
-    '☕ شاي حليب القهوة لجمهور ما بعد الظهر!',
+    'شاي حليب القهوة لجمهور ما بعد الظهر!',
     '🏅 أكثر من 50 طلباً منجزاً اليوم!',
     '🍑 شاي الخوخ الأخضر يطير من الباب!',
-    '🌿 مشروبات الموسم تنتهي بسرعة!',
+    'مشروبات الموسم تنتهي بسرعة!',
     '🎁 استبدل شخص ما مكافأة مشروب مجاني!',
   ],
   vi: [
-    '🧋 Ai đó vừa đặt Trà Sữa Đường Đen!',
+    'Ai đó vừa đặt Trà Sữa Đường Đen!',
     '⭐ Một khách hàng vừa kiếm được 60 điểm thưởng!',
     '🏆 Trà Xanh Xoài đang thịnh hành ngay lúc này!',
     '🎉 Một phiếu giảm giá topping miễn phí vừa được đổi!',
-    '🧊 Ai đó chọn không đá — lựa chọn dũng cảm!',
+    'Ai đó chọn không đá, lựa chọn dũng cảm!',
     '🌟 Trà Sữa Matcha rất phổ biến hôm nay!',
     '🎡 Một khách hàng vừa quay vòng quay thưởng!',
-    '💚 Trà Sữa Khoai Môn — món yêu thích của mọi người!',
+    'Trà Sữa Khoai Môn, món yêu thích của mọi người!',
     '🫧 Thêm trân châu vào Trà Xanh Dâu Tây!',
-    '☕ Trà Sữa Cà Phê cho buổi chiều!',
+    'Trà Sữa Cà Phê cho buổi chiều!',
     '🏅 Hơn 50 đơn hàng đã hoàn thành hôm nay!',
     '🍑 Trà Xanh Đào đang bán chạy!',
-    '🌿 Đặc sản theo mùa đang cháy hàng!',
+    'Đặc sản theo mùa đang cháy hàng!',
     '🎁 Ai đó vừa đổi phần thưởng đồ uống miễn phí!',
   ]
 };
