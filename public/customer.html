@@ -163,6 +163,37 @@
     </div>
   </div>
 
+    <!-- ── Assistant Modal ───────────────────────────────── -->
+  <div class="assistant-modal-overlay hidden" id="assistant-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="assistant-title">
+    <div class="assistant-modal">
+      <div class="assistant-header">
+        <div>
+          <h3 id="assistant-title">Boba Assistant</h3>
+          <p class="muted">Ask about drinks, rewards, toppings, or ordering.</p>
+        </div>
+        <button type="button" id="assistant-close-btn" class="assistant-close-btn" aria-label="Close assistant">✕</button>
+      </div>
+
+      <div class="assistant-quick-grid">
+        <button type="button" class="assistant-chip" data-question="What are the most popular drinks?">Popular drinks</button>
+        <button type="button" class="assistant-chip" data-question="Which drinks have dairy?">Dairy info</button>
+        <button type="button" class="assistant-chip" data-question="How do rewards work?">Rewards help</button>
+        <button type="button" class="assistant-chip" data-question="What sweetness level should I choose?">Sweetness help</button>
+      </div>
+
+      <div id="assistant-messages" class="assistant-messages" aria-live="polite">
+        <div class="assistant-msg assistant-msg-bot">
+          Hi! I can help with menu choices, toppings, rewards, and ordering.
+        </div>
+      </div>
+
+      <form id="assistant-form" class="assistant-form">
+        <input id="assistant-input" type="text" placeholder="Ask a question..." autocomplete="off" />
+        <button type="submit" class="btn">Ask</button>
+      </form>
+    </div>
+  </div>
+
   <main id="main-content" class="page-shell">
     <header class="cashier-topbar">
       <div class="brand-mark">
@@ -180,6 +211,7 @@
         </select>
         <span id="kiosk-user-greeting" class="cashier-user-info" style="font-size:0.85rem;"></span>
         <button id="kiosk-auth-btn" type="button" style="padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;cursor:pointer;color:var(--accent-dark);font-weight:600;">Sign In</button>
+        <button id="assistant-open-btn" type="button" class="assistant-open-btn">Ask Assistant</button>
       </div>
     </header>
 

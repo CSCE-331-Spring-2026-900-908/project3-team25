@@ -1919,3 +1919,123 @@ body.voice-guide-enabled
   color: var(--ink);
   font-weight: 600;
 }
+
+.assistant-open-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.assistant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(61, 37, 30, 0.45);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.assistant-modal-overlay.hidden {
+  display: none;
+}
+
+.assistant-modal {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+
+.assistant-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.assistant-header h3 {
+  margin: 0 0 4px;
+  color: var(--accent-dark);
+}
+
+.assistant-close-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.assistant-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.assistant-chip {
+  border: 1px solid var(--line);
+  background: #fff7f2;
+  color: var(--accent-dark);
+  border-radius: 10px;
+  padding: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assistant-messages {
+  display: grid;
+  gap: 10px;
+  min-height: 140px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--bg);
+  margin-bottom: 14px;
+}
+
+.assistant-msg {
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.4;
+  font-size: 0.92rem;
+}
+
+.assistant-msg-user {
+  background: var(--accent);
+  color: white;
+  justify-self: end;
+  max-width: 85%;
+}
+
+.assistant-msg-bot {
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  justify-self: start;
+  max-width: 90%;
+}
+
+.assistant-form {
+  display: flex;
+  gap: 10px;
+}
+
+.assistant-form input {
+  flex: 1;
+}

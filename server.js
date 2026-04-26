@@ -564,13 +564,95 @@ app.post('/api/checkout', async (req, res) => {
 app.post('/api/assistant', async (req, res) => {
   const { message } = req.body || {};
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.json({ source:'local-fallback', reply: ruleBasedAssistant(message) });
+
+  if (!apiKey) {
+    return res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message) });
+  }
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model: process.env.OPENAI_MODEL||'gpt-4o-mini', messages:[{role:'system',content:'You are a concise bubble tea kiosk assistant. Help users with ordering, menu choices, customization, allergens, rewards, promos, and store guidance.'},{role:'user',content:String(message||'')}], temperature:0.5, max_tokens:180 }) });
-    if (!response.ok) throw new Error(`OpenAI ${response.status}`);
+    const menuItems = await getMenuItems();
+
+    const menuText = menuItems
+      .map(item => `- ${item.name} (${item.category}) - $${Number(item.price).toFixed(2)}`)
+      .join('\n');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are the Reveille Bubble Tea customer kiosk assistant.
+
+You help customers with:
+- Menu questions
+- Recommendations (popular drinks, what to try)
+- Ordering steps and customization
+- Rewards, promos, and kiosk features
+
+IMPORTANT RULES:
+
+1. Only say "I don't see that on our current menu" when the user is asking for a specific item that does not exist (e.g., "Do you have slushies?").
+
+2. DO NOT use that response for general questions like:
+- "What's popular?"
+- "What should I get?"
+- "What do you recommend?"
+- "How does ordering work?"
+
+3. For recommendation questions:
+- Suggest drinks ONLY from the menu below
+- You may use these popular items if they exist:
+  Brown Sugar Milk Tea, Matcha Milk Tea, Strawberry Green Tea, Mango Green Tea, Coffee Milk Tea
+
+4. Use ONLY the menu below when naming drinks or prices.
+Do not invent drinks, toppings, or categories.
+
+Current menu:
+${menuText}
+
+Ordering flow:
+- Choose a drink
+- Customize sweetness, ice level, size, and toppings
+- Add to order
+- Review cart
+- Apply rewards or promo codes (if signed in)
+- Choose payment
+- Place order
+
+Keep answers short, friendly, and helpful for a touchscreen kiosk.
+            `.trim()
+          },
+          {
+            role: 'user',
+            content: String(message || '')
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 180
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI ${response.status}`);
+    }
+
     const data = await response.json();
-    res.json({ source:'openai', reply: data.choices?.[0]?.message?.content?.trim() || ruleBasedAssistant(message) });
-  } catch(e) { res.json({ source:'local-fallback', reply: ruleBasedAssistant(message) }); }
+
+    res.json({
+      source: 'openai',
+      reply: data.choices?.[0]?.message?.content?.trim() || ruleBasedAssistant(message)
+    });
+  } catch (e) {
+    console.error('Assistant API failed:', e.message);
+    res.json({ source: 'local-fallback', reply: ruleBasedAssistant(message) });
+  }
 });
 
 app.get('/api/weather', async (req, res) => {

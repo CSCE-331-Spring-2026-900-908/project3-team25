@@ -1777,6 +1777,79 @@ function checkDeepLink() {
   if (window.location.hash === '#spin') openSpinModal();
 }
 
+// ─── Assistant ────────────────────────────────────────────────────────────────
+function openAssistantModal() {
+  document.getElementById('assistant-modal-overlay')?.classList.remove('hidden');
+  setTimeout(() => document.getElementById('assistant-input')?.focus(), 50);
+}
+
+function closeAssistantModal() {
+  document.getElementById('assistant-modal-overlay')?.classList.add('hidden');
+}
+
+function addAssistantMessage(text, sender) {
+  const box = document.getElementById('assistant-messages');
+  if (!box) return;
+
+  const msg = document.createElement('div');
+  msg.className = sender === 'user'
+    ? 'assistant-msg assistant-msg-user'
+    : 'assistant-msg assistant-msg-bot';
+
+  msg.textContent = text;
+  box.appendChild(msg);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function askAssistant(message) {
+  const clean = String(message || '').trim();
+  if (!clean) return;
+
+  addAssistantMessage(clean, 'user');
+
+  const thinking = 'Thinking...';
+  addAssistantMessage(thinking, 'bot');
+
+  const box = document.getElementById('assistant-messages');
+  const thinkingEl = box?.lastElementChild;
+
+  try {
+    const res = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: clean })
+    });
+
+    const data = await res.json();
+    if (thinkingEl) {
+      thinkingEl.textContent = data.reply || 'Sorry, I could not answer that.';
+    }
+  } catch (_) {
+    if (thinkingEl) {
+      thinkingEl.textContent = 'Sorry, the assistant is unavailable right now.';
+    }
+  }
+}
+
+document.getElementById('assistant-open-btn')?.addEventListener('click', openAssistantModal);
+document.getElementById('assistant-close-btn')?.addEventListener('click', closeAssistantModal);
+
+document.getElementById('assistant-modal-overlay')?.addEventListener('click', e => {
+  if (e.target.id === 'assistant-modal-overlay') closeAssistantModal();
+});
+
+document.querySelectorAll('.assistant-chip').forEach(btn => {
+  btn.addEventListener('click', () => askAssistant(btn.dataset.question));
+});
+
+document.getElementById('assistant-form')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const input = document.getElementById('assistant-input');
+  const message = input?.value || '';
+  if (input) input.value = '';
+  askAssistant(message);
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function loadCustomerMenu() {
   const res = await fetch('/api/menu');
