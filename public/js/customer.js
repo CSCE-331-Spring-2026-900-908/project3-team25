@@ -473,7 +473,7 @@ const IMAGE_MAP = {
   'Honey Green Tea':          '/boba/Honey-Green-Tea.PNG',
   'Jasmine Green Tea':        '/boba/Jasmine-Green-Tea.png',
   'Black Tea Lemonade':       '/boba/Black-Tea-Lemonade.png',
-  'Yuzu Lemonade':            '/boba/Black-Tea-Lemonade.png',
+  'Yuzu Lemonade':            '/boba/Yuzu-Lemonade.png',
   // ── Fruit Tea ─────────────────────────────────────────────
   'Lychee Green Tea':         '/boba/Lychee.png',
   'Mango Green Tea':          '/boba/Mango.png',
@@ -493,7 +493,7 @@ const IMAGE_MAP = {
   'Oreo Milk Tea':            '/boba/Brown-Sugar-Milk-Tea.PNG',
   // ── New Tea ───────────────────────────────────────────────
   'Kumquat Green Tea':        '/boba/Honey-Green-Tea.PNG',
-  'Peppermint Herbal Tea':    '/boba/Honey-Green-Tea.PNG',
+  'Peppermint Herbal Tea':    '/boba/Peppermint-Herbal-Tea.png',
   'Chrysanthemum Tea':        '/boba/Honey-Green-Tea.PNG',
   // ── New Fruit Tea ─────────────────────────────────────────
   'Watermelon Fruit Tea':     '/boba/Strawberry-.png',
