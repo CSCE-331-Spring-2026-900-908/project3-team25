@@ -520,7 +520,9 @@ async function ensureCategoryTranslations() {
     milk_tea: 'Milk Tea',
     tea: 'Tea',
     fruit_tea: 'Fruit Tea',
-    coffee: 'Coffee'
+    coffee: 'Coffee',
+    seasonal: 'Seasonal',
+    smoothie: 'Smoothie'
   };
 
   await Promise.all(Object.entries(categories).map(async ([key, englishText]) => {
@@ -1583,12 +1585,15 @@ function drawWheel() {
     ctx.rotate(start + segAngle / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 11px Inter, sans-serif';
     const translatedLabel = rewardWheelLabel(seg.label);
     const wheelLines = translatedLabel.split(' ');
 
-    wheelLines.forEach((line, li) => {
-      ctx.fillText(line, radius - 10, li * 14 - ((wheelLines.length > 1) ? 7 : 0));
+    ctx.font = wheelLines.length > 3
+      ? 'bold 8px Inter, sans-serif'
+      : 'bold 10px Inter, sans-serif';
+
+    wheelLines.slice(0, 4).forEach((line, li) => {
+      ctx.fillText(line, radius - 12, li * 10 - ((wheelLines.length > 1) ? 12 : 0));
     });
     ctx.restore();
   });
