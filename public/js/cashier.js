@@ -17,6 +17,14 @@ const CATEGORY_LABELS = {
 const EXTRA_BOBA_PRODUCT_ID = 16;
 const EXTRA_BOBA_PRICE = 0.75;
 
+const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
+const CASHIER_TOPPINGS = [
+  { name: 'Extra Boba',    price: 0.75 },
+  { name: 'Grass Jelly',   price: 0.75 },
+  { name: 'Egg Pudding',   price: 0.75 },
+  { name: 'Coconut Jelly', price: 0.75 },
+];
+
 //  INIT 
 async function initCashier() {
   document.getElementById('cashier-logout-btn')?.addEventListener('click', cashierPinLogout);
@@ -39,7 +47,7 @@ async function initCashier() {
     const res = await fetch('/api/menu');
     const data = await res.json();
     cashierMenu = data.items || [];
-    cashierCategories = Object.keys(data.categories || {});
+    cashierCategories = Object.keys(data.categories || {}).filter(c => c !== 'topping');
     cashierActiveCategory = cashierCategories[0] || '';
     renderCategories();
     renderProductGrid();
@@ -181,10 +189,12 @@ function renderProductGrid() {
       cashierOrder.push({
         id: item.id,
         name: item.name,
+        category: item.category,
         qty: 1,
         unitPrice: Number(item.price),
         sugar: 100,
         ice: 100,
+        temp: 'Iced',
         note: '',
         linePrice: Number(item.price)
       });
@@ -214,16 +224,17 @@ function renderCart() {
   emptyEl.style.display = 'none';
   tableEl.style.display = '';
 
-  tbody.innerHTML = cashierOrder.map((item, i) =>
-    `<tr class="cart-row${cashierSelectedRow === i ? ' selected' : ''}" data-index="${i}">
+  tbody.innerHTML = cashierOrder.map((item, i) => {
+    const displayNote = [item.temp === 'Hot' ? 'Hot' : '', item.note].filter(Boolean).join(', ');
+    return `<tr class="cart-row${cashierSelectedRow === i ? ' selected' : ''}" data-index="${i}">
       <td>${item.name}</td>
       <td class="col-center">${item.qty}</td>
       <td class="col-right">$${item.linePrice.toFixed(2)}</td>
       <td class="col-center">${item.sugar}%</td>
       <td class="col-center">${item.ice}%</td>
-      <td class="col-notes">${item.note}</td>
-    </tr>`
-  ).join('');
+      <td class="col-notes">${displayNote}</td>
+    </tr>`;
+  }).join('');
 
   tbody.querySelectorAll('.cart-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -234,6 +245,16 @@ function renderCart() {
   });
 
   updateTotals(cashierOrder.reduce((sum, item) => sum + item.linePrice, 0));
+  updateModButtonStates();
+}
+
+function updateModButtonStates() {
+  const hotBtn = document.getElementById('mod-hot');
+  if (!hotBtn) return;
+  const item = cashierSelectedRow >= 0 ? cashierOrder[cashierSelectedRow] : null;
+  const canBeHot = !!(item && !item.isTopping && HOT_CATEGORIES.has(item.category));
+  hotBtn.disabled = !canBeHot;
+  hotBtn.textContent = 'Hot';
 }
 
 function updateTotals(subtotal) {
@@ -250,7 +271,10 @@ function bindModButtons() {
   document.getElementById('mod-2x-sweet').addEventListener('click',   () => applyQuickMod('sugar', 200));
   document.getElementById('mod-half-ice').addEventListener('click',   () => applyQuickMod('ice', 50));
   document.getElementById('mod-no-ice').addEventListener('click',     () => applyQuickMod('ice', 0));
-  document.getElementById('mod-extra-boba').addEventListener('click', () => applyExtraBoba());
+  document.getElementById('mod-hot').addEventListener('click',        () => applyHot());
+  document.getElementById('mod-topping-select').addEventListener('change', e => {
+    if (e.target.value) { applyTopping(e.target.value); e.target.value = ''; }
+  });
   document.getElementById('mod-modify-btn').addEventListener('click', () => showModifyPanel());
 }
 
@@ -273,22 +297,36 @@ function applyQuickMod(type, value) {
   renderCart();
 }
 
-function applyExtraBoba() {
+function applyHot() {
+  if (!requireSelection()) return;
+  const item = cashierOrder[cashierSelectedRow];
+  if (!HOT_CATEGORIES.has(item.category)) return;
+  item.temp = item.temp === 'Hot' ? 'Iced' : 'Hot';
+  renderCart();
+}
+
+function applyTopping(name) {
   if (!requireSelection()) return;
   const selected = cashierOrder[cashierSelectedRow];
-  if (selected.id === EXTRA_BOBA_PRODUCT_ID) {
-    setStatus('Cannot add Extra Boba to a topping.', 'error');
+  if (selected.isTopping) {
+    setStatus('Cannot add a topping to another topping.', 'error');
     return;
   }
+  const tp = CASHIER_TOPPINGS.find(t => t.name === name);
+  if (!tp) return;
+  const menuItem = cashierMenu.find(x => x.name === name);
   cashierOrder.splice(cashierSelectedRow + 1, 0, {
-    id: EXTRA_BOBA_PRODUCT_ID,
-    name: 'Extra Boba',
+    id: menuItem?.id ?? EXTRA_BOBA_PRODUCT_ID,
+    name: tp.name,
+    category: 'topping',
     qty: 1,
-    unitPrice: EXTRA_BOBA_PRICE,
+    unitPrice: tp.price,
     sugar: 100,
     ice: 100,
+    temp: 'Iced',
     note: 'for: ' + selected.name,
-    linePrice: EXTRA_BOBA_PRICE
+    isTopping: true,
+    linePrice: tp.price
   });
   renderCart();
 }
@@ -402,7 +440,8 @@ function bindCartActions() {
               sweetness: item.sugar + '%',
               ice: item.ice + '%',
               size: 'Regular',
-              topping: item.id === EXTRA_BOBA_PRODUCT_ID ? 'Extra Boba' : 'None'
+              topping: item.isTopping ? item.name : 'None',
+              temp: item.temp || 'Iced'
             }
           }))
         })

@@ -1205,6 +1205,23 @@ td {
   font-weight: 700;
 }
 
+.mod-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.mod-topping-select {
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+
 .mod-sep {
   flex: 1;
   min-width: 10px;
