@@ -57,6 +57,24 @@ const TRANSLATIONS = {
     rewards: 'Rewards',
     spin: 'Spin',
     rewardsAndPromos: 'Rewards & Promos',
+    askAssistant: 'Ask Assistant',
+    bobaAssistant: 'Boba Assistant',
+    assistantSubtitle: 'Ask about drinks, rewards, toppings, or ordering.',
+    assistantPlaceholder: 'Ask a question...',
+    ask: 'Ask',
+    popularDrinks: 'Popular drinks',
+    dairyInfo: 'Dairy info',
+    rewardsHelp: 'Rewards help',
+    sweetnessHelp: 'Sweetness help',
+    assistantWelcome: 'Hi! I can help with menu choices, toppings, rewards, and ordering.',
+
+    rewardFreeSmallDrink: 'Free Small Drink',
+    rewardHalfOffDrink: '50% Off One Drink',
+    rewardFreeTopping: 'Free Topping',
+    rewardOneDollarOff: '$1 Off Your Order',
+    rewardBuyOneGetOne: 'Buy One Get One',
+    rewardTwentyFiveOff: '25% Off Order',
+    prize: 'a prize',
     redemptionHistory: 'Redemption History',
     noRedemptionsYet: 'No redemptions yet.',
     spinWheel: 'Spin the Wheel',
@@ -187,6 +205,7 @@ const TRANSLATIONS = {
     qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
     couldNotCreateQr: 'Could not create QR sign-in.',
     couldNotFinishKioskSignIn: 'Could not finish kiosk sign-in.'
+
   },
   es: {
     language: 'Idioma',
@@ -342,6 +361,30 @@ const TRANSLATIONS = {
 
 function t(key) {
   return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
+}
+
+function rewardKeyFromLabel(label) {
+  const normalized = String(label || '').replace(/\n/g, ' ').trim();
+
+  const map = {
+    'Free Small Drink': 'rewardFreeSmallDrink',
+    '50% Off One Drink': 'rewardHalfOffDrink',
+    'Free Topping': 'rewardFreeTopping',
+    '$1 Off Your Order': 'rewardOneDollarOff',
+    'Buy One Get One': 'rewardBuyOneGetOne',
+    '25% Off Order': 'rewardTwentyFiveOff'
+  };
+
+  return map[normalized] || null;
+}
+
+function rewardLabel(label) {
+  const key = rewardKeyFromLabel(label);
+  return key ? t(key) : label;
+}
+
+function rewardWheelLabel(label) {
+  return rewardLabel(label);
 }
 
 async function translateWithLara(text) {
@@ -584,6 +627,26 @@ function applyStaticTranslations() {
     document.documentElement.dir = 'ltr';
     document.body.dir = 'ltr';
     document.body.classList.toggle('arabic-text', currentLanguage === 'ar');
+
+    document.getElementById('assistant-open-btn').textContent = t('askAssistant');
+    document.getElementById('assistant-title').textContent = t('bobaAssistant');
+
+    const assistantSubtitle = document.querySelector('.assistant-header .muted');
+    if (assistantSubtitle) assistantSubtitle.textContent = t('assistantSubtitle');
+
+    const assistantInput = document.getElementById('assistant-input');
+    if (assistantInput) assistantInput.placeholder = t('assistantPlaceholder');
+
+    const assistantAskBtn = document.querySelector('#assistant-form button');
+    if (assistantAskBtn) assistantAskBtn.textContent = t('ask');
+
+    const assistantWelcome = document.querySelector('.assistant-msg-bot');
+    if (assistantWelcome) assistantWelcome.textContent = t('assistantWelcome');
+
+    document.querySelector('[data-question="What are the most popular drinks?"]').textContent = t('popularDrinks');
+    document.querySelector('[data-question="Which drinks have dairy?"]').textContent = t('dairyInfo');
+    document.querySelector('[data-question="How do rewards work?"]').textContent = t('rewardsHelp');
+    document.querySelector('[data-question="What sweetness level should I choose?"]').textContent = t('sweetnessHelp');
 
   const setText = (id, value) => {
     const el = document.getElementById(id);
@@ -1175,10 +1238,10 @@ function renderTotals() {
   if (discount > 0) {
     discountRow.style.display = '';
     document.getElementById('customer-discount').textContent = `−$${discount.toFixed(2)}`;
-    document.getElementById('discount-label').textContent = appliedRewardLabel || appliedPromoLabel || t('discount');
+    document.getElementById('discount-label').textContent = rewardLabel(appliedRewardLabel || appliedPromoLabel) || t('discount');
     const note = document.getElementById('payment-discount-note');
     if (note) {
-      note.textContent = `Includes ${appliedRewardLabel || appliedPromoLabel} (−$${discount.toFixed(2)})`;
+      note.textContent = `Includes ${rewardLabel(appliedRewardLabel || appliedPromoLabel)} (−$${discount.toFixed(2)})`;
       note.style.display = '';
     }
   } else {
@@ -1234,7 +1297,7 @@ async function loadCheckoutRewardsPanel() {
         <div style="display:flex;gap:8px;margin-bottom:6px;">
           <select id="reward-select" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;">
             <option value="">${t('selectReward')}</option>
-            ${affordable.map(r => `<option value="${r.reward_id}" data-label="${r.label}" data-type="${r.reward_type}" data-value="${r.reward_value}">${r.label} (${r.points_cost} ${t('pointsUnit')})</option>`).join('')}
+              ${affordable.map(r => `<option value="${r.reward_id}" data-label="${r.label}" data-type="${r.reward_type}" data-value="${r.reward_value}">${rewardLabel(r.label)} (${r.points_cost} ${t('pointsUnit')})</option>`).join('')}
           </select>
           <button type="button" class="btn-apply" id="apply-reward-btn">${t('apply')}</button>
         </div>`;
@@ -1419,7 +1482,7 @@ async function openRewardsModal() {
       return `
         <div class="reward-card ${canRedeem ? 'can-redeem' : ''}">
           <div class="rw-info">
-            <div class="rw-name">${r.label}</div>
+            <div class="rw-name">${rewardLabel(r.label)}</div>
             <div class="rw-cost">${r.points_cost} ${t('pointsUnit')} ${canRedeem ? '' : `· ${t('needMore')} ${r.points_cost - pts} ${t('more')}`}</div>
           </div>
           <button class="btn-redeem" 
@@ -1440,7 +1503,7 @@ async function openRewardsModal() {
         appliedPromoCode = null;
         appliedPromoLabel = '';
         calcRewardDiscount(btn.dataset.type, Number(btn.dataset.value || 0));
-        showToast(`${btn.dataset.label} ${t('applied')} -$${discountAmount.toFixed(2)}`);
+        showToast(`${rewardLabel(btn.dataset.label)} ${t('applied')} -$${discountAmount.toFixed(2)}`);
         closeRewardsModal();
         renderAppliedDiscount();
         renderTotals();
@@ -1452,7 +1515,7 @@ async function openRewardsModal() {
     histEl.innerHTML = history.length
       ? history.map(h => `
           <div class="rw-history-item">
-            <span>${h.label}</span>
+            <span>${rewardLabel(h.label)}</span>
             <span>${new Date(h.redeemed_at).toLocaleDateString(currentLanguage === 'es' ? 'es-ES' : 'en-US')}</span>
           </div>`).join('')
       : `<p class="muted" style="font-size:0.85rem;">${t('noRedemptionsYet')}</p>`;
@@ -1521,8 +1584,11 @@ function drawWheel() {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'white';
     ctx.font = 'bold 11px Inter, sans-serif';
-    seg.label.split('\n').forEach((line, li) => {
-      ctx.fillText(line, radius - 10, li * 14 - (seg.label.includes('\n') ? 7 : 0));
+    const translatedLabel = rewardWheelLabel(seg.label);
+    const wheelLines = translatedLabel.split(' ');
+
+    wheelLines.forEach((line, li) => {
+      ctx.fillText(line, radius - 10, li * 14 - ((wheelLines.length > 1) ? 7 : 0));
     });
     ctx.restore();
   });
@@ -1608,14 +1674,14 @@ function tryFinishSpin() {
       drawWheel();
     }
 
-    prizeEl.textContent = `${t('youWon')}: ${spinResult.prize?.label || 'a prize'}!`;
+    prizeEl.textContent = `${t('youWon')}: ${rewardLabel(spinResult.prize?.label || t('prize'))}!`;
     codeEl.textContent = spinResult.code ? `${t('code')}: ${spinResult.code}` : '';
     result.classList.add('show');
 
     if (spinResult.prize) {
       // Auto-apply discount immediately — no code entry needed
       appliedPromoCode = spinResult.code || 'SPIN-AUTO';
-      appliedPromoLabel = spinResult.prize.label || 'Prize';
+      appliedPromoLabel = rewardLabel(spinResult.prize.label || t('prize'));
       spinPrizeDetails = spinResult.prize;
       // Calculate discount right now based on prize type
       const prize = spinResult.prize;
@@ -1632,7 +1698,7 @@ function tryFinishSpin() {
       discountAmount = Math.min(discountAmount, subtotal);
     }
 
-    showToast(`${t('youWon')}: ${spinResult.prize?.label}! ✅ Applied to your order!`);
+    showToast(`${t('youWon')}: ${rewardLabel(spinResult.prize?.label)}! ✅ Applied to your order!`);
   }
 
   const btn = document.getElementById('spin-btn');
@@ -1896,6 +1962,13 @@ document.getElementById('language-select')?.addEventListener('change', async e =
   renderTotals();
   setPaymentMethod(selectedPaymentMethod);
   loadCustomerWeather();
+  if (document.getElementById('rewards-modal-overlay')?.classList.contains('open')) {
+    await loadRewardsPanel?.();
+  }
+
+  if (document.getElementById('spin-modal-overlay')?.classList.contains('open')) {
+    drawWheel();
+  }
 });
 
 document.getElementById('kiosk-auth-btn')?.addEventListener('click', handleCustomerAuthButton);
