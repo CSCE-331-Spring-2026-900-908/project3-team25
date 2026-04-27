@@ -11,7 +11,8 @@ const CATEGORY_LABELS = {
   fruit_tea: 'Fruity\nBeverage',
   tea:       'Non\nCaffeinated',
   coffee:    'Fresh\nBrew',
-  seasonal:  'Seasonal'
+  seasonal:  'Seasonal',
+  smoothie:  'Smoothie'
 };
 
 const EXTRA_BOBA_PRODUCT_ID = 16;

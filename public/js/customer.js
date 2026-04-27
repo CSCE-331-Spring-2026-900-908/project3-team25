@@ -102,8 +102,9 @@ const TRANSLATIONS = {
     lightIce: 'Light Ice',
     regularIce: 'Regular Ice',
     extraIce: 'Extra Ice',
-    regular: 'Regular',
+    regular: 'Medium (+$0.50)',
     large: 'Large (+$1.00)',
+    small: 'Small',
     none: 'None',
     extraBoba: 'Extra Boba (+$0.75)',
     extraBobaName: 'Extra Boba',
@@ -257,8 +258,9 @@ const TRANSLATIONS = {
     lightIce: 'Poco hielo',
     regularIce: 'Hielo regular',
     extraIce: 'Extra hielo',
-    regular: 'Regular',
+    regular: 'Mediano (+$0.50)',
     large: 'Grande (+$1.00)',
+    small: 'Pequeño',
     none: 'Ninguno',
     extraBoba: 'Boba extra (+$0.75)',
     extraBobaName: 'Boba extra',
@@ -585,8 +587,9 @@ function translateSelectionValue(value) {
     'Light Ice': t('lightIce'),
     'Regular Ice': t('regularIce'),
     'Extra Ice': t('extraIce'),
+    'Small': t('small'),
     'Regular': t('regular'),
-    'Large': currentLanguage === 'es' ? 'Grande' : 'Large',
+    'Large': t('large'),
     'None': t('none'),
     'Extra Boba':    t('extraBobaName'),
     'Grass Jelly':   t('grassJelly'),
@@ -615,11 +618,11 @@ function updateSelectOptionsText() {
 
   mapOptions('modal-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('modal-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
-  mapOptions('modal-size', [t('regular'), t('large')]);
+  mapOptions('modal-size', [t('small'), t('regular'), t('large')]);
 
   mapOptions('edit-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('edit-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
-  mapOptions('edit-size', [t('regular'), t('large')]);
+  mapOptions('edit-size', [t('small'), t('regular'), t('large')]);
 
   const labelMap = {
     'modal-sweetness': t('sweetness'),
@@ -758,6 +761,7 @@ function applyStaticTranslations() {
 // ─── Pricing helpers ──────────────────────────────────────────────────────────
 function extraPrice(size, toppings) {
   let extra = 0;
+  if (size === 'Medium') extra += 0.50;
   if (size === 'Large') extra += 1.0;
   const list = Array.isArray(toppings) ? toppings : (toppings && toppings !== 'None' ? [toppings] : []);
   list.forEach(name => {
@@ -1113,7 +1117,7 @@ function openDrinkModal(item) {
   document.getElementById('modal-drink-desc').textContent = descText;
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
-  document.getElementById('modal-size').value = 'Regular';
+  document.getElementById('modal-size').value = 'Small';
   renderToppingChecks('modal-topping-checks', []);
   const tempWrap = document.getElementById('modal-temp-wrap');
   if (tempWrap) tempWrap.style.display = HOT_CATEGORIES.has(item.category) ? '' : 'none';
@@ -1163,7 +1167,7 @@ function addModalItemToOrder() {
   const selections = {
     sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('modal-sweetness').selectedIndex] || 'Regular Sugar',
     ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('modal-ice').selectedIndex] || 'Regular Ice',
-    size:      ['Regular','Large'][document.getElementById('modal-size').selectedIndex] || 'Regular',
+    size:      ['Small','Medium','Large'][document.getElementById('modal-size').selectedIndex] || 'Small',
     toppings:  getCheckedToppings('modal-topping-checks'),
     temp:      HOT_CATEGORIES.has(modalItem.category) ? (document.getElementById('modal-temp')?.value || 'Iced') : 'Iced'
   };
@@ -1820,7 +1824,7 @@ function openEditModal(index) {
   // Map stored English selections to the correct option index
   const sweetnessMap = ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'];
   const iceMap       = ['No Ice','Light Ice','Regular Ice','Extra Ice'];
-  const sizeMap      = ['Regular','Large'];
+  const sizeMap      = ['Small','Medium','Large'];
 
   function setByVal(id, map, val) {
     const el = document.getElementById(id);
@@ -1857,7 +1861,7 @@ document.getElementById('edit-modal-save').addEventListener('click', () => {
   const newSel = {
     sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('edit-sweetness').selectedIndex] || document.getElementById('edit-sweetness').value,
     ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('edit-ice').selectedIndex] || document.getElementById('edit-ice').value,
-    size:      ['Regular','Large'][document.getElementById('edit-size').selectedIndex] || document.getElementById('edit-size').value,
+    size:      ['Small','Medium','Large'][document.getElementById('edit-size').selectedIndex] || document.getElementById('edit-size').value,
     toppings:  getCheckedToppings('edit-topping-checks'),
     temp:      HOT_CATEGORIES.has(item.category) ? (document.getElementById('edit-temp')?.value || 'Iced') : 'Iced'
   };
