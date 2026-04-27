@@ -1562,6 +1562,31 @@ body.voice-guide-enabled
 }
 .drink-modal-footer .btn-add:hover { filter: brightness(1.06); }
 
+.topping-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.topping-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.topping-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.topping-price {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 /* ── Menu cards (cleaner, clickable) ─────────────────────────── */
 .menu-card {
   cursor: pointer;

@@ -53,12 +53,16 @@
               <option value="Large">Large (+$1.00)</option>
             </select>
           </div>
-          <div>
-            <label for="modal-topping">Topping</label>
-            <select id="modal-topping">
-              <option value="None">None</option>
-              <option value="Extra Boba">Extra Boba (+$0.75)</option>
+          <div id="modal-temp-wrap">
+            <label for="modal-temp">Temperature</label>
+            <select id="modal-temp">
+              <option value="Iced">Iced</option>
+              <option value="Hot">Hot</option>
             </select>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Toppings</label>
+            <div id="modal-topping-checks" class="topping-checks"></div>
           </div>
         </div>
 
@@ -150,12 +154,16 @@
               <option value="Large">Large (+$1.00)</option>
             </select>
           </div>
-          <div>
-            <label for="edit-topping">Topping</label>
-            <select id="edit-topping">
-              <option value="None">None</option>
-              <option value="Extra Boba">Extra Boba (+$0.75)</option>
+          <div id="edit-temp-wrap">
+            <label for="edit-temp">Temperature</label>
+            <select id="edit-temp">
+              <option value="Iced">Iced</option>
+              <option value="Hot">Hot</option>
             </select>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Toppings</label>
+            <div id="edit-topping-checks" class="topping-checks"></div>
           </div>
         </div>
         <div class="drink-modal-footer" style="margin-top:20px;">
