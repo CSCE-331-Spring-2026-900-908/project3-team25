@@ -19,12 +19,28 @@ const EXTRA_BOBA_PRODUCT_ID = 16;
 const EXTRA_BOBA_PRICE = 0.75;
 
 const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
-const CASHIER_TOPPINGS = [
+let CASHIER_TOPPINGS = [
   { name: 'Extra Boba',    price: 0.75 },
   { name: 'Grass Jelly',   price: 0.75 },
   { name: 'Egg Pudding',   price: 0.75 },
   { name: 'Coconut Jelly', price: 0.75 },
 ];
+
+async function loadCashierToppings() {
+  try {
+    const res = await fetch('/api/toppings');
+    const data = await res.json();
+    if (data.toppings && data.toppings.length > 0) {
+      CASHIER_TOPPINGS = data.toppings;
+    }
+  } catch (_) { /* keep fallback */ }
+  // Repopulate the topping <select> with live data
+  const sel = document.getElementById('mod-topping-select');
+  if (sel) {
+    sel.innerHTML = '<option value="">Add Topping…</option>' +
+      CASHIER_TOPPINGS.map(t => `<option value="${t.name}">${t.name} (+$${t.price.toFixed(2)})</option>`).join('');
+  }
+}
 
 //  INIT 
 async function initCashier() {
@@ -43,10 +59,10 @@ async function initCashier() {
     });
   }
 
-  // Load menu from API
+  // Load menu and toppings from API
   try {
-    const res = await fetch('/api/menu');
-    const data = await res.json();
+    const [menuRes] = await Promise.all([fetch('/api/menu'), loadCashierToppings()]);
+    const data = await menuRes.json();
     cashierMenu = data.items || [];
     cashierCategories = Object.keys(data.categories || {}).filter(c => c !== 'topping');
     cashierActiveCategory = cashierCategories[0] || '';

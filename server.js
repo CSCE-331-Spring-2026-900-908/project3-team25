@@ -376,6 +376,20 @@ app.get('/api/menu', async (_req, res) => {
   catch(e) { res.status(500).json({ error: 'Failed to load menu.', details: e.message }); }
 });
 
+// Public endpoint — returns active toppings so kiosk and cashier stay in sync with DB
+app.get('/api/toppings', async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT productid AS id, name, baseprice AS price FROM product WHERE is_active=true AND category='topping' ORDER BY name`);
+      return res.json({ toppings: r.rows.map(t => ({ id: Number(t.id), name: t.name, price: Number(t.price) })) });
+    }
+    const toppings = parseCsv(path.join(dataDir,'product.csv'))
+      .filter(r => r.is_active === 'true' && r.category === 'topping')
+      .map(r => ({ id: Number(r.productid), name: r.name, price: Number(r.baseprice) }));
+    res.json({ toppings });
+  } catch(e) { res.status(500).json({ error: 'Failed to load toppings.', details: e.message }); }
+});
+
 app.get('/api/inventory', async (req, res) => {
   if (!req.isAuthenticated?.()) return res.status(401).json({ error: 'Auth required.' });
   try { const items = await getInventoryItems(); res.json({ items, lowStock: lowStock(items), source: hasDbConfig()?'database':'csv' }); }

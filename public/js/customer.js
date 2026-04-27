@@ -12,12 +12,24 @@ let guestCheckoutRequested = false;
 
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
 
-const TOPPINGS = [
+let TOPPINGS = [
   { name: 'Extra Boba',    price: 0.75 },
   { name: 'Grass Jelly',   price: 0.75 },
   { name: 'Egg Pudding',   price: 0.75 },
   { name: 'Coconut Jelly', price: 0.75 },
 ];
+
+async function loadToppings() {
+  try {
+    const res = await fetch('/api/toppings');
+    const data = await res.json();
+    if (data.toppings && data.toppings.length > 0) {
+      TOPPINGS = data.toppings;
+    }
+  } catch (_) {
+    // keep hardcoded fallback
+  }
+}
 const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
 
 const LANGUAGE_CODES = {
@@ -2135,6 +2147,7 @@ document.getElementById('assistant-form')?.addEventListener('submit', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function loadCustomerMenu() {
+  await loadToppings();
   const res = await fetch('/api/menu');
   const data = await res.json();
   customerMenu = data.items || [];
