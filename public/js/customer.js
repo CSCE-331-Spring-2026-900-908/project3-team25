@@ -1204,9 +1204,7 @@ document.getElementById('modal-qty-plus').addEventListener('click', () => {
   }
 });
 document.getElementById('modal-add-btn').addEventListener('click', addModalItemToOrder);
-['modal-size', 'modal-topping'].forEach(id => {
-  document.getElementById(id).addEventListener('change', updateModalPrice);
-});
+document.getElementById('modal-size').addEventListener('change', updateModalPrice);
 
 // ─── Order rendering ──────────────────────────────────────────────────────────
 function renderOrder() {
