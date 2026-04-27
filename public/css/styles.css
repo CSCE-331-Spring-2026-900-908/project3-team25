@@ -1220,6 +1220,7 @@ td {
   background: white;
   color: var(--ink);
   cursor: pointer;
+  max-width: 160px;
 }
 
 .mod-sep {
