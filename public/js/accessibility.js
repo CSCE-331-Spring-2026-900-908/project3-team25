@@ -8,43 +8,112 @@
   let availableVoices = [];
 
   const UI_TEXT = {
-    en: {
-      control: "control",
-      dropdown: "dropdown",
-      voiceGuideOn: "Voice Guide: On",
-      voiceGuideOff: "Voice Guide: Off",
-      turnVoiceOff: "Turn voice guide off",
-      turnVoiceOn: "Turn voice guide on",
-      voiceEnabled: "Voice guide enabled.",
-      voiceDisabled: "Voice guide disabled.",
-      categorySuffix: "category"
-    },
-    es: {
-      control: "control",
-      dropdown: "lista desplegable",
-      voiceGuideOn: "Guía de voz: activada",
-      voiceGuideOff: "Guía de voz: desactivada",
-      turnVoiceOff: "Desactivar guía de voz",
-      turnVoiceOn: "Activar guía de voz",
-      voiceEnabled: "Guía de voz activada.",
-      voiceDisabled: "Guía de voz desactivada.",
-      categorySuffix: "categoría"
-    }
-  };
-
-  function getCurrentLanguage() {
-    const lang = localStorage.getItem(LANGUAGE_KEY) || "en";
-    return lang === "es" ? "es" : "en";
+  en: {
+    control: "control",
+    dropdown: "dropdown",
+    voiceGuideOn: "Voice Guide: On",
+    voiceGuideOff: "Voice Guide: Off",
+    turnVoiceOff: "Turn voice guide off",
+    turnVoiceOn: "Turn voice guide on",
+    voiceEnabled: "Voice guide enabled.",
+    voiceDisabled: "Voice guide disabled.",
+    categorySuffix: "category",
+    current: "Current",
+    options: "Options",
+    setTo: "set to",
+    ingredients: "Ingredients",
+    customizePrompt: "Use the dropdowns below to customize sweetness, ice level, size, and topping."
+  },
+  es: {
+    control: "control",
+    dropdown: "lista desplegable",
+    voiceGuideOn: "Guía de voz: activada",
+    voiceGuideOff: "Guía de voz: desactivada",
+    turnVoiceOff: "Desactivar guía de voz",
+    turnVoiceOn: "Activar guía de voz",
+    voiceEnabled: "Guía de voz activada.",
+    voiceDisabled: "Guía de voz desactivada.",
+    categorySuffix: "categoría",
+    current: "Actual",
+    options: "Opciones",
+    setTo: "cambiado a",
+    ingredients: "Ingredientes",
+    customizePrompt: "Usa las listas desplegables para personalizar el dulzor, el nivel de hielo, el tamaño y el topping."
+  },
+  zh: {
+    control: "控件",
+    dropdown: "下拉菜单",
+    voiceGuideOn: "语音引导：开启",
+    voiceGuideOff: "语音引导：关闭",
+    turnVoiceOff: "关闭语音引导",
+    turnVoiceOn: "开启语音引导",
+    voiceEnabled: "语音引导已开启。",
+    voiceDisabled: "语音引导已关闭。",
+    categorySuffix: "类别",
+    current: "当前",
+    options: "选项",
+    setTo: "设置为",
+    ingredients: "配料",
+    customizePrompt: "使用下面的下拉菜单来选择甜度、冰量、大小和配料。"
+  },
+  vi: {
+    control: "điều khiển",
+    dropdown: "danh sách chọn",
+    voiceGuideOn: "Hướng dẫn giọng nói: Bật",
+    voiceGuideOff: "Hướng dẫn giọng nói: Tắt",
+    turnVoiceOff: "Tắt hướng dẫn giọng nói",
+    turnVoiceOn: "Bật hướng dẫn giọng nói",
+    voiceEnabled: "Đã bật hướng dẫn giọng nói.",
+    voiceDisabled: "Đã tắt hướng dẫn giọng nói.",
+    categorySuffix: "danh mục",
+    current: "Hiện tại",
+    options: "Tùy chọn",
+    setTo: "đã chọn",
+    ingredients: "Thành phần",
+    customizePrompt: "Dùng các danh sách chọn bên dưới để tùy chỉnh độ ngọt, mức đá, kích cỡ và topping."
+  },
+  ar: {
+    control: "عنصر تحكم",
+    dropdown: "قائمة منسدلة",
+    voiceGuideOn: "الدليل الصوتي: تشغيل",
+    voiceGuideOff: "الدليل الصوتي: إيقاف",
+    turnVoiceOff: "إيقاف الدليل الصوتي",
+    turnVoiceOn: "تشغيل الدليل الصوتي",
+    voiceEnabled: "تم تشغيل الدليل الصوتي.",
+    voiceDisabled: "تم إيقاف الدليل الصوتي.",
+    categorySuffix: "فئة",
+    current: "الحالي",
+    options: "الخيارات",
+    setTo: "تم التغيير إلى",
+    ingredients: "المكونات",
+    customizePrompt: "استخدم القوائم المنسدلة بالأسفل لتخصيص درجة الحلاوة، مستوى الثلج، الحجم، والإضافات."
   }
+};
 
-  function ui(key) {
-    const lang = getCurrentLanguage();
-    return UI_TEXT[lang]?.[key] || UI_TEXT.en[key] || key;
-  }
+const SPEECH_LANGS = {
+  en: "en-US",
+  es: "es-MX",
+  zh: "zh-CN",
+  vi: "vi-VN",
+  ar: "ar-SA"
+};
 
-  function getSpeechLang() {
-    return getCurrentLanguage() === "es" ? "es-MX" : "en-US";
-  }
+function getCurrentLanguage() {
+  const selectLang = document.getElementById("language-select")?.value;
+  const storedLang = localStorage.getItem(LANGUAGE_KEY);
+  const lang = selectLang || storedLang || "en";
+
+  return ["en", "es", "zh", "vi", "ar"].includes(lang) ? lang : "en";
+}
+
+function ui(key) {
+  const lang = getCurrentLanguage();
+  return UI_TEXT[lang]?.[key] || UI_TEXT.en[key] || key;
+}
+
+function getSpeechLang() {
+  return SPEECH_LANGS[getCurrentLanguage()] || "en-US";
+}
 
   function getVoiceButton() {
     return document.getElementById("voiceGuideToggle");
@@ -235,7 +304,7 @@
         const opts = Array.from(el.options).map(o => normalizeText(o.textContent)).filter(Boolean);
         const currentVal = normalizeText(el.options[el.selectedIndex]?.textContent || "");
         const msg = opts.length
-          ? label + ". Current: " + currentVal + ". Options: " + opts.join(", ") + "."
+          ? `${label}. ${ui("current")}: ${currentVal}. ${ui("options")}: ${opts.join(", ")}.`
           : label;
         announce(msg, true);
         return;
@@ -313,7 +382,7 @@
       if (selected) {
         const label = getElementLabel(el);
         const val = normalizeText(selected.textContent);
-        speak(label + " set to " + val);
+        speak(`${label} ${ui("setTo")} ${val}`);
       }
     });
   }
@@ -348,13 +417,32 @@
         const desc  = normalizeText(document.getElementById('modal-drink-desc')?.textContent || '');
         const ings  = normalizeText(document.getElementById('modal-ingredients-list')?.textContent || '');
         const parts = [name, price, desc];
-        if (ings && ings !== '…') parts.push('Ingredients: ' + ings);
-        parts.push('Use the dropdowns below to customize sweetness, ice level, size, and topping.');
+        if (ings && ings !== '…') parts.push(`${ui("ingredients")}: ${ings}`);
+        parts.push(ui("customizePrompt"));
         setTimeout(() => speak(parts.filter(Boolean).join('. ')), 300);
       }
     });
     observer.observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
   }
+
+
+  function watchDynamicLabels() {
+  const menu = document.getElementById("customer-menu");
+  const tabs = document.getElementById("customer-tabs");
+
+  const observer = new MutationObserver(() => {
+    improveLabels();
+  });
+
+  if (menu) {
+    observer.observe(menu, { childList: true, subtree: true });
+  }
+
+  if (tabs) {
+    observer.observe(tabs, { childList: true, subtree: true });
+  }
+}
+
 
   document.addEventListener('DOMContentLoaded', () => {
     getLiveRegion();
@@ -362,6 +450,7 @@
     updateVoiceButton();
     improveLabels();
     wireHoverSpeech();
+    watchDynamicLabels();
     wireFocusSpeech();
     wireClickSpeech();
     wireSelectSpeech();
