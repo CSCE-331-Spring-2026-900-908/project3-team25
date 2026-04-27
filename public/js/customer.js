@@ -2134,7 +2134,7 @@ async function loadCustomerMenu() {
   const res = await fetch('/api/menu');
   const data = await res.json();
   customerMenu = data.items || [];
-  customerCategories = Object.keys(data.categories || {});
+  customerCategories = Object.keys(data.categories || {}).filter(c => c !== 'topping');
   if (!customerCategories.includes(customerActiveCategory)) {
     customerActiveCategory = customerCategories[0] || '';
   }
