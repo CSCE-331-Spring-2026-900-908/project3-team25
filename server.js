@@ -1105,6 +1105,82 @@ app.get('/api/analytics/xreport', requireMgrRoute, async (_req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Z-Report: check if already run today ─────────────────────────────────────
+app.get('/api/analytics/zreport/status', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ run_today: false });
+  try {
+    await queryDb(`CREATE TABLE IF NOT EXISTS z_report_log (
+      id SERIAL PRIMARY KEY,
+      run_date DATE NOT NULL,
+      total_orders INT,
+      total_revenue NUMERIC(10,2),
+      cash_total NUMERIC(10,2),
+      card_total NUMERIC(10,2),
+      applepay_total NUMERIC(10,2),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    const r = await queryDb(
+      `SELECT id FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
+    );
+    res.json({ run_today: r.rows.length > 0 });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Z-Report: generate (once per day) ────────────────────────────────────────
+app.post('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ rows: [], totals: {} });
+  try {
+    await queryDb(`CREATE TABLE IF NOT EXISTS z_report_log (
+      id SERIAL PRIMARY KEY,
+      run_date DATE NOT NULL,
+      total_orders INT,
+      total_revenue NUMERIC(10,2),
+      cash_total NUMERIC(10,2),
+      card_total NUMERIC(10,2),
+      applepay_total NUMERIC(10,2),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    const today = await queryDb(
+      `SELECT id FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
+    );
+    if (today.rows.length > 0) {
+      return res.status(409).json({ error: 'Z-Report has already been run today.' });
+    }
+    const r = await queryDb(`
+      WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
+      day_tx AS (
+        SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
+               totalamount, paymentmethod
+        FROM transactions
+        WHERE status='completed'
+          AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+              = (NOW() AT TIME ZONE 'America/Chicago')::date
+      )
+      SELECT h.hour_of_day,
+             COALESCE(COUNT(d.totalamount),0)  AS orders,
+             COALESCE(SUM(d.totalamount),0)    AS revenue,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='cash'     THEN d.totalamount ELSE 0 END),0) AS cash_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='card'     THEN d.totalamount ELSE 0 END),0) AS card_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='applepay' THEN d.totalamount ELSE 0 END),0) AS applepay_total
+      FROM hours h LEFT JOIN day_tx d ON d.hour_of_day=h.hour_of_day
+      GROUP BY h.hour_of_day ORDER BY h.hour_of_day`);
+    const rows = r.rows;
+    const totals = {
+      orders:   rows.reduce((s,row) => s + Number(row.orders||0), 0),
+      revenue:  rows.reduce((s,row) => s + Number(row.revenue||0), 0),
+      cash:     rows.reduce((s,row) => s + Number(row.cash_total||0), 0),
+      card:     rows.reduce((s,row) => s + Number(row.card_total||0), 0),
+      applepay: rows.reduce((s,row) => s + Number(row.applepay_total||0), 0),
+    };
+    await queryDb(
+      `INSERT INTO z_report_log (run_date, total_orders, total_revenue, cash_total, card_total, applepay_total)
+       VALUES ((NOW() AT TIME ZONE 'America/Chicago')::date, $1, $2, $3, $4, $5)`,
+      [totals.orders, totals.revenue, totals.cash, totals.card, totals.applepay]
+    );
+    res.json({ rows, totals });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [] });
   try {

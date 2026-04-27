@@ -430,7 +430,7 @@
     <div class="mgr-panel" id="tab-reports">
       <div class="mgr-card">
         <div class="top-row">
-          <h3>X-Report — Today's Hourly Breakdown</h3>
+          <h3>X-Report: Today's Hourly Breakdown</h3>
           <button class="action-btn primary" onclick="loadXReport()">Refresh</button>
         </div>
         <div class="xreport-grid" id="xreport-summary"></div>
@@ -439,6 +439,23 @@
           <tbody id="xreport-tbody"></tbody>
         </table>
       </div>
+      <div class="mgr-card" id="zreport-card">
+        <div class="top-row">
+          <div>
+            <h3>Z-Report: End of Day Summary</h3>
+            <p class="muted" style="margin:0;font-size:0.82rem;" id="zreport-status-msg">Run once at end of day to close out and reset daily totals.</p>
+          </div>
+          <button class="action-btn primary" id="zreport-btn" onclick="generateZReport()">Generate Z-Report</button>
+        </div>
+        <div id="zreport-output" style="display:none;">
+          <div class="xreport-grid" id="zreport-summary"></div>
+          <table>
+            <thead><tr><th>Hour</th><th>Orders</th><th>Revenue</th><th>Card</th><th>Cash</th><th>Apple Pay</th></tr></thead>
+            <tbody id="zreport-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="mgr-card">
         <h3>Weekly Extremes</h3>
         <table>

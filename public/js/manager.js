@@ -21,7 +21,7 @@ document.querySelectorAll('.mgr-tab').forEach(btn => {
     if (btn.dataset.tab === 'menu')      loadMenuEditor();
     if (btn.dataset.tab === 'inventory') loadFullInventory();
     if (btn.dataset.tab === 'employees') { loadEmployees(); }
-    if (btn.dataset.tab === 'reports')   { loadXReport(); loadBestOfWorst(); }
+    if (btn.dataset.tab === 'reports')   { loadXReport(); loadBestOfWorst(); checkZReportStatus(); }
     if (btn.dataset.tab === 'requests')  loadStaffRequests();
     if (btn.dataset.tab === 'loginlog')  loadLoginLog();
   });
@@ -68,9 +68,9 @@ async function loadOverview() {
     document.getElementById('orders-tbody').innerHTML = (recent.items || []).map(i => `
       <tr>
         <td>#${i.transactionid || i.transactionId}</td>
-        <td>${i.cashier_name || i.cashierid || i.cashierId || '—'}</td>
+        <td>${i.cashier_name || i.cashierid || i.cashierId || 'N/A'}</td>
         <td><strong>${fmt(i.totalamount || i.totalAmount)}</strong></td>
-        <td style="text-transform:capitalize">${i.paymentmethod || i.paymentMethod || '—'}</td>
+        <td style="text-transform:capitalize">${i.paymentmethod || i.paymentMethod || 'N/A'}</td>
         <td>${(i.transactiontime||i.transactionTime||'').toString().slice(0,10)}</td>
         <td><span class="badge-ok">${i.status}</span></td>
       </tr>`).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
@@ -152,7 +152,7 @@ async function loadSalesCharts() {
     // Peak days table
     document.getElementById('peak-tbody').innerHTML = (peak.rows || []).map(r => `
       <tr>
-        <td>${r.day||r.transactiontime||'—'}</td>
+        <td>${r.day||r.transactiontime||'N/A'}</td>
         <td><strong>${fmt(r.revenue)}</strong></td>
         <td>${fmtN(r.orders)}</td>
       </tr>`).join('') || '<tr><td colspan="3" class="muted">No data yet.</td></tr>';
@@ -238,7 +238,7 @@ let ingProductId = null;
 
 async function openIngModal(productId, productName) {
   ingProductId = productId;
-  document.getElementById('ing-modal-title').textContent = `Ingredients — ${productName}`;
+  document.getElementById('ing-modal-title').textContent = `Ingredients: ${productName}`;
   document.getElementById('ing-rows').innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading…</p>';
   document.getElementById('ing-modal').classList.add('open');
 
@@ -312,7 +312,7 @@ async function saveMenuItem() {
       // NEW item — show inline ingredients section without closing modal
       await loadMenuEditor();
       document.getElementById('menu-modal-id').value = data.id;
-      document.getElementById('menu-modal-title').textContent = `Add Ingredients — ${name}`;
+      document.getElementById('menu-modal-title').textContent = `Add Ingredients: ${name}`;
       ingProductId = data.id;
       const ingSection = document.getElementById('menu-modal-ing-section');
       if (ingSection) {
@@ -621,6 +621,66 @@ async function loadXReport() {
       </tr>`).join('') || '<tr><td colspan="6" class="muted" style="padding:20px;">No orders today yet.</td></tr>';
 }
 window.loadXReport = loadXReport;
+
+// ── Z-Report ──────────────────────────────────────────────────────────────────
+async function checkZReportStatus() {
+  try {
+    const res  = await fetch('/api/analytics/zreport/status');
+    const data = res.ok ? await res.json() : { run_today: false };
+    const btn  = document.getElementById('zreport-btn');
+    const msg  = document.getElementById('zreport-status-msg');
+    if (data.run_today) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Already Run Today'; }
+      if (msg) msg.textContent = 'Z-Report has already been generated for today. It can only be run once per day.';
+    }
+  } catch(e) { /* silently ignore */ }
+}
+
+async function generateZReport() {
+  const btn = document.getElementById('zreport-btn');
+  if (!btn || btn.disabled) return;
+  if (!confirm('Generate the Z-Report? This closes out today and can only be done once per day.')) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  const res  = await fetch('/api/analytics/zreport', { method: 'POST' });
+  if (res.status === 409) {
+    alert('Z-Report has already been run today.');
+    btn.textContent = 'Already Run Today';
+    return;
+  }
+  const data = res.ok ? await res.json() : { rows: [], totals: {} };
+  const rows   = data.rows   || [];
+  const totals = data.totals || {};
+
+  document.getElementById('zreport-summary').innerHTML = `
+    <div class="xr-cell"><div class="xv">${totals.orders ?? 0}</div><div class="xl">Total Orders</div></div>
+    <div class="xr-cell"><div class="xv">${fmt(totals.revenue)}</div><div class="xl">Total Revenue</div></div>
+    <div class="xr-cell"><div class="xv">${fmt(totals.card)}</div><div class="xl">Card</div></div>
+    <div class="xr-cell"><div class="xv">${fmt(totals.cash)}</div><div class="xl">Cash</div></div>
+    <div class="xr-cell"><div class="xv">${fmt(totals.applepay)}</div><div class="xl">Apple Pay</div></div>
+  `;
+
+  document.getElementById('zreport-tbody').innerHTML = rows
+    .filter(r => Number(r.orders||0) > 0)
+    .map(r => `
+      <tr>
+        <td>${String(r.hour_of_day).padStart(2,'0')}:00</td>
+        <td>${r.orders}</td>
+        <td>${fmt(r.revenue)}</td>
+        <td>${fmt(r.card_total)}</td>
+        <td>${fmt(r.cash_total)}</td>
+        <td>${fmt(r.applepay_total)}</td>
+      </tr>`).join('') || '<tr><td colspan="6" class="muted" style="padding:20px;">No orders today.</td></tr>';
+
+  document.getElementById('zreport-output').style.display = 'block';
+
+  const msg = document.getElementById('zreport-status-msg');
+  if (msg) msg.textContent = 'Z-Report generated. Daily totals have been recorded and the day is now closed.';
+  btn.textContent = 'Already Run Today';
+}
+window.generateZReport = generateZReport;
 
 // ── Best of Worst ─────────────────────────────────────────────────────────────
 async function loadBestOfWorst() {
