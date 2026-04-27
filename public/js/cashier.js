@@ -20,10 +20,10 @@ const EXTRA_BOBA_PRICE = 0.75;
 
 const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
 let CASHIER_TOPPINGS = [
-  { name: 'Extra Boba',    price: 0.75 },
-  { name: 'Grass Jelly',   price: 0.75 },
-  { name: 'Egg Pudding',   price: 0.75 },
-  { name: 'Coconut Jelly', price: 0.75 },
+  { name: 'Extra Boba Add-on', price: 0.75 },
+  { name: 'Grass Jelly',       price: 0.75 },
+  { name: 'Egg Pudding',       price: 0.75 },
+  { name: 'Coconut Jelly',     price: 0.75 },
 ];
 
 async function loadCashierToppings() {

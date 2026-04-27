@@ -1533,4 +1533,35 @@ app.get('/api/staff-log', async (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
-app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
+
+// ── Seed missing toppings into DB on startup ──────────────────────────────────
+const REQUIRED_TOPPINGS = [
+  { name: 'Extra Boba Add-on', price: 0.75 },
+  { name: 'Grass Jelly',       price: 0.75 },
+  { name: 'Egg Pudding',       price: 0.75 },
+  { name: 'Coconut Jelly',     price: 0.75 },
+];
+
+async function seedToppings() {
+  if (!hasDbConfig()) return;
+  try {
+    const existing = await queryDb(`SELECT name FROM product WHERE category='topping'`);
+    const existingNames = new Set(existing.rows.map(r => r.name.trim().toLowerCase()));
+    for (const tp of REQUIRED_TOPPINGS) {
+      if (!existingNames.has(tp.name.toLowerCase())) {
+        await queryDb(
+          `INSERT INTO product (name, category, baseprice, is_active) VALUES ($1, 'topping', $2, true)`,
+          [tp.name, tp.price]
+        );
+        console.log(`Seeded missing topping: ${tp.name}`);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not seed toppings:', e.message);
+  }
+}
+
+(async () => {
+  await seedToppings();
+  app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
+})();

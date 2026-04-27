@@ -13,10 +13,10 @@ let guestCheckoutRequested = false;
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
 
 let TOPPINGS = [
-  { name: 'Extra Boba',    price: 0.75 },
-  { name: 'Grass Jelly',   price: 0.75 },
-  { name: 'Egg Pudding',   price: 0.75 },
-  { name: 'Coconut Jelly', price: 0.75 },
+  { name: 'Extra Boba Add-on', price: 0.75 },
+  { name: 'Grass Jelly',       price: 0.75 },
+  { name: 'Egg Pudding',       price: 0.75 },
+  { name: 'Coconut Jelly',     price: 0.75 },
 ];
 
 async function loadToppings() {
