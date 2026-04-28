@@ -13,10 +13,10 @@ let guestCheckoutRequested = false;
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
 
 const TOPPINGS = [
-  { name: 'Extra Boba',    price: 0.75 },
-  { name: 'Grass Jelly',   price: 0.75 },
-  { name: 'Egg Pudding',   price: 0.75 },
-  { name: 'Coconut Jelly', price: 0.75 },
+  { name: 'Extra Boba',    price: 0.75, key: 'extraBobaName' },
+  { name: 'Grass Jelly',   price: 0.75, key: 'grassJelly'    },
+  { name: 'Egg Pudding',   price: 0.75, key: 'eggPudding'    },
+  { name: 'Coconut Jelly', price: 0.75, key: 'coconutJelly'  },
 ];
 const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
 
@@ -773,7 +773,7 @@ function renderToppingChecks(containerId, selected = []) {
   wrap.innerHTML = TOPPINGS.map(tp =>
     `<label class="topping-check">
       <input type="checkbox" value="${tp.name}" ${selected.includes(tp.name) ? 'checked' : ''} />
-      <span>${tp.name} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
+      <span>${t(tp.key)} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
     </label>`
   ).join('');
   wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', updateModalPrice));
