@@ -1725,17 +1725,17 @@ function tryFinishSpin() {
   const codeEl = document.getElementById('spin-promo-code');
 
   if (spinResult) {
-    const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
-    // Use segmentIndex from server for accurate wheel snap
-    const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
-      s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
-    );
-    if (segIdx >= 0) {
-      const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
-      const n = Math.round((spinAngle - base) / (2 * Math.PI));
-      spinAngle = base + n * 2 * Math.PI;
-      drawWheel();
-    }
+    // const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
+    // // Use segmentIndex from server for accurate wheel snap
+    // const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
+    //   s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
+    // );
+    // if (segIdx >= 0) {
+    //   const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
+    //   const n = Math.round((spinAngle - base) / (2 * Math.PI));
+    //   spinAngle = base + n * 2 * Math.PI;
+    //   drawWheel();
+    // }
 
     prizeEl.textContent = `${t('youWon')}: ${rewardLabel(spinResult.prize?.label || t('prize'))}!`;
     codeEl.textContent = spinResult.code ? `${t('code')}: ${spinResult.code}` : '';
@@ -1772,6 +1772,7 @@ function tryFinishSpin() {
 
 async function executeSpin() {
   if (!canSpin || spinning) return;
+
   spinning = true;
   spinAnimDone = false;
   spinApiDone = false;
@@ -1781,10 +1782,29 @@ async function executeSpin() {
   btn.disabled = true;
   btn.textContent = t('spinning');
 
-  const extraSpins = 5 + Math.random() * 3;
-  const targetAngle = spinAngle + extraSpins * 2 * Math.PI + Math.random() * 2 * Math.PI;
-  const duration = 4000;
+  try {
+    const res = await fetch('/api/spin', { method: 'POST' });
+    spinResult = await res.json();
+  } catch (_) {
+    spinResult = {
+      prize: { label: 'Free Topping', type: 'free_topping', value: 0, segmentIndex: 1 },
+      code: 'RBT-DEMO'
+    };
+  }
+
+  const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
+  const segIdx = spinResult.prize?.segmentIndex ?? 1;
+
   const startAngle = spinAngle;
+  const extraSpins = 6 + Math.floor(Math.random() * 3);
+
+  // pointer is at top, so center selected segment under top pointer
+  const targetAngle =
+    -Math.PI / 2 -
+    (segIdx + 0.5) * segAngle +
+    extraSpins * 2 * Math.PI;
+
+  const duration = 4000;
   const startTime = performance.now();
 
   function easeOutFn(p) {
@@ -1795,26 +1815,20 @@ async function executeSpin() {
     const progress = Math.min((now - startTime) / duration, 1);
     spinAngle = startAngle + (targetAngle - startAngle) * easeOutFn(progress);
     drawWheel();
+
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
+      spinAngle = targetAngle;
+      drawWheel();
+
       spinAnimDone = true;
-      if (!spinApiDone) btn.textContent = t('processing');
+      spinApiDone = true;
       tryFinishSpin();
     }
   }
 
   requestAnimationFrame(animate);
-
-  try {
-    const res = await fetch('/api/spin', { method: 'POST' });
-    spinResult = await res.json();
-  } catch (_) {
-    spinResult = { prize: { label: 'Free Topping', type: 'free_topping', value: 0 }, code: 'RBT-DEMO' };
-  }
-
-  spinApiDone = true;
-  tryFinishSpin();
 }
 
 document.getElementById('spin-btn').addEventListener('click', executeSpin);
