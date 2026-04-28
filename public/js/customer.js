@@ -215,21 +215,21 @@ const TRANSLATIONS = {
     signOut: 'Sign Out',
     signInBeforeCheckout: 'Sign in before checkout?',
     signInBeforeCheckoutSubtitle: 'Sign in to earn reward points, or continue as a guest.',
-    scanQrCode: 'Scan QR Code',
+    //scanQrCode: 'Scan QR Code',
     signInWithGoogle: 'Sign In with Google',
-    scanQrInstructions: 'Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.',
+    //scanQrInstructions: 'Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.',
     waitingForPhoneSignIn: 'Waiting for phone sign-in…',
     googleKioskInstructions: 'Use Google on this kiosk to sign in before you pay.',
     continueWithGoogle: 'Continue with Google',
     continueAsGuest: 'Continue as Guest',
     signInForRewards: 'Sign In for Rewards',
     closeSignIn: 'Close sign-in popup',
-    signInQrAlt: 'Sign in QR code',
+    //signInQrAlt: 'Sign in QR code',
     preparingSecureSignIn: 'Preparing secure sign-in…',
-    scanQrFinishGoogle: 'Scan the QR code with your phone, then finish Google sign-in there.',
+    //scanQrFinishGoogle: 'Scan the QR code with your phone, then finish Google sign-in there.',
     signInCompleteConnecting: 'Sign-in complete. Connecting this kiosk…',
-    qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
-    couldNotCreateQr: 'Could not create QR sign-in.',
+    //qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
+    //couldNotCreateQr: 'Could not create QR sign-in.',
     couldNotFinishKioskSignIn: 'Could not finish kiosk sign-in.'
 
   },
@@ -371,20 +371,20 @@ const TRANSLATIONS = {
     signOut: 'Cerrar sesión',
     signInBeforeCheckout: '¿Iniciar sesión antes de pagar?',
     signInBeforeCheckoutSubtitle: 'Inicia sesión para ganar puntos de recompensa, o continúa como invitado.',
-    scanQrCode: 'Escanear código QR',
+    //scanQrCode: 'Escanear código QR',
     signInWithGoogle: 'Iniciar sesión con Google',
-    scanQrInstructions: 'Escanea este código con tu teléfono para iniciar sesión, y el quiosco continuará automáticamente en esta computadora.',
+    //scanQrInstructions: 'Escanea este código con tu teléfono para iniciar sesión, y el quiosco continuará automáticamente en esta computadora.',
     waitingForPhoneSignIn: 'Esperando inicio de sesión desde el teléfono…',
     googleKioskInstructions: 'Usa Google en este quiosco para iniciar sesión antes de pagar.',
     continueWithGoogle: 'Continuar con Google',
     continueAsGuest: 'Continuar como invitado',
     signInForRewards: 'Iniciar sesión para recompensas',
     closeSignIn: 'Cerrar ventana de inicio de sesión',
-    signInQrAlt: 'Código QR para iniciar sesión',
+    //signInQrAlt: 'Código QR para iniciar sesión',
     preparingSecureSignIn: 'Preparando inicio de sesión seguro…',
-    scanQrFinishGoogle: 'Escanea el código QR con tu teléfono y luego termina el inicio de sesión con Google allí.',
+    //scanQrFinishGoogle: 'Escanea el código QR con tu teléfono y luego termina el inicio de sesión con Google allí.',
     signInCompleteConnecting: 'Inicio de sesión completo. Conectando este quiosco…',
-    qrExpired: 'Este código QR expiró. Vuelve a abrir la ventana de inicio de sesión para obtener uno nuevo.',
+    //qrExpired: 'Este código QR expiró. Vuelve a abrir la ventana de inicio de sesión para obtener uno nuevo.',
     couldNotCreateQr: 'No se pudo crear el inicio de sesión con QR.',
     couldNotFinishKioskSignIn: 'No se pudo terminar el inicio de sesión en el quiosco.'
   }
@@ -883,8 +883,10 @@ function openGuestLoginOverlay(fromCheckout = false) {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   overlay.classList.add('open');
-  switchGuestLoginTab('qr');
-  startGuestPairing(); // Generate real QR code for phone sign-in
+
+  // QR sign-in disabled: open the modal directly on Google sign-in.
+  switchGuestLoginTab('google');
+  // startGuestPairing(); // QR phone pairing disabled.
 }
 
 function closeGuestLoginOverlay() {
@@ -897,21 +899,23 @@ function closeGuestLoginOverlay() {
 }
 
 function switchGuestLoginTab(tab) {
+  // QR sign-in disabled: always show the Google sign-in panel.
   const qrBtn = document.getElementById('guest-login-tab-qr');
   const googleBtn = document.getElementById('guest-login-tab-google');
   const qrPanel = document.getElementById('guest-login-qr-panel');
   const googlePanel = document.getElementById('guest-login-google-panel');
-  if (!qrBtn || !googleBtn || !qrPanel || !googlePanel) return;
 
-  const qrActive = tab === 'qr';
-  qrBtn.style.background = qrActive ? 'var(--accent)' : '#fff';
-  qrBtn.style.color = qrActive ? '#fff' : 'var(--muted)';
-  googleBtn.style.background = qrActive ? '#fff' : 'var(--accent)';
-  googleBtn.style.color = qrActive ? 'var(--muted)' : '#fff';
-  qrPanel.style.display = qrActive ? '' : 'none';
-  googlePanel.style.display = qrActive ? 'none' : '';
+  if (qrBtn) qrBtn.style.display = 'none';
+  if (qrPanel) qrPanel.style.display = 'none';
+  if (googlePanel) googlePanel.style.display = '';
+
+  if (googleBtn) {
+    googleBtn.style.background = 'var(--accent)';
+    googleBtn.style.color = '#fff';
+  }
 }
 
+/* QR SIGN-IN DISABLED: old phone pairing logic kept here for rollback/reference.
 async function startGuestPairing() {
   const img = document.getElementById('guest-login-qr-image');
   const status = document.getElementById('guest-login-qr-status');
@@ -966,6 +970,7 @@ async function checkGuestPairingStatus() {
     if (statusEl) statusEl.textContent = err.message;
   }
 }
+*/
 
 function startCustomerGoogleLogin(fromCheckout = false) {
   guestCheckoutRequested = fromCheckout;
@@ -1063,7 +1068,8 @@ function renderMenu() {
   const displayName = translateDrinkName(item.name);
 
   return `
-    <article class="menu-card" data-id="${item.id}">
+    <article class="menu-card" data-id="${item.id}" tabindex="0" role="button"
+             aria-label="${displayName}, $${Number(item.price).toFixed(2)}">
       <div class="drink-image-wrap">
         <div class="drink-image" style="background-image:url('${getDrinkImg(item.name)}');"></div>
       </div>
@@ -1089,13 +1095,13 @@ function renderMenu() {
       if (item) openDrinkModal(item);
     });
 
-    // card.addEventListener('keydown', e => {
-    //   if (e.key === 'Enter' || e.key === ' ') {
-    //     e.preventDefault();
-    //     const item = customerMenu.find(x => x.id === Number(card.dataset.id));
-    //     if (item) openDrinkModal(item);
-    //   }
-    // });
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const item = customerMenu.find(x => x.id === Number(card.dataset.id));
+        if (item) openDrinkModal(item);
+      }
+    });
   });
 
   wrap.querySelectorAll('.add-btn').forEach(btn => {
@@ -1725,17 +1731,17 @@ function tryFinishSpin() {
   const codeEl = document.getElementById('spin-promo-code');
 
   if (spinResult) {
-    // const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
-    // // Use segmentIndex from server for accurate wheel snap
-    // const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
-    //   s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
-    // );
-    // if (segIdx >= 0) {
-    //   const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
-    //   const n = Math.round((spinAngle - base) / (2 * Math.PI));
-    //   spinAngle = base + n * 2 * Math.PI;
-    //   drawWheel();
-    // }
+    const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
+    // Use segmentIndex from server for accurate wheel snap
+    const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
+      s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
+    );
+    if (segIdx >= 0) {
+      const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
+      const n = Math.round((spinAngle - base) / (2 * Math.PI));
+      spinAngle = base + n * 2 * Math.PI;
+      drawWheel();
+    }
 
     prizeEl.textContent = `${t('youWon')}: ${rewardLabel(spinResult.prize?.label || t('prize'))}!`;
     codeEl.textContent = spinResult.code ? `${t('code')}: ${spinResult.code}` : '';
@@ -1772,7 +1778,6 @@ function tryFinishSpin() {
 
 async function executeSpin() {
   if (!canSpin || spinning) return;
-
   spinning = true;
   spinAnimDone = false;
   spinApiDone = false;
@@ -1782,29 +1787,10 @@ async function executeSpin() {
   btn.disabled = true;
   btn.textContent = t('spinning');
 
-  try {
-    const res = await fetch('/api/spin', { method: 'POST' });
-    spinResult = await res.json();
-  } catch (_) {
-    spinResult = {
-      prize: { label: 'Free Topping', type: 'free_topping', value: 0, segmentIndex: 1 },
-      code: 'RBT-DEMO'
-    };
-  }
-
-  const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
-  const segIdx = spinResult.prize?.segmentIndex ?? 1;
-
-  const startAngle = spinAngle;
-  const extraSpins = 6 + Math.floor(Math.random() * 3);
-
-  // pointer is at top, so center selected segment under top pointer
-  const targetAngle =
-    -Math.PI / 2 -
-    (segIdx + 0.5) * segAngle +
-    extraSpins * 2 * Math.PI;
-
+  const extraSpins = 5 + Math.random() * 3;
+  const targetAngle = spinAngle + extraSpins * 2 * Math.PI + Math.random() * 2 * Math.PI;
   const duration = 4000;
+  const startAngle = spinAngle;
   const startTime = performance.now();
 
   function easeOutFn(p) {
@@ -1815,20 +1801,26 @@ async function executeSpin() {
     const progress = Math.min((now - startTime) / duration, 1);
     spinAngle = startAngle + (targetAngle - startAngle) * easeOutFn(progress);
     drawWheel();
-
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
-      spinAngle = targetAngle;
-      drawWheel();
-
       spinAnimDone = true;
-      spinApiDone = true;
+      if (!spinApiDone) btn.textContent = t('processing');
       tryFinishSpin();
     }
   }
 
   requestAnimationFrame(animate);
+
+  try {
+    const res = await fetch('/api/spin', { method: 'POST' });
+    spinResult = await res.json();
+  } catch (_) {
+    spinResult = { prize: { label: 'Free Topping', type: 'free_topping', value: 0 }, code: 'RBT-DEMO' };
+  }
+
+  spinApiDone = true;
+  tryFinishSpin();
 }
 
 document.getElementById('spin-btn').addEventListener('click', executeSpin);
@@ -2062,10 +2054,12 @@ document.getElementById('guest-login-close')?.addEventListener('click', closeGue
 document.getElementById('guest-login-overlay')?.addEventListener('click', event => {
   if (event.target.id === 'guest-login-overlay') closeGuestLoginOverlay();
 });
+/* QR SIGN-IN DISABLED: QR tab listener removed.
 document.getElementById('guest-login-tab-qr')?.addEventListener('click', () => {
   switchGuestLoginTab('qr');
   if (!guestLoginPairToken) startGuestPairing();
 });
+*/
 document.getElementById('guest-login-tab-google')?.addEventListener('click', () => switchGuestLoginTab('google'));
 document.getElementById('guest-login-google-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
 document.getElementById('guest-login-rewards-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));

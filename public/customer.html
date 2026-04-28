@@ -9,9 +9,9 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
-  <nav class="accessibility-toolbar" aria-label="Accessibility controls">
+  <div class="accessibility-toolbar" aria-label="Accessibility controls">
     <button id="voiceGuideToggle" class="access-btn" type="button" aria-pressed="false" data-tooltip="Voice Guide: Off">🔇</button>
-  </nav>
+  </div>
 
   <!-- ── Drink Detail Modal ─────────────────────────────── -->
   <div class="drink-modal-overlay" id="drink-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-drink-name">
@@ -383,11 +383,14 @@
           <button id="guest-login-close" type="button" aria-label="Close sign-in popup" style="background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);">✕</button>
         </div>
 
+        <!-- QR SIGN-IN DISABLED: leaving only Google sign-in on the kiosk.
         <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
           <button id="guest-login-tab-qr" type="button" style="padding:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:700;cursor:pointer;">📱 Scan QR Code</button>
           <button id="guest-login-tab-google" type="button" style="padding:12px;border:none;background:#fff;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;">Sign In with Google</button>
         </div>
+        -->
 
+        <!-- QR SIGN-IN DISABLED: old phone pairing panel kept here for rollback/reference.
         <div id="guest-login-qr-panel">
           <p id="guest-login-qr-instructions" style="margin:0 0 12px;color:var(--muted);text-align:center;font-size:0.9rem;">
             📱 Scan with your phone → sign in with Google → kiosk updates automatically
@@ -406,8 +409,9 @@
             <button type="button" onclick="startGuestPairing()" style="background:none;border:none;color:var(--accent-dark);font:inherit;font-size:0.8rem;cursor:pointer;text-decoration:underline;">↺ Refresh QR Code</button>
           </div>
         </div>
+        -->
 
-        <div id="guest-login-google-panel" style="display:none;">
+        <div id="guest-login-google-panel" style="display:block;">
           <p id="guest-login-google-instructions" style="margin:0 0 14px;color:var(--muted);text-align:center;">Use Google on this kiosk to sign in before you pay.</p>
           <button id="guest-login-google-btn" type="button" class="btn" style="width:100%;">Continue with Google</button>
         </div>
