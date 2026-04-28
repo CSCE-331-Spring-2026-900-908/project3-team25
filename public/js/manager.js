@@ -625,35 +625,20 @@ window.loadXReport = loadXReport;
 // ── Z-Report ──────────────────────────────────────────────────────────────────
 async function checkZReportStatus() {
   try {
-    const res  = await fetch('/api/analytics/zreport/status');
+    const res  = await fetch('/api/analytics/zreport');
     const data = res.ok ? await res.json() : { run_today: false };
     const btn  = document.getElementById('zreport-btn');
     const msg  = document.getElementById('zreport-status-msg');
     if (data.run_today) {
       if (btn) { btn.disabled = true; btn.textContent = 'Already Run Today'; }
-      if (msg) msg.textContent = 'Z-Report has already been generated for today. It can only be run once per day.';
+      if (msg) msg.textContent = 'Z-Report generated. Daily totals have been recorded and the day is now closed.';
+      // Display the saved Z-report data
+      displayZReport(data.rows || [], data.totals || {});
     }
   } catch(e) { /* silently ignore */ }
 }
 
-async function generateZReport() {
-  const btn = document.getElementById('zreport-btn');
-  if (!btn || btn.disabled) return;
-  if (!confirm('Generate the Z-Report? This closes out today and can only be done once per day.')) return;
-
-  btn.disabled = true;
-  btn.textContent = 'Generating...';
-
-  const res  = await fetch('/api/analytics/zreport', { method: 'POST' });
-  if (res.status === 409) {
-    alert('Z-Report has already been run today.');
-    btn.textContent = 'Already Run Today';
-    return;
-  }
-  const data = res.ok ? await res.json() : { rows: [], totals: {} };
-  const rows   = data.rows   || [];
-  const totals = data.totals || {};
-
+function displayZReport(rows, totals) {
   document.getElementById('zreport-summary').innerHTML = `
     <div class="xr-cell"><div class="xv">${totals.orders ?? 0}</div><div class="xl">Total Orders</div></div>
     <div class="xr-cell"><div class="xv">${fmt(totals.revenue)}</div><div class="xl">Total Revenue</div></div>
@@ -661,7 +646,6 @@ async function generateZReport() {
     <div class="xr-cell"><div class="xv">${fmt(totals.cash)}</div><div class="xl">Cash</div></div>
     <div class="xr-cell"><div class="xv">${fmt(totals.applepay)}</div><div class="xl">Apple Pay</div></div>
   `;
-
   document.getElementById('zreport-tbody').innerHTML = rows
     .filter(r => Number(r.orders||0) > 0)
     .map(r => `
@@ -673,12 +657,35 @@ async function generateZReport() {
         <td>${fmt(r.cash_total)}</td>
         <td>${fmt(r.applepay_total)}</td>
       </tr>`).join('') || '<tr><td colspan="6" class="muted" style="padding:20px;">No orders today.</td></tr>';
-
   document.getElementById('zreport-output').style.display = 'block';
+}
+
+async function generateZReport() {
+  const btn = document.getElementById('zreport-btn');
+  if (!btn || btn.disabled) return;
+  if (!confirm('Generate the Z-Report? This closes out today and can only be done once per day.')) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  const res = await fetch('/api/analytics/zreport', { method: 'POST' });
+  if (res.status === 409) {
+    alert('Z-Report has already been run today.');
+    btn.textContent = 'Already Run Today';
+    return;
+  }
+  const data   = res.ok ? await res.json() : { rows: [], totals: {} };
+  const rows   = data.rows   || [];
+  const totals = data.totals || {};
+
+  displayZReport(rows, totals);
 
   const msg = document.getElementById('zreport-status-msg');
   if (msg) msg.textContent = 'Z-Report generated. Daily totals have been recorded and the day is now closed.';
   btn.textContent = 'Already Run Today';
+
+  // Reload X-report so it resets to zero now that transactions are closed
+  loadXReport();
 }
 window.generateZReport = generateZReport;
 

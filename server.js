@@ -1140,6 +1140,48 @@ app.get('/api/analytics/zreport/status', requireMgrRoute, async (_req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Z-Report: get today's saved report if already run ────────────────────────
+app.get('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
+  if (!hasDbConfig()) return res.json({ run_today: false, rows: [], totals: {} });
+  try {
+    const r = await queryDb(
+      `SELECT * FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date LIMIT 1`
+    );
+    if (r.rows.length === 0) return res.json({ run_today: false });
+    const log = r.rows[0];
+    // Also fetch hourly breakdown for today from closed transactions
+    const hourly = await queryDb(`
+      WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
+      day_tx AS (
+        SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
+               totalamount, paymentmethod
+        FROM transactions
+        WHERE (status='completed' OR status='closed')
+          AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+              = (NOW() AT TIME ZONE 'America/Chicago')::date
+      )
+      SELECT h.hour_of_day,
+             COALESCE(COUNT(d.totalamount),0) AS orders,
+             COALESCE(SUM(d.totalamount),0) AS revenue,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='cash'     THEN d.totalamount ELSE 0 END),0) AS cash_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='card'     THEN d.totalamount ELSE 0 END),0) AS card_total,
+             COALESCE(SUM(CASE WHEN d.paymentmethod='applepay' THEN d.totalamount ELSE 0 END),0) AS applepay_total
+      FROM hours h LEFT JOIN day_tx d ON d.hour_of_day=h.hour_of_day
+      GROUP BY h.hour_of_day ORDER BY h.hour_of_day`);
+    res.json({
+      run_today: true,
+      rows: hourly.rows,
+      totals: {
+        orders:   Number(log.total_orders),
+        revenue:  Number(log.total_revenue),
+        cash:     Number(log.cash_total),
+        card:     Number(log.card_total),
+        applepay: Number(log.applepay_total),
+      }
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Z-Report: generate (once per day) ────────────────────────────────────────
 app.post('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [], totals: {} });
@@ -1186,11 +1228,20 @@ app.post('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
       card:     rows.reduce((s,row) => s + Number(row.card_total||0), 0),
       applepay: rows.reduce((s,row) => s + Number(row.applepay_total||0), 0),
     };
+    // Save the Z-report summary
     await queryDb(
       `INSERT INTO z_report_log (run_date, total_orders, total_revenue, cash_total, card_total, applepay_total)
        VALUES ((NOW() AT TIME ZONE 'America/Chicago')::date, $1, $2, $3, $4, $5)`,
       [totals.orders, totals.revenue, totals.cash, totals.card, totals.applepay]
     );
+    // Mark today's completed transactions as 'closed' so X-report resets to zero
+    await queryDb(`
+      UPDATE transactions
+      SET status = 'closed'
+      WHERE status = 'completed'
+        AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
+            = (NOW() AT TIME ZONE 'America/Chicago')::date
+    `);
     res.json({ rows, totals });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
