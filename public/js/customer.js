@@ -113,6 +113,7 @@ const TRANSLATIONS = {
     sweetness: 'Sweetness',
     iceLevel: 'Ice Level',
     size: 'Size',
+    temperature: 'Temperature',
     topping: 'Topping',
     noSugar: 'No Sugar',
     quarterSugar: 'Quarter Sugar',
@@ -269,6 +270,7 @@ const TRANSLATIONS = {
     sweetness: 'Dulzor',
     iceLevel: 'Nivel de hielo',
     size: 'Tamaño',
+    temperature: 'Temperatura',
     topping: 'Ingrediente extra',
     noSugar: 'Sin azúcar',
     quarterSugar: 'Un cuarto de azúcar',
@@ -649,10 +651,12 @@ function updateSelectOptionsText() {
     'modal-sweetness':    t('sweetness'),
     'modal-ice':          t('iceLevel'),
     'modal-size':         t('size'),
+    'modal-temp':         t('temperature'),
     'modal-topping-checks': t('topping'),
     'edit-sweetness':     t('sweetness'),
     'edit-ice':           t('iceLevel'),
     'edit-size':          t('size'),
+    'edit-temp':          t('temperature'),
     'edit-topping-checks':  t('topping')
   };
 
