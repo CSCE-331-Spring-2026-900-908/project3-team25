@@ -7,6 +7,11 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { getPool, hasDbConfig } = require('./config/db');
 
+
+
+
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
@@ -374,6 +379,20 @@ app.post('/api/auth/pair-claim/:token', (req, res, next) => {
 app.get('/api/menu', async (_req, res) => {
   try { const items = await getMenuItems(); res.json({ items, categories: categoryBreakdown(items), source: hasDbConfig()?'database':'csv' }); }
   catch(e) { res.status(500).json({ error: 'Failed to load menu.', details: e.message }); }
+});
+
+// Public endpoint — returns active toppings so kiosk and cashier stay in sync with DB
+app.get('/api/toppings', async (_req, res) => {
+  try {
+    if (hasDbConfig()) {
+      const r = await queryDb(`SELECT productid AS id, name, baseprice AS price FROM product WHERE is_active=true AND category='topping' ORDER BY name`);
+      return res.json({ toppings: r.rows.map(t => ({ id: Number(t.id), name: t.name, price: Number(t.price) })) });
+    }
+    const toppings = parseCsv(path.join(dataDir,'product.csv'))
+      .filter(r => r.is_active === 'true' && r.category === 'topping')
+      .map(r => ({ id: Number(r.productid), name: r.name, price: Number(r.baseprice) }));
+    res.json({ toppings });
+  } catch(e) { res.status(500).json({ error: 'Failed to load toppings.', details: e.message }); }
 });
 
 app.get('/api/inventory', async (req, res) => {
@@ -1519,4 +1538,35 @@ app.get('/api/staff-log', async (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname,'public','index.html')));
-app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
+
+// ── Seed missing toppings into DB on startup ──────────────────────────────────
+const REQUIRED_TOPPINGS = [
+  { name: 'Extra Boba Add-on', price: 0.75 },
+  { name: 'Grass Jelly',       price: 0.75 },
+  { name: 'Egg Pudding',       price: 0.75 },
+  { name: 'Coconut Jelly',     price: 0.75 },
+];
+
+async function seedToppings() {
+  if (!hasDbConfig()) return;
+  try {
+    const existing = await queryDb(`SELECT name FROM product WHERE category='topping'`);
+    const existingNames = new Set(existing.rows.map(r => r.name.trim().toLowerCase()));
+    for (const tp of REQUIRED_TOPPINGS) {
+      if (!existingNames.has(tp.name.toLowerCase())) {
+        await queryDb(
+          `INSERT INTO product (name, category, baseprice, is_active) VALUES ($1, 'topping', $2, true)`,
+          [tp.name, tp.price]
+        );
+        console.log(`Seeded missing topping: ${tp.name}`);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not seed toppings:', e.message);
+  }
+}
+
+(async () => {
+  await seedToppings();
+  app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
+})();

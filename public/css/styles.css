@@ -1459,8 +1459,10 @@ body.voice-guide-enabled
   border-radius: 18px;
   max-width: 520px;
   width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
   transform: translateY(24px) scale(0.97);
   transition: transform 0.22s ease;
@@ -1470,26 +1472,32 @@ body.voice-guide-enabled
 }
 .drink-modal-img {
   width: 100%;
-  height: 210px;
+  height: 220px;
   object-fit: cover;
+  object-position: center top;
   border-radius: 18px 18px 0 0;
   background: var(--bg);
+  flex-shrink: 0;
 }
 .drink-modal-body {
-  padding: 22px 24px 28px;
+  padding: 16px 20px 18px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .drink-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 .drink-modal-header h3 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
 }
 .drink-modal-price {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
@@ -1497,48 +1505,48 @@ body.voice-guide-enabled
 }
 .drink-modal-desc {
   color: var(--muted);
-  font-size: 0.93rem;
-  margin: 0 0 18px;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+  line-height: 1.4;
 }
 .drink-modal-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
-  margin-bottom: 18px;
+  gap: 8px 14px;
+  margin-bottom: 10px;
 }
 .drink-modal-options label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .drink-modal-options select {
   width: 100%;
-  padding: 9px 10px;
+  padding: 7px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 .drink-modal-qty {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 .drink-modal-qty button {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1px solid var(--line);
   background: white;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -1547,20 +1555,22 @@ body.voice-guide-enabled
 }
 .drink-modal-qty button:hover { background: var(--bg); }
 .drink-modal-qty span {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  min-width: 24px;
+  min-width: 22px;
   text-align: center;
 }
 .drink-modal-footer {
   display: flex;
   gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
 }
 .drink-modal-footer .btn-cancel {
   background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
   font: inherit;
@@ -1571,38 +1581,38 @@ body.voice-guide-enabled
   background: var(--accent);
   color: white;
   border: none;
-  padding: 13px;
+  padding: 11px;
   border-radius: 8px;
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
 }
 .drink-modal-footer .btn-add:hover { filter: brightness(1.06); }
 
 .topping-checks {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+  margin-top: 2px;
 }
 .topping-check {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  gap: 6px;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 .topping-check input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
 }
 .topping-price {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 /* ── Menu cards (cleaner, clickable) ─────────────────────────── */

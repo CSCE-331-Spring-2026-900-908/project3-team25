@@ -15,3 +15,6 @@ productid,name,category,baseprice,is_active
 14,Wintermelon Milk Tea,milk_tea,5.99,true
 15,Oolong Milk Tea,milk_tea,5.79,true
 16,Extra Boba Add-on,topping,0.75,true
+17,Grass Jelly,topping,0.75,true
+18,Egg Pudding,topping,0.75,true
+19,Coconut Jelly,topping,0.75,true

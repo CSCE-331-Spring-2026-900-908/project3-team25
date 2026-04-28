@@ -12,12 +12,32 @@ let guestCheckoutRequested = false;
 
 let currentLanguage = localStorage.getItem('kioskLanguage') || 'en';
 
-const TOPPINGS = [
-  { name: 'Extra Boba',    price: 0.75, key: 'extraBobaName' },
-  { name: 'Grass Jelly',   price: 0.75, key: 'grassJelly'    },
-  { name: 'Egg Pudding',   price: 0.75, key: 'eggPudding'    },
-  { name: 'Coconut Jelly', price: 0.75, key: 'coconutJelly'  },
+const TOPPING_KEY_MAP = {
+  'Extra Boba':        'extraBobaName',
+  'Extra Boba Add-on': 'extraBobaName',
+  'Grass Jelly':       'grassJelly',
+  'Egg Pudding':       'eggPudding',
+  'Coconut Jelly':     'coconutJelly',
+};
+
+let TOPPINGS = [
+  { name: 'Extra Boba Add-on', price: 0.75, key: 'extraBobaName' },
+  { name: 'Grass Jelly',       price: 0.75, key: 'grassJelly'    },
+  { name: 'Egg Pudding',       price: 0.75, key: 'eggPudding'    },
+  { name: 'Coconut Jelly',     price: 0.75, key: 'coconutJelly'  },
 ];
+
+async function loadToppings() {
+  try {
+    const res = await fetch('/api/toppings');
+    const data = await res.json();
+    if (data.toppings && data.toppings.length > 0) {
+      TOPPINGS = data.toppings.map(tp => ({ ...tp, key: TOPPING_KEY_MAP[tp.name] || null }));
+    }
+  } catch (_) {
+    // keep hardcoded fallback
+  }
+}
 const HOT_CATEGORIES = new Set(['milk_tea', 'tea', 'coffee']);
 
 const LANGUAGE_CODES = {
@@ -102,8 +122,9 @@ const TRANSLATIONS = {
     lightIce: 'Light Ice',
     regularIce: 'Regular Ice',
     extraIce: 'Extra Ice',
-    regular: 'Regular',
+    regular: 'Medium (+$0.50)',
     large: 'Large (+$1.00)',
+    small: 'Small',
     none: 'None',
     extraBoba: 'Extra Boba (+$0.75)',
     extraBobaName: 'Extra Boba',
@@ -202,21 +223,21 @@ const TRANSLATIONS = {
     signOut: 'Sign Out',
     signInBeforeCheckout: 'Sign in before checkout?',
     signInBeforeCheckoutSubtitle: 'Sign in to earn reward points, or continue as a guest.',
-    scanQrCode: 'Scan QR Code',
+    //scanQrCode: 'Scan QR Code',
     signInWithGoogle: 'Sign In with Google',
-    scanQrInstructions: 'Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.',
+    //scanQrInstructions: 'Scan this code with your phone to sign in, and the kiosk will continue on this computer automatically.',
     waitingForPhoneSignIn: 'Waiting for phone sign-in…',
     googleKioskInstructions: 'Use Google on this kiosk to sign in before you pay.',
     continueWithGoogle: 'Continue with Google',
     continueAsGuest: 'Continue as Guest',
     signInForRewards: 'Sign In for Rewards',
     closeSignIn: 'Close sign-in popup',
-    signInQrAlt: 'Sign in QR code',
+    //signInQrAlt: 'Sign in QR code',
     preparingSecureSignIn: 'Preparing secure sign-in…',
-    scanQrFinishGoogle: 'Scan the QR code with your phone, then finish Google sign-in there.',
+    //scanQrFinishGoogle: 'Scan the QR code with your phone, then finish Google sign-in there.',
     signInCompleteConnecting: 'Sign-in complete. Connecting this kiosk…',
-    qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
-    couldNotCreateQr: 'Could not create QR sign-in.',
+    //qrExpired: 'This QR code expired. Please reopen the sign-in box to get a new one.',
+    //couldNotCreateQr: 'Could not create QR sign-in.',
     couldNotFinishKioskSignIn: 'Could not finish kiosk sign-in.'
 
   },
@@ -257,8 +278,9 @@ const TRANSLATIONS = {
     lightIce: 'Poco hielo',
     regularIce: 'Hielo regular',
     extraIce: 'Extra hielo',
-    regular: 'Regular',
+    regular: 'Mediano (+$0.50)',
     large: 'Grande (+$1.00)',
+    small: 'Pequeño',
     none: 'Ninguno',
     extraBoba: 'Boba extra (+$0.75)',
     extraBobaName: 'Boba extra',
@@ -357,20 +379,20 @@ const TRANSLATIONS = {
     signOut: 'Cerrar sesión',
     signInBeforeCheckout: '¿Iniciar sesión antes de pagar?',
     signInBeforeCheckoutSubtitle: 'Inicia sesión para ganar puntos de recompensa, o continúa como invitado.',
-    scanQrCode: 'Escanear código QR',
+    //scanQrCode: 'Escanear código QR',
     signInWithGoogle: 'Iniciar sesión con Google',
-    scanQrInstructions: 'Escanea este código con tu teléfono para iniciar sesión, y el quiosco continuará automáticamente en esta computadora.',
+    //scanQrInstructions: 'Escanea este código con tu teléfono para iniciar sesión, y el quiosco continuará automáticamente en esta computadora.',
     waitingForPhoneSignIn: 'Esperando inicio de sesión desde el teléfono…',
     googleKioskInstructions: 'Usa Google en este quiosco para iniciar sesión antes de pagar.',
     continueWithGoogle: 'Continuar con Google',
     continueAsGuest: 'Continuar como invitado',
     signInForRewards: 'Iniciar sesión para recompensas',
     closeSignIn: 'Cerrar ventana de inicio de sesión',
-    signInQrAlt: 'Código QR para iniciar sesión',
+    //signInQrAlt: 'Código QR para iniciar sesión',
     preparingSecureSignIn: 'Preparando inicio de sesión seguro…',
-    scanQrFinishGoogle: 'Escanea el código QR con tu teléfono y luego termina el inicio de sesión con Google allí.',
+    //scanQrFinishGoogle: 'Escanea el código QR con tu teléfono y luego termina el inicio de sesión con Google allí.',
     signInCompleteConnecting: 'Inicio de sesión completo. Conectando este quiosco…',
-    qrExpired: 'Este código QR expiró. Vuelve a abrir la ventana de inicio de sesión para obtener uno nuevo.',
+    //qrExpired: 'Este código QR expiró. Vuelve a abrir la ventana de inicio de sesión para obtener uno nuevo.',
     couldNotCreateQr: 'No se pudo crear el inicio de sesión con QR.',
     couldNotFinishKioskSignIn: 'No se pudo terminar el inicio de sesión en el quiosco.'
   }
@@ -585,10 +607,12 @@ function translateSelectionValue(value) {
     'Light Ice': t('lightIce'),
     'Regular Ice': t('regularIce'),
     'Extra Ice': t('extraIce'),
+    'Small': t('small'),
     'Regular': t('regular'),
-    'Large': currentLanguage === 'es' ? 'Grande' : 'Large',
+    'Large': t('large'),
     'None': t('none'),
-    'Extra Boba':    t('extraBobaName'),
+    'Extra Boba':        t('extraBobaName'),
+    'Extra Boba Add-on': t('extraBobaName'),
     'Grass Jelly':   t('grassJelly'),
     'Egg Pudding':   t('eggPudding'),
     'Coconut Jelly': t('coconutJelly')
@@ -615,11 +639,11 @@ function updateSelectOptionsText() {
 
   mapOptions('modal-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('modal-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
-  mapOptions('modal-size', [t('regular'), t('large')]);
+  mapOptions('modal-size', [t('small'), t('regular'), t('large')]);
 
   mapOptions('edit-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('edit-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
-  mapOptions('edit-size', [t('regular'), t('large')]);
+  mapOptions('edit-size', [t('small'), t('regular'), t('large')]);
 
   const labelMap = {
     'modal-sweetness': t('sweetness'),
@@ -758,6 +782,7 @@ function applyStaticTranslations() {
 // ─── Pricing helpers ──────────────────────────────────────────────────────────
 function extraPrice(size, toppings) {
   let extra = 0;
+  if (size === 'Medium') extra += 0.50;
   if (size === 'Large') extra += 1.0;
   const list = Array.isArray(toppings) ? toppings : (toppings && toppings !== 'None' ? [toppings] : []);
   list.forEach(name => {
@@ -773,7 +798,7 @@ function renderToppingChecks(containerId, selected = []) {
   wrap.innerHTML = TOPPINGS.map(tp =>
     `<label class="topping-check">
       <input type="checkbox" value="${tp.name}" ${selected.includes(tp.name) ? 'checked' : ''} />
-      <span>${t(tp.key)} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
+      <span>${tp.key ? t(tp.key) : tp.name} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
     </label>`
   ).join('');
   wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', updateModalPrice));
@@ -867,8 +892,10 @@ function openGuestLoginOverlay(fromCheckout = false) {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   overlay.classList.add('open');
-  switchGuestLoginTab('qr');
-  startGuestPairing(); // Generate real QR code for phone sign-in
+
+  // QR sign-in disabled: open the modal directly on Google sign-in.
+  switchGuestLoginTab('google');
+  // startGuestPairing(); // QR phone pairing disabled.
 }
 
 function closeGuestLoginOverlay() {
@@ -881,21 +908,23 @@ function closeGuestLoginOverlay() {
 }
 
 function switchGuestLoginTab(tab) {
+  // QR sign-in disabled: always show the Google sign-in panel.
   const qrBtn = document.getElementById('guest-login-tab-qr');
   const googleBtn = document.getElementById('guest-login-tab-google');
   const qrPanel = document.getElementById('guest-login-qr-panel');
   const googlePanel = document.getElementById('guest-login-google-panel');
-  if (!qrBtn || !googleBtn || !qrPanel || !googlePanel) return;
 
-  const qrActive = tab === 'qr';
-  qrBtn.style.background = qrActive ? 'var(--accent)' : '#fff';
-  qrBtn.style.color = qrActive ? '#fff' : 'var(--muted)';
-  googleBtn.style.background = qrActive ? '#fff' : 'var(--accent)';
-  googleBtn.style.color = qrActive ? 'var(--muted)' : '#fff';
-  qrPanel.style.display = qrActive ? '' : 'none';
-  googlePanel.style.display = qrActive ? 'none' : '';
+  if (qrBtn) qrBtn.style.display = 'none';
+  if (qrPanel) qrPanel.style.display = 'none';
+  if (googlePanel) googlePanel.style.display = '';
+
+  if (googleBtn) {
+    googleBtn.style.background = 'var(--accent)';
+    googleBtn.style.color = '#fff';
+  }
 }
 
+/* QR SIGN-IN DISABLED: old phone pairing logic kept here for rollback/reference.
 async function startGuestPairing() {
   const img = document.getElementById('guest-login-qr-image');
   const status = document.getElementById('guest-login-qr-status');
@@ -950,6 +979,7 @@ async function checkGuestPairingStatus() {
     if (statusEl) statusEl.textContent = err.message;
   }
 }
+*/
 
 function startCustomerGoogleLogin(fromCheckout = false) {
   guestCheckoutRequested = fromCheckout;
@@ -1113,7 +1143,7 @@ function openDrinkModal(item) {
   document.getElementById('modal-drink-desc').textContent = descText;
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
-  document.getElementById('modal-size').value = 'Regular';
+  document.getElementById('modal-size').value = 'Small';
   renderToppingChecks('modal-topping-checks', []);
   const tempWrap = document.getElementById('modal-temp-wrap');
   if (tempWrap) tempWrap.style.display = HOT_CATEGORIES.has(item.category) ? '' : 'none';
@@ -1163,7 +1193,7 @@ function addModalItemToOrder() {
   const selections = {
     sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('modal-sweetness').selectedIndex] || 'Regular Sugar',
     ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('modal-ice').selectedIndex] || 'Regular Ice',
-    size:      ['Regular','Large'][document.getElementById('modal-size').selectedIndex] || 'Regular',
+    size:      ['Small','Medium','Large'][document.getElementById('modal-size').selectedIndex] || 'Small',
     toppings:  getCheckedToppings('modal-topping-checks'),
     temp:      HOT_CATEGORIES.has(modalItem.category) ? (document.getElementById('modal-temp')?.value || 'Iced') : 'Iced'
   };
@@ -1820,7 +1850,7 @@ function openEditModal(index) {
   // Map stored English selections to the correct option index
   const sweetnessMap = ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'];
   const iceMap       = ['No Ice','Light Ice','Regular Ice','Extra Ice'];
-  const sizeMap      = ['Regular','Large'];
+  const sizeMap      = ['Small','Medium','Large'];
 
   function setByVal(id, map, val) {
     const el = document.getElementById(id);
@@ -1857,7 +1887,7 @@ document.getElementById('edit-modal-save').addEventListener('click', () => {
   const newSel = {
     sweetness: ['No Sugar','Quarter Sugar','Regular Sugar','Extra Sweet'][document.getElementById('edit-sweetness').selectedIndex] || document.getElementById('edit-sweetness').value,
     ice:       ['No Ice','Light Ice','Regular Ice','Extra Ice'][document.getElementById('edit-ice').selectedIndex] || document.getElementById('edit-ice').value,
-    size:      ['Regular','Large'][document.getElementById('edit-size').selectedIndex] || document.getElementById('edit-size').value,
+    size:      ['Small','Medium','Large'][document.getElementById('edit-size').selectedIndex] || document.getElementById('edit-size').value,
     toppings:  getCheckedToppings('edit-topping-checks'),
     temp:      HOT_CATEGORIES.has(item.category) ? (document.getElementById('edit-temp')?.value || 'Iced') : 'Iced'
   };
@@ -2033,10 +2063,12 @@ document.getElementById('guest-login-close')?.addEventListener('click', closeGue
 document.getElementById('guest-login-overlay')?.addEventListener('click', event => {
   if (event.target.id === 'guest-login-overlay') closeGuestLoginOverlay();
 });
+/* QR SIGN-IN DISABLED: QR tab listener removed.
 document.getElementById('guest-login-tab-qr')?.addEventListener('click', () => {
   switchGuestLoginTab('qr');
   if (!guestLoginPairToken) startGuestPairing();
 });
+*/
 document.getElementById('guest-login-tab-google')?.addEventListener('click', () => switchGuestLoginTab('google'));
 document.getElementById('guest-login-google-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
 document.getElementById('guest-login-rewards-btn')?.addEventListener('click', () => startCustomerGoogleLogin(guestCheckoutRequested));
@@ -2131,6 +2163,7 @@ document.getElementById('assistant-form')?.addEventListener('submit', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function loadCustomerMenu() {
+  await loadToppings();
   const res = await fetch('/api/menu');
   const data = await res.json();
   customerMenu = data.items || [];

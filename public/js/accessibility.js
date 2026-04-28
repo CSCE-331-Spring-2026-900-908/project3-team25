@@ -192,6 +192,34 @@ function getSpeechLang() {
   }
 
   function describeElement(el) {
+    if (!el) return ui("control");
+    const tag = (el.tagName || "").toLowerCase();
+
+    // For <select>: announce label + current value + all options
+    if (tag === "select") {
+      const label = getElementLabel(el);
+      const opts = Array.from(el.options).map(o => normalizeText(o.textContent)).filter(Boolean);
+      const currentVal = normalizeText(el.options[el.selectedIndex]?.textContent || "");
+      return opts.length
+        ? `${label}. ${ui("current")}: ${currentVal}. ${ui("options")}: ${opts.join(", ")}.`
+        : label;
+    }
+
+    // For topping-check labels: announce name + checked state
+    if (el.classList && el.classList.contains("topping-check")) {
+      const cb = el.querySelector("input[type=checkbox]");
+      const name = normalizeText(el.textContent);
+      const checked = cb && cb.checked;
+      return checked ? `${name}, checked` : `${name}, unchecked`;
+    }
+
+    // For checkboxes directly
+    if (tag === "input" && el.type === "checkbox") {
+      const lbl = el.closest("label");
+      const name = lbl ? normalizeText(lbl.textContent) : (el.getAttribute("aria-label") || el.value || "checkbox");
+      return el.checked ? `${name}, checked` : `${name}, unchecked`;
+    }
+
     return getElementLabel(el);
   }
 
@@ -269,7 +297,7 @@ function getSpeechLang() {
     }
 
     return target.closest(
-      'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .portal-btn, .portal-card'
+      'a, button, input, select, textarea, [tabindex], .menu-card, .payment-option, .tab-btn, .portal-btn, .portal-card, label.topping-check'
     );
   }
 
@@ -329,7 +357,15 @@ function getSpeechLang() {
 
         if (!voiceEnabled) return;
 
-        announce(describeElement(el), true);
+        // For checkboxes/topping-check labels, delay so checked state is updated first
+        const tag = (el.tagName || "").toLowerCase();
+        const isCheckboxLike = tag === "input" && el.type === "checkbox"
+          || (el.classList && el.classList.contains("topping-check"));
+        if (isCheckboxLike) {
+          setTimeout(() => announce(describeElement(el), true), 50);
+        } else {
+          announce(describeElement(el), true);
+        }
       },
       true
     );
@@ -373,6 +409,7 @@ function getSpeechLang() {
         setTimeout(() => {
           updateVoiceButton();
           improveLabels();
+          improveModalLabels();
         }, 0);
       }
 
@@ -420,28 +457,87 @@ function getSpeechLang() {
         if (ings && ings !== '…') parts.push(`${ui("ingredients")}: ${ings}`);
         parts.push(ui("customizePrompt"));
         setTimeout(() => speak(parts.filter(Boolean).join('. ')), 300);
+        // Refresh modal labels/tabindex for newly-rendered toppings
+        setTimeout(() => improveModalLabels(), 100);
       }
     });
     observer.observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
   }
 
 
+  // ── Improve accessibility labels inside the customize modal ──────────────────
+  function improveModalLabels() {
+    // Give every modal select a proper aria-label from its associated <label>
+    [
+      { selectId: 'modal-sweetness', labelText: 'Sweetness' },
+      { selectId: 'modal-ice',       labelText: 'Ice Level' },
+      { selectId: 'modal-size',      labelText: 'Size' },
+      { selectId: 'modal-temp',      labelText: 'Temperature' },
+      { selectId: 'edit-sweetness',  labelText: 'Sweetness' },
+      { selectId: 'edit-ice',        labelText: 'Ice Level' },
+      { selectId: 'edit-size',       labelText: 'Size' },
+      { selectId: 'edit-temp',       labelText: 'Temperature' },
+    ].forEach(({ selectId, labelText }) => {
+      const sel = document.getElementById(selectId);
+      if (sel) {
+        // Find associated label text from DOM (may be translated)
+        const lbl = document.querySelector(`label[for="${selectId}"]`);
+        const text = (lbl && normalizeText(lbl.textContent)) || labelText;
+        sel.setAttribute('aria-label', text);
+        sel.setAttribute('data-accessibility-label', text);
+      }
+    });
+
+    // Make topping-check labels focusable and give them aria roles
+    document.querySelectorAll('.topping-check').forEach(lbl => {
+      if (!lbl.getAttribute('tabindex')) lbl.setAttribute('tabindex', '0');
+      lbl.setAttribute('role', 'checkbox');
+      const cb = lbl.querySelector('input[type=checkbox]');
+      if (cb) lbl.setAttribute('aria-checked', String(cb.checked));
+      // Keep aria-checked in sync when checkbox changes
+      if (cb && !cb._ariaSync) {
+        cb._ariaSync = true;
+        cb.addEventListener('change', () => {
+          lbl.setAttribute('aria-checked', String(cb.checked));
+        });
+      }
+    });
+  }
+
   function watchDynamicLabels() {
-  const menu = document.getElementById("customer-menu");
-  const tabs = document.getElementById("customer-tabs");
+    const menu = document.getElementById("customer-menu");
+    const tabs = document.getElementById("customer-tabs");
 
-  const observer = new MutationObserver(() => {
-    improveLabels();
-  });
+    const observer = new MutationObserver(() => {
+      improveLabels();
+    });
 
-  if (menu) {
-    observer.observe(menu, { childList: true, subtree: true });
+    if (menu) {
+      observer.observe(menu, { childList: true, subtree: true });
+    }
+
+    if (tabs) {
+      observer.observe(tabs, { childList: true, subtree: true });
+    }
+
+    // Watch the modals for topping checkboxes being injected
+    const modalContainers = [
+      document.getElementById('modal-topping-checks'),
+      document.getElementById('edit-topping-checks'),
+      document.getElementById('drink-modal-overlay'),
+    ].filter(Boolean);
+
+    const modalObserver = new MutationObserver(() => {
+      improveModalLabels();
+    });
+
+    modalContainers.forEach(container => {
+      modalObserver.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Also run once on init
+    improveModalLabels();
   }
-
-  if (tabs) {
-    observer.observe(tabs, { childList: true, subtree: true });
-  }
-}
 
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -449,6 +545,7 @@ function getSpeechLang() {
     loadVoices();
     updateVoiceButton();
     improveLabels();
+    improveModalLabels();
     wireHoverSpeech();
     watchDynamicLabels();
     wireFocusSpeech();
