@@ -7,11 +7,6 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { getPool, hasDbConfig } = require('./config/db');
 
-
-
-
-
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
@@ -1130,7 +1125,7 @@ app.get('/api/analytics/zreport/status', requireMgrRoute, async (_req, res) => {
   try {
     await queryDb(`CREATE TABLE IF NOT EXISTS z_report_log (
       id SERIAL PRIMARY KEY,
-      run_date DATE NOT NULL,
+      business_date DATE NOT NULL,
       total_orders INT,
       total_revenue NUMERIC(10,2),
       cash_total NUMERIC(10,2),
@@ -1139,7 +1134,7 @@ app.get('/api/analytics/zreport/status', requireMgrRoute, async (_req, res) => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
     const r = await queryDb(
-      `SELECT id FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
+      `SELECT id FROM z_report_log WHERE business_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
     );
     res.json({ run_today: r.rows.length > 0 });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1149,12 +1144,20 @@ app.get('/api/analytics/zreport/status', requireMgrRoute, async (_req, res) => {
 app.get('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ run_today: false, rows: [], totals: {} });
   try {
+    // Add missing columns to existing table if needed
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS total_orders INT`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS total_revenue NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS cash_total NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS card_total NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS applepay_total NUMERIC(10,2)`);
+
     const r = await queryDb(
-      `SELECT * FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date LIMIT 1`
+      `SELECT * FROM z_report_log WHERE business_date = (NOW() AT TIME ZONE 'America/Chicago')::date LIMIT 1`
     );
     if (r.rows.length === 0) return res.json({ run_today: false });
     const log = r.rows[0];
-    // Also fetch hourly breakdown for today from closed transactions
+
+    // Recompute hourly from closed transactions
     const hourly = await queryDb(`
       WITH hours AS (SELECT generate_series(0,23) AS hour_of_day),
       day_tx AS (
@@ -1173,17 +1176,17 @@ app.get('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
              COALESCE(SUM(CASE WHEN d.paymentmethod='applepay' THEN d.totalamount ELSE 0 END),0) AS applepay_total
       FROM hours h LEFT JOIN day_tx d ON d.hour_of_day=h.hour_of_day
       GROUP BY h.hour_of_day ORDER BY h.hour_of_day`);
-    res.json({
-      run_today: true,
-      rows: hourly.rows,
-      totals: {
-        orders:   Number(log.total_orders),
-        revenue:  Number(log.total_revenue),
-        cash:     Number(log.cash_total),
-        card:     Number(log.card_total),
-        applepay: Number(log.applepay_total),
-      }
-    });
+
+    const rows = hourly.rows;
+    // Use saved totals if available, otherwise recompute from hourly
+    const totals = {
+      orders:   Number(log.total_orders  || rows.reduce((s,row) => s + Number(row.orders||0), 0)),
+      revenue:  Number(log.total_revenue || rows.reduce((s,row) => s + Number(row.revenue||0), 0)),
+      cash:     Number(log.cash_total    || rows.reduce((s,row) => s + Number(row.cash_total||0), 0)),
+      card:     Number(log.card_total    || rows.reduce((s,row) => s + Number(row.card_total||0), 0)),
+      applepay: Number(log.applepay_total|| rows.reduce((s,row) => s + Number(row.applepay_total||0), 0)),
+    };
+    res.json({ run_today: true, rows, totals });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1191,18 +1194,15 @@ app.get('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
 app.post('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [], totals: {} });
   try {
-    await queryDb(`CREATE TABLE IF NOT EXISTS z_report_log (
-      id SERIAL PRIMARY KEY,
-      run_date DATE NOT NULL,
-      total_orders INT,
-      total_revenue NUMERIC(10,2),
-      cash_total NUMERIC(10,2),
-      card_total NUMERIC(10,2),
-      applepay_total NUMERIC(10,2),
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )`);
+    // Add missing columns to existing table if needed
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS total_orders INT`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS total_revenue NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS cash_total NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS card_total NUMERIC(10,2)`);
+    await queryDb(`ALTER TABLE z_report_log ADD COLUMN IF NOT EXISTS applepay_total NUMERIC(10,2)`);
+
     const today = await queryDb(
-      `SELECT id FROM z_report_log WHERE run_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
+      `SELECT business_date FROM z_report_log WHERE business_date = (NOW() AT TIME ZONE 'America/Chicago')::date`
     );
     if (today.rows.length > 0) {
       return res.status(409).json({ error: 'Z-Report has already been run today.' });
@@ -1233,16 +1233,15 @@ app.post('/api/analytics/zreport', requireMgrRoute, async (_req, res) => {
       card:     rows.reduce((s,row) => s + Number(row.card_total||0), 0),
       applepay: rows.reduce((s,row) => s + Number(row.applepay_total||0), 0),
     };
-    // Save the Z-report summary
+    // Insert using existing schema + new columns
     await queryDb(
-      `INSERT INTO z_report_log (run_date, total_orders, total_revenue, cash_total, card_total, applepay_total)
+      `INSERT INTO z_report_log (business_date, total_orders, total_revenue, cash_total, card_total, applepay_total)
        VALUES ((NOW() AT TIME ZONE 'America/Chicago')::date, $1, $2, $3, $4, $5)`,
       [totals.orders, totals.revenue, totals.cash, totals.card, totals.applepay]
     );
     // Mark today's completed transactions as 'closed' so X-report resets to zero
     await queryDb(`
-      UPDATE transactions
-      SET status = 'closed'
+      UPDATE transactions SET status = 'closed'
       WHERE status = 'completed'
         AND (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')::date
             = (NOW() AT TIME ZONE 'America/Chicago')::date
