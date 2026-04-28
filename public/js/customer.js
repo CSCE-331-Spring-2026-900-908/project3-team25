@@ -1063,8 +1063,7 @@ function renderMenu() {
   const displayName = translateDrinkName(item.name);
 
   return `
-    <article class="menu-card" data-id="${item.id}" tabindex="0" role="button"
-             aria-label="${displayName}, $${Number(item.price).toFixed(2)}">
+    <article class="menu-card" data-id="${item.id}">
       <div class="drink-image-wrap">
         <div class="drink-image" style="background-image:url('${getDrinkImg(item.name)}');"></div>
       </div>
@@ -1090,13 +1089,13 @@ function renderMenu() {
       if (item) openDrinkModal(item);
     });
 
-    card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const item = customerMenu.find(x => x.id === Number(card.dataset.id));
-        if (item) openDrinkModal(item);
-      }
-    });
+    // card.addEventListener('keydown', e => {
+    //   if (e.key === 'Enter' || e.key === ' ') {
+    //     e.preventDefault();
+    //     const item = customerMenu.find(x => x.id === Number(card.dataset.id));
+    //     if (item) openDrinkModal(item);
+    //   }
+    // });
   });
 
   wrap.querySelectorAll('.add-btn').forEach(btn => {
