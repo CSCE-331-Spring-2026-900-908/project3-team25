@@ -646,12 +646,14 @@ function updateSelectOptionsText() {
   mapOptions('edit-size', [t('small'), t('regular'), t('large')]);
 
   const labelMap = {
-    'modal-sweetness': t('sweetness'),
-    'modal-ice': t('iceLevel'),
-    'modal-size': t('size'),
-    'edit-sweetness': t('sweetness'),
-    'edit-ice': t('iceLevel'),
-    'edit-size': t('size')
+    'modal-sweetness':    t('sweetness'),
+    'modal-ice':          t('iceLevel'),
+    'modal-size':         t('size'),
+    'modal-topping-checks': t('topping'),
+    'edit-sweetness':     t('sweetness'),
+    'edit-ice':           t('iceLevel'),
+    'edit-size':          t('size'),
+    'edit-topping-checks':  t('topping')
   };
 
   Object.entries(labelMap).forEach(([id, text]) => {
