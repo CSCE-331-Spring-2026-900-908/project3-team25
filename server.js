@@ -7,6 +7,11 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { getPool, hasDbConfig } = require('./config/db');
 
+
+
+
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, 'data');
