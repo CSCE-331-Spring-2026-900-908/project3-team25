@@ -114,6 +114,8 @@ const TRANSLATIONS = {
     iceLevel: 'Ice Level',
     size: 'Size',
     temperature: 'Temperature',
+    iced: 'Iced',
+    hot: 'Hot',
     topping: 'Topping',
     noSugar: 'No Sugar',
     quarterSugar: 'Quarter Sugar',
@@ -271,6 +273,8 @@ const TRANSLATIONS = {
     iceLevel: 'Nivel de hielo',
     size: 'Tamaño',
     temperature: 'Temperatura',
+    iced: 'Frío',
+    hot: 'Caliente',
     topping: 'Ingrediente extra',
     noSugar: 'Sin azúcar',
     quarterSugar: 'Un cuarto de azúcar',
@@ -642,10 +646,12 @@ function updateSelectOptionsText() {
   mapOptions('modal-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('modal-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
   mapOptions('modal-size', [t('small'), t('regular'), t('large')]);
+  mapOptions('modal-temp', [t('iced'), t('hot')]);
 
   mapOptions('edit-sweetness', [t('noSugar'), t('quarterSugar'), t('regularSugar'), t('extraSweet')]);
   mapOptions('edit-ice', [t('noIce'), t('lightIce'), t('regularIce'), t('extraIce')]);
   mapOptions('edit-size', [t('small'), t('regular'), t('large')]);
+  mapOptions('edit-temp', [t('iced'), t('hot')]);
 
   const labelMap = {
     'modal-sweetness':    t('sweetness'),

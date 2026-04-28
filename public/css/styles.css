@@ -908,7 +908,7 @@ td {
 .cashier-workspace {
   display: grid;
   grid-template-columns: 350px 112px 1fr;
-  height: min(calc(100vh - 300px), 660px);
+  height: calc(100vh - 200px);
   min-height: 540px;
   border-radius: var(--radius-xl);
   overflow: hidden;
