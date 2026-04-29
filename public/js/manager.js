@@ -350,12 +350,17 @@ async function loadInlineIngredients(productId) {
   const rows = document.getElementById('menu-modal-ing-rows');
   if (!rows) return;
   rows.innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading…</p>';
+  // Always load inventory first so dropdown is populated
+  if (!allInventory.length) await loadFullInventory();
   try {
     const res  = await fetch(`/api/menu-item/${productId}/ingredients`);
     const data = res.ok ? await res.json() : { ingredients: [] };
     rows.innerHTML = '';
-    (data.ingredients || []).forEach(ing => addIngredientRowInline(ing.inventoryid, ing.amountused));
-    if (!(data.ingredients || []).length) addIngredientRowInline();
+    const ings = data.ingredients || [];
+    for (const ing of ings) {
+      await addIngredientRowInline(ing.inventoryid, ing.amountused);
+    }
+    if (!ings.length) await addIngredientRowInline();
   } catch(_) { rows.innerHTML = '<p class="muted">Failed to load.</p>'; }
 }
 
