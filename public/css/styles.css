@@ -2355,5 +2355,16 @@ button, .btn, .menu-card, .tab-btn, .cashier-product-btn,
   transform: scale(0.98);
 }
 
+.kiosk-footer-actions {
+  position: sticky;
+  bottom: 16px;
+  z-index: 50;
+  background: rgba(255, 250, 247, 0.95);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(80, 39, 29, 0.12);
+}
+
 /* Remove 300ms click delay site-wide */
 html { touch-action: manipulation; }

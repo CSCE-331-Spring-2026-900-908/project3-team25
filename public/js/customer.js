@@ -804,16 +804,32 @@ function extraPrice(size, toppings) {
   return extra;
 }
 
-function renderToppingChecks(containerId, selected = []) {
+async function getToppingDisplayName(tp) {
+  if (tp.key) return t(tp.key);
+  return await translateWithLara(tp.name);
+}
+
+async function renderToppingChecks(containerId, selected = []) {
   const wrap = document.getElementById(containerId);
   if (!wrap) return;
-  wrap.innerHTML = TOPPINGS.map(tp =>
+
+  const labels = await Promise.all(
+    TOPPINGS.map(async tp => ({
+      ...tp,
+      displayName: await getToppingDisplayName(tp)
+    }))
+  );
+
+  wrap.innerHTML = labels.map(tp =>
     `<label class="topping-check">
       <input type="checkbox" value="${tp.name}" ${selected.includes(tp.name) ? 'checked' : ''} />
-      <span>${tp.key ? t(tp.key) : tp.name} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
+      <span>${tp.displayName} <span class="topping-price">+$${tp.price.toFixed(2)}</span></span>
     </label>`
   ).join('');
-  wrap.querySelectorAll('input').forEach(cb => cb.addEventListener('change', updateModalPrice));
+
+  wrap.querySelectorAll('input').forEach(cb =>
+    cb.addEventListener('change', updateModalPrice)
+  );
 }
 
 function getCheckedToppings(containerId) {
@@ -1136,7 +1152,7 @@ function renderMenu() {
 }
 
 // ─── Drink Detail Modal ───────────────────────────────────────────────────────
-function openDrinkModal(item) {
+async function openDrinkModal(item) {
   modalItem = item;
   modalQty = 1;
 
@@ -1156,7 +1172,7 @@ function openDrinkModal(item) {
   document.getElementById('modal-sweetness').value = 'Regular Sugar';
   document.getElementById('modal-ice').value = 'Regular Ice';
   document.getElementById('modal-size').value = 'Small';
-  renderToppingChecks('modal-topping-checks', []);
+  await renderToppingChecks('modal-topping-checks', []);
   const tempWrap = document.getElementById('modal-temp-wrap');
   if (tempWrap) tempWrap.style.display = HOT_CATEGORIES.has(item.category) ? '' : 'none';
   const tempEl = document.getElementById('modal-temp');
@@ -1851,7 +1867,7 @@ document.getElementById('spin-modal-overlay').addEventListener('click', e => {
 });
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
-function openEditModal(index) {
+async function openEditModal(index) {
   const item = customerOrder[index];
   if (!item) return;
   editingIndex = index;
@@ -1882,7 +1898,7 @@ function openEditModal(index) {
   const selectedToppings = Array.isArray(item.selections.toppings)
     ? item.selections.toppings
     : (item.selections.topping && item.selections.topping !== 'None' ? [item.selections.topping] : []);
-  renderToppingChecks('edit-topping-checks', selectedToppings);
+  await renderToppingChecks('edit-topping-checks', selectedToppings);
 
   document.getElementById('edit-modal-overlay').classList.remove('hidden');
   document.getElementById('edit-modal-overlay').classList.add('open');
