@@ -1322,7 +1322,9 @@ app.post('/api/menu-item/:id/toggle', requireMgrRoute, async (req, res) => {
 app.delete('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
   try {
-    await queryDb(`UPDATE product SET is_active=false WHERE productid=$1`, [Number(req.params.id)]);
+    // Delete ingredients first (foreign key), then delete the product
+    await queryDb(`DELETE FROM productingredient WHERE productid=$1`, [Number(req.params.id)]);
+    await queryDb(`DELETE FROM product WHERE productid=$1`, [Number(req.params.id)]);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1570,9 +1572,9 @@ app.get('/api/staff-log', async (req, res) => {
   try {
     const r = await queryDb(`
       SELECT sl.log_id, sl.staff_id, sl.staff_type, sl.action,
-             to_char(sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago',
+             to_char(sl.logged_at AT TIME ZONE 'America/Chicago',
                      'Mon DD, YYYY HH12:MI AM') AS logged_at_str,
-             (sl.logged_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') AS logged_at,
+             (sl.logged_at AT TIME ZONE 'America/Chicago') AS logged_at,
              CASE sl.staff_type
                WHEN 'cashier' THEN c.firstname || ' ' || c.lastname
                WHEN 'manager' THEN m.firstname || ' ' || m.lastname

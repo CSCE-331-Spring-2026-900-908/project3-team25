@@ -242,7 +242,7 @@ async function openIngModal(productId, productName) {
   document.getElementById('ing-rows').innerHTML = '<p class="muted" style="font-size:0.85rem;">Loading…</p>';
   document.getElementById('ing-modal').classList.add('open');
 
-  // Ensure inventory is loaded
+  // Always ensure inventory is loaded before rendering rows
   if (!allInventory.length) await loadFullInventory();
 
   try {
@@ -252,7 +252,8 @@ async function openIngModal(productId, productName) {
     (data.ingredients || []).forEach(ing => addIngredientRow(ing.inventoryid, ing.amountused));
     if (!(data.ingredients || []).length) addIngredientRow();
   } catch(e) {
-    document.getElementById('ing-rows').innerHTML = '<p class="muted" style="font-size:0.85rem;">Failed to load ingredients.</p>';
+    document.getElementById('ing-rows').innerHTML = '';
+    addIngredientRow(); // still allow adding even if load fails
   }
 }
 
@@ -358,9 +359,11 @@ async function loadInlineIngredients(productId) {
   } catch(_) { rows.innerHTML = '<p class="muted">Failed to load.</p>'; }
 }
 
-function addIngredientRowInline(invId = '', amount = '') {
+async function addIngredientRowInline(invId = '', amount = '') {
   const rows = document.getElementById('menu-modal-ing-rows');
-  if (!rows || !allInventory.length) return;
+  if (!rows) return;
+  // Load inventory if not yet loaded
+  if (!allInventory.length) await loadFullInventory();
   const row = document.createElement('div');
   row.style = 'display:flex;gap:8px;align-items:center;';
   row.innerHTML = `
