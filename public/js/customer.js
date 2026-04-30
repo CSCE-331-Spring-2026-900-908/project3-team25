@@ -1066,106 +1066,6 @@ function renderRewardsTopbar(pts) {
   if (!bar) return;
   bar.style.display = 'flex';
   if (ptsEl) ptsEl.textContent = pts.toLocaleString();
-  // Show recent orders button when logged in
-  const recentBtn = document.getElementById('open-recent-orders-btn');
-  if (recentBtn) recentBtn.style.display = '';
-}
-
-// ── Recent Orders ─────────────────────────────────────────────────────────────
-async function openRecentOrders() {
-  const overlay = document.getElementById('recent-orders-overlay');
-  const list    = document.getElementById('recent-orders-list');
-  if (!overlay || !list) return;
-  overlay.style.display = 'flex';
-  list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Loading your orders…</p>';
-
-  try {
-    const res  = await fetch('/api/customer/recent-orders');
-    const data = res.ok ? await res.json() : { orders: [] };
-    const orders = data.orders || [];
-
-    if (!orders.length) {
-      list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">No previous orders found.</p>';
-      return;
-    }
-
-    list.innerHTML = orders.map((order, idx) => {
-      const date = new Date(order.transactiontime).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-      const items = order.items || [];
-      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ''}`).join(', ');
-      return `
-        <div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-            <div>
-              <div style="font-weight:700;font-size:0.95rem;">${date}</div>
-              <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">${itemSummary}</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-weight:700;color:var(--accent);">$${Number(order.totalamount).toFixed(2)}</div>
-              <div style="font-size:0.78rem;color:var(--muted);">${order.paymentmethod || ''}</div>
-            </div>
-          </div>
-          <button type="button"
-            onclick="reorderFromHistory(${idx})"
-            data-order='${JSON.stringify(order).replace(/'/g,"&#39;")}'
-            style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;font-size:0.9rem;cursor:pointer;">
-            🔄 Reorder — Add to Cart
-          </button>
-        </div>`;
-    }).join('');
-
-    // Store orders for reorder
-    window._recentOrders = orders;
-  } catch(e) {
-    list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Could not load orders.</p>';
-  }
-}
-
-function closeRecentOrders() {
-  const overlay = document.getElementById('recent-orders-overlay');
-  if (overlay) overlay.style.display = 'none';
-}
-
-function reorderFromHistory(idx) {
-  const order = window._recentOrders?.[idx];
-  if (!order) return;
-
-  const items = order.items || [];
-  let added = 0;
-
-  items.forEach(item => {
-    // Find the menu item by name
-    const menuItem = customerMenu.find(m => m.name === item.name);
-    if (!menuItem) return;
-
-    let selections = {};
-    try { selections = typeof item.selections === 'string' ? JSON.parse(item.selections) : (item.selections || {}); } catch(_) {}
-
-    const qty = item.quantity || 1;
-    const extra = extraPrice(selections.size, selections.toppings);
-    const unitPrice = Number(menuItem.price) + extra;
-
-    customerOrder.push({
-      ...menuItem,
-      selections: {
-        sweetness: selections.sweetness || 'Regular Sugar',
-        ice:       selections.ice       || 'Regular Ice',
-        size:      selections.size      || 'Small',
-        temp:      selections.temp      || 'Iced',
-        toppings:  selections.toppings  || []
-      },
-      quantity:  qty,
-      unitPrice: unitPrice,
-      linePrice: unitPrice * qty
-    });
-    added++;
-  });
-
-  closeRecentOrders();
-  renderOrder();
-  showToast(`${added} drink${added !== 1 ? 's' : ''} added to your cart!`);
-  // Go to review screen
-  showScreen('review');
 }
 
 function updateTopbarPts(pts) {
@@ -1216,10 +1116,7 @@ function renderMenu() {
       </div>
       ${item.description ? `<p>${TRANSLATIONS[currentLanguage][`description_${item.name}`] || item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
-        <div>
-          <span class="price">$${Number(item.price).toFixed(2)}</span>
-          ${currentUser ? `<div style="font-size:0.75rem;color:var(--accent);margin-top:2px;">🌟 +${Math.floor(Number(item.price) * 10)} pts</div>` : ''}
-        </div>
+        <span class="price">$${Number(item.price).toFixed(2)}</span>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
           ${t('customize')}
         </button>
@@ -1440,17 +1337,6 @@ function renderTotals() {
   document.getElementById('customer-total').textContent = `$${total.toFixed(2)}`;
   document.getElementById('payment-total').textContent = `$${total.toFixed(2)}`;
 
-  // Show points to earn (10 pts per dollar of total paid)
-  const ptsRow = document.getElementById('points-to-earn-row');
-  const ptsEl  = document.getElementById('points-to-earn');
-  if (ptsRow && ptsEl && customerOrder.length > 0) {
-    const ptsEarned = Math.floor(total * 10);
-    ptsEl.textContent = `+${ptsEarned} pts`;
-    ptsRow.style.display = '';
-  } else if (ptsRow) {
-    ptsRow.style.display = 'none';
-  }
-
   const discountRow = document.getElementById('discount-row');
   if (discount > 0) {
     discountRow.style.display = '';
@@ -1571,12 +1457,13 @@ function applySelectedReward() {
 
 function calcRewardDiscount(type, value) {
   const subtotal = calcSubtotal();
-  if (!subtotal) { discountAmount = 0; return; }
+  if (!subtotal) {
+    discountAmount = 0;
+    return;
+  }
 
   if (type === 'percent_off') {
-    // 50% off = half price of the cheapest drink only, not the whole order
-    const cheapest = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
-    discountAmount = Number((cheapest * value / 100).toFixed(2));
+    discountAmount = Number(((subtotal * value) / 100).toFixed(2));
   } else if (type === 'free_drink') {
     discountAmount = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
     discountAmount = Number(discountAmount.toFixed(2));
@@ -2179,11 +2066,6 @@ document.getElementById('apply-promo-btn').addEventListener('click', applyPromoC
 // Rewards / spin buttons
 document.getElementById('open-rewards-btn')?.addEventListener('click', openRewardsModal);
 document.getElementById('open-spin-topbar-btn')?.addEventListener('click', openSpinModal);
-document.getElementById('open-recent-orders-btn')?.addEventListener('click', openRecentOrders);
-document.getElementById('close-recent-orders-btn')?.addEventListener('click', closeRecentOrders);
-document.getElementById('recent-orders-overlay')?.addEventListener('click', e => {
-  if (e.target === document.getElementById('recent-orders-overlay')) closeRecentOrders();
-});
 document.getElementById('open-spin-btn')?.addEventListener('click', openSpinModal);
 
 // Language selector
