@@ -2154,7 +2154,7 @@ document.getElementById('start-new-order-btn').addEventListener('click', () => {
   setActiveScreen('menu');
 });
 
-document.getElementById('apply-promo-btn').addEventListener('click', applyPromoCode);
+document.getElementById('apply-promo-btn')?.addEventListener('click', applyPromoCode);
 
 // Rewards / spin buttons
 document.getElementById('open-rewards-btn')?.addEventListener('click', openRewardsModal);
