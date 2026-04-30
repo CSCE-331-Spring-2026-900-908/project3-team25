@@ -1,4 +1,3 @@
-
 :root {
   --bg: #f7efe9;
   --surface: rgba(255, 255, 255, 0.85);
@@ -1321,7 +1320,7 @@ input[type="range"] {
   width: 100%;
   max-width: 100%;
   height: 170px;
-  background-size: contain;
+  background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;
   background-color: #f5eee9;
@@ -1473,7 +1472,7 @@ body.voice-guide-enabled
 .drink-modal-img {
   width: 100%;
   height: 220px;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center center;
   border-radius: 18px 18px 0 0;
   background: var(--bg);

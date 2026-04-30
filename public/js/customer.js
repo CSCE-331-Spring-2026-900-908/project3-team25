@@ -18,8 +18,6 @@ const TOPPING_KEY_MAP = {
   'Grass Jelly':       'grassJelly',
   'Egg Pudding':       'eggPudding',
   'Coconut Jelly':     'coconutJelly',
-  'Coffee Jelly':      'coffeeJelly',
-  'Lychee Jelly':      'lycheeJelly',
 };
 
 let TOPPINGS = [
@@ -130,22 +128,12 @@ const TRANSLATIONS = {
     regular: 'Medium (+$0.50)',
     large: 'Large (+$1.00)',
     small: 'Small',
-    medium: 'Medium',
     none: 'None',
     extraBoba: 'Extra Boba (+$0.75)',
     extraBobaName: 'Extra Boba',
     grassJelly: 'Grass Jelly',
     eggPudding: 'Egg Pudding',
     coconutJelly: 'Coconut Jelly',
-    coffeeJelly: 'Coffee Jelly',
-    lycheeJelly: 'Lychee Jelly',
-    pointsYoullEarn: "Points you'll earn",
-    recentOrders: 'Recent Orders',
-    yourRecentOrders: 'Your Recent Orders',
-    loadingOrders: 'Loading your orders…',
-    noOrdersFound: 'No previous orders found. Place your first order!',
-    reorderAddToCart: 'Reorder - Add to Cart',
-    couldNotLoadOrders: 'Could not load orders.',
     qty: 'qty',
     cancel: 'Cancel',
     saveChanges: 'Save Changes',
@@ -572,6 +560,9 @@ function getDrinkImg(name, imageUrl) {
 
 // ─── Translation helpers ─────────────────────────────────────────────────────
 function translateCategoryName(category) {
+  if (category === 'all') {
+    return TRANSLATIONS[currentLanguage]?.['category_all'] || 'All';
+  }
   const englishMap = {
     milk_tea: 'Milk Tea',
     tea: 'Tea',
@@ -589,6 +580,7 @@ async function ensureCategoryTranslations() {
   if (currentLanguage === 'en') return;
 
   const categories = {
+    all: 'All',
     milk_tea: 'Milk Tea',
     tea: 'Tea',
     fruit_tea: 'Fruit Tea',
@@ -641,19 +633,14 @@ function translateSelectionValue(value) {
     'Regular Ice': t('regularIce'),
     'Extra Ice': t('extraIce'),
     'Small': t('small'),
-    'Medium': t('medium'),
     'Regular': t('regular'),
     'Large': t('large'),
     'None': t('none'),
-    'Hot': t('hot'),
-    'Iced': t('iced'),
     'Extra Boba':        t('extraBobaName'),
     'Extra Boba Add-on': t('extraBobaName'),
     'Grass Jelly':   t('grassJelly'),
     'Egg Pudding':   t('eggPudding'),
-    'Coconut Jelly': t('coconutJelly'),
-    'Coffee Jelly':  t('coffeeJelly'),
-    'Lychee Jelly':  t('lycheeJelly')
+    'Coconut Jelly': t('coconutJelly')
   };
 
   return valueMap[value] || value;
@@ -784,10 +771,8 @@ function applyStaticTranslations() {
   setText('start-new-order-btn', t('startNewOrder'));
   setText('topbar-points-label', t('yourRewardPoints'));
   setText('open-rewards-btn', t('rewards'));
-  setText('open-recent-orders-btn', t('recentOrders'));
   setText('open-spin-topbar-btn', t('spin'));
-  setText('points-earn-label', t('pointsYoullEarn'));
-  setText('recent-orders-title', t('yourRecentOrders'));
+  setText('open-recent-orders-btn', t('recentOrders'));
   setText('rewards-modal-title', t('rewards'));
   setText('rewards-history-title', t('redemptionHistory'));
   setText('open-spin-btn', t('spinWheel'));
@@ -1111,6 +1096,11 @@ async function openRecentOrders() {
   const list    = document.getElementById('recent-orders-list');
   if (!overlay || !list) return;
   overlay.style.display = 'flex';
+
+  // Translate modal title
+  const titleEl = document.getElementById('recent-orders-title');
+  if (titleEl) titleEl.textContent = t('recentOrders');
+
   list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:20px;">${t('recentOrdersLoading')}</p>`;
   try {
     const res   = await fetch('/api/customer/recent-orders');
@@ -1121,11 +1111,10 @@ async function openRecentOrders() {
       return;
     }
     window._recentOrders = orders;
-    const locale = LANGUAGE_CODES[currentLanguage] || 'en-US';
     list.innerHTML = orders.map((order, idx) => {
-      const date = new Date(order.transactiontime).toLocaleDateString(locale, {month:'short',day:'numeric',year:'numeric'});
+      const date = new Date(order.transactiontime).toLocaleDateString(LANGUAGE_CODES[currentLanguage] || 'en-US', {month:'short',day:'numeric',year:'numeric'});
       const items = order.items || [];
-      const itemSummary = items.map(i => `${translateDrinkName(i.name)}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
+      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
       return `<div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
@@ -1216,7 +1205,9 @@ function renderTabs() {
 function renderMenu() {
   const wrap = document.getElementById('customer-menu');
   if (!wrap) return;
-  const filtered = customerMenu.filter(i => i.category === customerActiveCategory);
+  const filtered = customerActiveCategory === 'all'
+    ? customerMenu.filter(i => i.category !== 'topping')
+    : customerMenu.filter(i => i.category === customerActiveCategory);
 
   wrap.innerHTML = filtered.map(item => {
   const displayName = translateDrinkName(item.name);
@@ -1231,7 +1222,7 @@ function renderMenu() {
         <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
-      ${item.description ? `<p>${TRANSLATIONS[currentLanguage]?.[`description_${item.name}`] || item.description}</p>` : ''}
+      ${item.description ? `<p>${TRANSLATIONS[currentLanguage][`description_${item.name}`] || item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
         <div>
           <span class="price">$${Number(item.price).toFixed(2)}</span>
@@ -1409,17 +1400,17 @@ function renderOrder() {
       ? item.selections.toppings
       : (item.selections.topping && item.selections.topping !== 'None' ? [item.selections.topping] : []);
     const mods = [
-      item.selections.size && item.selections.size !== 'Small' ? translateSelectionValue(item.selections.size) : null,
+      item.selections.size !== 'Regular' ? translateSelectionValue(item.selections.size) : null,
       item.selections.sweetness !== 'Regular Sugar' ? translateSelectionValue(item.selections.sweetness) : null,
       item.selections.ice !== 'Regular Ice' ? translateSelectionValue(item.selections.ice) : null,
-      item.selections.temp && item.selections.temp !== 'Iced' ? translateSelectionValue(item.selections.temp) : null,
+      item.selections.temp && item.selections.temp !== 'Iced' ? item.selections.temp : null,
       ...toppingList.map(tp => translateSelectionValue(tp))
     ].filter(Boolean);
 
     return `
       <article class="order-item">
         <div class="line-top">
-          <strong>${translateDrinkName(item.name)}${item.quantity > 1 ? ` ×${item.quantity}` : ''}</strong>
+          <strong>${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ''}</strong>
           <strong>$${Number(item.linePrice).toFixed(2)}</strong>
         </div>
         <small class="muted">${mods.join(', ') || t('noModifications')}</small>
@@ -2353,14 +2344,9 @@ async function loadCustomerMenu() {
   const res = await fetch('/api/menu');
   const data = await res.json();
   customerMenu = data.items || [];
-  customerCategories = Object.keys(data.categories || {}).filter(c => c !== 'topping');
+  customerCategories = ['all', ...Object.keys(data.categories || {}).filter(c => c !== 'topping')];
   if (!customerCategories.includes(customerActiveCategory)) {
-    customerActiveCategory = customerCategories[0] || '';
-  }
-  if (currentLanguage !== 'en') {
-    await ensureLanguageLoaded();
-    await ensureCategoryTranslations();
-    await ensureDrinkTranslations();
+    customerActiveCategory = 'all';
   }
   renderTabs();
   renderMenu();
