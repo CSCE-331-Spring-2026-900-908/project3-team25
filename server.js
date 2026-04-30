@@ -1080,7 +1080,7 @@ app.get('/api/analytics/hourly', requireMgrRoute, async (_req, res) => {
   if (!hasDbConfig()) return res.json({ rows: [] });
   try {
     const r = await queryDb(`
-      SELECT EXTRACT(HOUR FROM transactiontime)::int AS hour_of_day,
+      SELECT EXTRACT(HOUR FROM (transactiontime AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago'))::int AS hour_of_day,
              COUNT(*) AS orders, COALESCE(SUM(totalamount),0) AS revenue
       FROM transactions WHERE status='completed'
       GROUP BY 1 ORDER BY 1`);
