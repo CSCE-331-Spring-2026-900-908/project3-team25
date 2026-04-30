@@ -402,6 +402,33 @@ app.get('/api/dashboard', async (req, res) => {
   catch(e) { res.status(500).json({ error: 'Failed to load dashboard.', details: e.message }); }
 });
 
+// Customer recent orders (last 5 orders for logged-in user)
+app.get('/api/customer/recent-orders', async (req, res) => {
+  if (!req.isAuthenticated?.() || !req.user?.id) return res.status(401).json({ error: 'Login required.' });
+  if (!hasDbConfig()) return res.json({ orders: [] });
+  try {
+    const r = await queryDb(`
+      SELECT t.transactionid, t.transactiontime, t.totalamount, t.paymentmethod,
+             json_agg(
+               json_build_object(
+                 'name', p.name,
+                 'price', ti.unitprice,
+                 'quantity', ti.quantity,
+                 'category', p.category,
+                 'selections', ti.selections
+               ) ORDER BY p.name
+             ) AS items
+      FROM transactions t
+      JOIN transactionitem ti ON ti.transactionid = t.transactionid
+      JOIN product p ON p.productid = ti.productid
+      WHERE t.user_id = $1 AND t.status IN ('completed','closed')
+      GROUP BY t.transactionid, t.transactiontime, t.totalamount, t.paymentmethod
+      ORDER BY t.transactiontime DESC
+      LIMIT 5`, [req.user.id]);
+    res.json({ orders: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/orders/recent', async (req, res) => {
   if (!req.isAuthenticated?.() || req.user?.role !== 'manager') return res.status(403).json({ error: 'Manager only.' });
   const limit = Math.min(Number(req.query.limit || 50), 200);
@@ -552,9 +579,19 @@ app.post('/api/checkout', async (req, res) => {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const txr = await client.query(`INSERT INTO transactions (cashierid,transactiontime,totalamount,paymentmethod,status) VALUES ($1,NOW(),$2,$3,'completed') RETURNING transactionid,transactiontime,totalamount,paymentmethod,status`, [cashierId, totalAmount, String(paymentMethod).toLowerCase()]);
+        const txr = await client.query(`
+          INSERT INTO transactions (cashierid,transactiontime,totalamount,paymentmethod,status,user_id)
+          VALUES ($1,NOW(),$2,$3,'completed',$4)
+          RETURNING transactionid,transactiontime,totalamount,paymentmethod,status`,
+          [cashierId, totalAmount, String(paymentMethod).toLowerCase(), userId || null]);
         const tx = txr.rows[0];
-        for (const item of normalized) { await client.query(`INSERT INTO transactionitem (transactionid,productid,quantity,unitprice) VALUES ($1,$2,$3,$4)`, [tx.transactionid, item.productId, item.quantity, item.unitPrice]); }
+        for (const item of normalized) {
+          await client.query(
+            `INSERT INTO transactionitem (transactionid,productid,quantity,unitprice,selections)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [tx.transactionid, item.productId, item.quantity, item.unitPrice,
+             JSON.stringify(item.selections || {})]);
+        }
 
         // ── Deduct inventory based on ingredients used per item sold ──
         for (const item of normalized) {
@@ -1618,7 +1655,43 @@ async function seedToppings() {
   }
 }
 
+async function seedRewards() {
+  if (!hasDbConfig()) return;
+  try {
+    const REWARDS = [
+      { label: '$1 Off Your Order',     reward_type: 'flat_off',     reward_value: 1,   points_cost: 100 },
+      { label: 'Free Topping',          reward_type: 'free_topping', reward_value: 0.75,points_cost: 150 },
+      { label: '10% Off Your Order',    reward_type: 'percent_off',  reward_value: 10,  points_cost: 200 },
+      { label: '50% Off One Drink',     reward_type: 'percent_off',  reward_value: 50,  points_cost: 300 },
+      { label: 'Free Small Drink',      reward_type: 'free_drink',   reward_value: 0,   points_cost: 500 },
+      { label: '$3 Off Your Order',     reward_type: 'flat_off',     reward_value: 3,   points_cost: 400 },
+      { label: 'Free Medium Drink',     reward_type: 'free_drink',   reward_value: 0,   points_cost: 700 },
+      { label: 'Free Large Drink',      reward_type: 'free_drink',   reward_value: 0,   points_cost: 1000 },
+    ];
+    const existing = await queryDb(`SELECT label FROM rewards_catalog`);
+    const existingLabels = new Set(existing.rows.map(r => r.label));
+    for (const r of REWARDS) {
+      if (!existingLabels.has(r.label)) {
+        await queryDb(
+          `INSERT INTO rewards_catalog (label, reward_type, reward_value, points_cost, is_active)
+           VALUES ($1, $2, $3, $4, true)`,
+          [r.label, r.reward_type, r.reward_value, r.points_cost]
+        );
+        console.log(`Seeded reward: ${r.label}`);
+      }
+    }
+  } catch(e) { console.warn('Could not seed rewards:', e.message); }
+}
+
 (async () => {
   await seedToppings();
+  await seedRewards();
+  // Add columns if not exist
+  if (hasDbConfig()) {
+    try {
+      await queryDb(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id VARCHAR(255)`);
+      await queryDb(`ALTER TABLE transactionitem ADD COLUMN IF NOT EXISTS selections JSONB`);
+    } catch(e) { console.warn('Migration warning:', e.message); }
+  }
   app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
 })();

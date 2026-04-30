@@ -1066,6 +1066,107 @@ function renderRewardsTopbar(pts) {
   if (!bar) return;
   bar.style.display = 'flex';
   if (ptsEl) ptsEl.textContent = pts.toLocaleString();
+  // Show recent orders button when logged in
+  const recentBtn = document.getElementById('open-recent-orders-btn');
+  if (recentBtn) recentBtn.style.display = '';
+}
+
+// ── Recent Orders ─────────────────────────────────────────────────────────────
+async function openRecentOrders() {
+  const overlay = document.getElementById('recent-orders-overlay');
+  const list    = document.getElementById('recent-orders-list');
+  if (!overlay || !list) return;
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+  list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Loading your orders…</p>';
+
+  try {
+    const res  = await fetch('/api/customer/recent-orders');
+    const data = res.ok ? await res.json() : { orders: [] };
+    const orders = data.orders || [];
+
+    if (!orders.length) {
+      list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">No previous orders found.</p>';
+      return;
+    }
+
+    list.innerHTML = orders.map((order, idx) => {
+      const date = new Date(order.transactiontime).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      const items = order.items || [];
+      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ''}`).join(', ');
+      return `
+        <div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;">${date}</div>
+              <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;">${itemSummary}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700;color:var(--accent);">$${Number(order.totalamount).toFixed(2)}</div>
+              <div style="font-size:0.78rem;color:var(--muted);">${order.paymentmethod || ''}</div>
+            </div>
+          </div>
+          <button type="button"
+            onclick="reorderFromHistory(${idx})"
+            data-order='${JSON.stringify(order).replace(/'/g,"&#39;")}'
+            style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;font-size:0.9rem;cursor:pointer;">
+            🔄 Reorder — Add to Cart
+          </button>
+        </div>`;
+    }).join('');
+
+    // Store orders for reorder
+    window._recentOrders = orders;
+  } catch(e) {
+    list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Could not load orders.</p>';
+  }
+}
+
+function closeRecentOrders() {
+  const overlay = document.getElementById('recent-orders-overlay');
+  if (overlay) { overlay.classList.add('hidden'); overlay.style.display = 'none'; }
+}
+
+function reorderFromHistory(idx) {
+  const order = window._recentOrders?.[idx];
+  if (!order) return;
+
+  const items = order.items || [];
+  let added = 0;
+
+  items.forEach(item => {
+    // Find the menu item by name
+    const menuItem = customerMenu.find(m => m.name === item.name);
+    if (!menuItem) return;
+
+    let selections = {};
+    try { selections = typeof item.selections === 'string' ? JSON.parse(item.selections) : (item.selections || {}); } catch(_) {}
+
+    const qty = item.quantity || 1;
+    const extra = extraPrice(selections.size, selections.toppings);
+    const unitPrice = Number(menuItem.price) + extra;
+
+    customerOrder.push({
+      ...menuItem,
+      selections: {
+        sweetness: selections.sweetness || 'Regular Sugar',
+        ice:       selections.ice       || 'Regular Ice',
+        size:      selections.size      || 'Small',
+        temp:      selections.temp      || 'Iced',
+        toppings:  selections.toppings  || []
+      },
+      quantity:  qty,
+      unitPrice: unitPrice,
+      linePrice: unitPrice * qty
+    });
+    added++;
+  });
+
+  closeRecentOrders();
+  renderOrder();
+  showToast(`${added} drink${added !== 1 ? 's' : ''} added to your cart!`);
+  // Go to review screen
+  showScreen('review');
 }
 
 function updateTopbarPts(pts) {
@@ -1116,7 +1217,10 @@ function renderMenu() {
       </div>
       ${item.description ? `<p>${TRANSLATIONS[currentLanguage][`description_${item.name}`] || item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
-        <span class="price">$${Number(item.price).toFixed(2)}</span>
+        <div>
+          <span class="price">$${Number(item.price).toFixed(2)}</span>
+          ${currentUser ? `<div style="font-size:0.75rem;color:var(--accent);margin-top:2px;">🌟 +${Math.floor(Number(item.price) * 10)} pts</div>` : ''}
+        </div>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
           ${t('customize')}
         </button>
@@ -1337,6 +1441,17 @@ function renderTotals() {
   document.getElementById('customer-total').textContent = `$${total.toFixed(2)}`;
   document.getElementById('payment-total').textContent = `$${total.toFixed(2)}`;
 
+  // Show points to earn (10 pts per dollar of total paid)
+  const ptsRow = document.getElementById('points-to-earn-row');
+  const ptsEl  = document.getElementById('points-to-earn');
+  if (ptsRow && ptsEl && customerOrder.length > 0) {
+    const ptsEarned = Math.floor(total * 10);
+    ptsEl.textContent = `+${ptsEarned} pts`;
+    ptsRow.style.display = '';
+  } else if (ptsRow) {
+    ptsRow.style.display = 'none';
+  }
+
   const discountRow = document.getElementById('discount-row');
   if (discount > 0) {
     discountRow.style.display = '';
@@ -1457,13 +1572,12 @@ function applySelectedReward() {
 
 function calcRewardDiscount(type, value) {
   const subtotal = calcSubtotal();
-  if (!subtotal) {
-    discountAmount = 0;
-    return;
-  }
+  if (!subtotal) { discountAmount = 0; return; }
 
   if (type === 'percent_off') {
-    discountAmount = Number(((subtotal * value) / 100).toFixed(2));
+    // 50% off = half price of the cheapest drink only, not the whole order
+    const cheapest = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
+    discountAmount = Number((cheapest * value / 100).toFixed(2));
   } else if (type === 'free_drink') {
     discountAmount = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
     discountAmount = Number(discountAmount.toFixed(2));
@@ -1686,7 +1800,7 @@ function drawWheel() {
     ctx.rotate(start + segAngle / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'white';
-    const translatedLabel = rewardWheelLabel(seg.label);
+    const translatedLabel = rewardWheelLabel(seg.label.replace(/\n/g, ' '));
     const wheelLines = translatedLabel.split(' ');
 
     ctx.font = wheelLines.length > 3
@@ -1761,73 +1875,97 @@ function closeSpinModal() {
 
 function tryFinishSpin() {
   if (!spinAnimDone || !spinApiDone) return;
+  if (!spinResult || !spinResult.prize) return;
+
+  const prize = spinResult.prize;
+  const code = spinResult.code || '';
 
   spinning = false;
-  const result = document.getElementById('spin-result');
-  const prizeEl = document.getElementById('spin-prize-label');
-  const codeEl = document.getElementById('spin-promo-code');
-
-  if (spinResult) {
-    const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
-    // Use segmentIndex from server for accurate wheel snap
-    const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
-      s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
-    );
-    if (segIdx >= 0) {
-      const base = -Math.PI / 2 - (segIdx + 0.5) * segAngle;
-      const n = Math.round((spinAngle - base) / (2 * Math.PI));
-      spinAngle = base + n * 2 * Math.PI;
-      drawWheel();
-    }
-
-    prizeEl.textContent = `${t('youWon')}: ${rewardLabel(spinResult.prize?.label || t('prize'))}!`;
-    codeEl.textContent = spinResult.code ? `${t('code')}: ${spinResult.code}` : '';
-    result.classList.add('show');
-
-    if (spinResult.prize) {
-      // Auto-apply discount immediately — no code entry needed
-      appliedPromoCode = spinResult.code || 'SPIN-AUTO';
-      appliedPromoLabel = rewardLabel(spinResult.prize.label || t('prize'));
-      spinPrizeDetails = spinResult.prize;
-      // Calculate discount right now based on prize type
-      const prize = spinResult.prize;
-      const subtotal = calcSubtotal();
-      if (prize.type === 'percent_off') {
-        discountAmount = Number(((subtotal * Number(prize.value)) / 100).toFixed(2));
-      } else if (prize.type === 'free_drink') {
-        discountAmount = customerOrder.length ? Number(Math.min(...customerOrder.map(i => i.unitPrice)).toFixed(2)) : 0;
-      } else if (prize.type === 'free_topping') {
-        discountAmount = 0.75;
-      } else if (prize.type === 'flat_off') {
-        discountAmount = Math.min(subtotal, Number(prize.value) || 0);
-      }
-      discountAmount = Math.min(discountAmount, subtotal);
-    }
-
-    showToast(`${t('youWon')}: ${rewardLabel(spinResult.prize?.label)}! ✅ Applied to your order!`);
-  }
-
-  const btn = document.getElementById('spin-btn');
-  btn.textContent = t('spun');
   canSpin = false;
   hasSpunThisSession = true;
+
+  document.getElementById('spin-btn').disabled = true;
+  document.getElementById('spin-btn').textContent = t('spun');
+
+  document.getElementById('spin-prize-label').textContent =
+    `${t('youWon')}: ${rewardLabel(prize.label)}!`;
+
+  document.getElementById('spin-promo-code').textContent =
+    code ? `${t('code')}: ${code}` : '';
+
+  appliedPromoCode = code;
+  appliedPromoLabel = prize.label;
+  appliedRewardId = null;
+  appliedRewardLabel = '';
+  spinPrizeDetails = {
+    type: prize.type,
+    value: prize.value
+  };
+
+  calcRewardDiscount(prize.type, Number(prize.value || 0));
+  renderAppliedDiscount();
+  renderTotals();
+  saveKioskState();
+
+  spinAnimDone = false;
+  spinApiDone = false;
 }
 
 async function executeSpin() {
   if (!canSpin || spinning) return;
+
   spinning = true;
-  spinAnimDone = false;
-  spinApiDone = false;
   spinResult = null;
 
   const btn = document.getElementById('spin-btn');
   btn.disabled = true;
+  btn.textContent = t('processing');
+
+  try {
+    const res = await fetch('/api/spin', { method: 'POST' });
+    spinResult = await res.json();
+    spinApiDone = true;
+  } catch (_) {
+    // fallback (demo mode)
+    spinResult = {
+      prize: { label: 'Free Topping', type: 'free_topping', value: 0, segmentIndex: 1 },
+      code: 'RBT-DEMO'
+    };
+    spinApiDone = true;
+  }
+
   btn.textContent = t('spinning');
 
-  const extraSpins = 5 + Math.random() * 3;
-  const targetAngle = spinAngle + extraSpins * 2 * Math.PI + Math.random() * 2 * Math.PI;
-  const duration = 4000;
+  const segAngle = (2 * Math.PI) / SPIN_SEGMENTS.length;
+  const pointerAngle = -Math.PI / 2; // top pointer
+
+  // Get correct segment index
+  const segIdx = spinResult.prize?.segmentIndex ?? SPIN_SEGMENTS.findIndex(
+    s => s.label.replace(/\n/g, ' ') === (spinResult.prize?.label || '')
+  );
+
+  const safeSegIdx = segIdx >= 0 ? segIdx : 1;
+
+  // Target center of segment
+  const targetCenter = safeSegIdx * segAngle + segAngle / 2;
+
+  // Final resting angle
+  const desiredFinalAngle = pointerAngle - targetCenter;
+
+  // Normalize helper
+  const normalize = angle =>
+    ((angle % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+
   const startAngle = spinAngle;
+  const startNorm = normalize(startAngle);
+  const desiredNorm = normalize(desiredFinalAngle);
+
+  // Add multiple full spins for realism
+  const fullSpins = 6;
+  const delta = normalize(desiredNorm - startNorm);
+  const targetAngle = startAngle + fullSpins * 2 * Math.PI + delta;
+
+  const duration = 4000;
   const startTime = performance.now();
 
   function easeOutFn(p) {
@@ -1836,28 +1974,23 @@ async function executeSpin() {
 
   function animate(now) {
     const progress = Math.min((now - startTime) / duration, 1);
+
     spinAngle = startAngle + (targetAngle - startAngle) * easeOutFn(progress);
     drawWheel();
+
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
+      spinAngle = targetAngle; // ensure exact final angle
+      drawWheel();
+
       spinAnimDone = true;
-      if (!spinApiDone) btn.textContent = t('processing');
+      spinning = false;
       tryFinishSpin();
     }
   }
 
   requestAnimationFrame(animate);
-
-  try {
-    const res = await fetch('/api/spin', { method: 'POST' });
-    spinResult = await res.json();
-  } catch (_) {
-    spinResult = { prize: { label: 'Free Topping', type: 'free_topping', value: 0 }, code: 'RBT-DEMO' };
-  }
-
-  spinApiDone = true;
-  tryFinishSpin();
 }
 
 document.getElementById('spin-btn').addEventListener('click', executeSpin);
@@ -2047,6 +2180,11 @@ document.getElementById('apply-promo-btn').addEventListener('click', applyPromoC
 // Rewards / spin buttons
 document.getElementById('open-rewards-btn')?.addEventListener('click', openRewardsModal);
 document.getElementById('open-spin-topbar-btn')?.addEventListener('click', openSpinModal);
+document.getElementById('open-recent-orders-btn')?.addEventListener('click', openRecentOrders);
+document.getElementById('close-recent-orders-btn')?.addEventListener('click', closeRecentOrders);
+document.getElementById('recent-orders-overlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('recent-orders-overlay')) closeRecentOrders();
+});
 document.getElementById('open-spin-btn')?.addEventListener('click', openSpinModal);
 
 // Language selector
