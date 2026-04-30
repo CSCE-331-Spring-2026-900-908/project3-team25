@@ -1227,7 +1227,7 @@ function renderMenu() {
         <h3 style="margin:0;">${displayName}</h3>
         ${item.popular ? `<span class="tag">${t('popular')}</span>` : ''}
       </div>
-      ${item.description ? `<p>${TRANSLATIONS[currentLanguage][`description_${item.name}`] || item.description}</p>` : ''}
+      ${item.description ? `<p>${TRANSLATIONS[currentLanguage]?.[`description_${item.name}`] || item.description}</p>` : ''}
       <div class="price-line" style="margin-top:auto;">
         <div>
           <span class="price">$${Number(item.price).toFixed(2)}</span>
@@ -2352,6 +2352,11 @@ async function loadCustomerMenu() {
   customerCategories = Object.keys(data.categories || {}).filter(c => c !== 'topping');
   if (!customerCategories.includes(customerActiveCategory)) {
     customerActiveCategory = customerCategories[0] || '';
+  }
+  if (currentLanguage !== 'en') {
+    await ensureLanguageLoaded();
+    await ensureCategoryTranslations();
+    await ensureDrinkTranslations();
   }
   renderTabs();
   renderMenu();
