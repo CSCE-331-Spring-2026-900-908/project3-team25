@@ -199,7 +199,7 @@ async function getMenuItems() {
       queryDb(`SELECT productid AS id, name, category, baseprice AS price, image_url FROM product WHERE is_active=true ORDER BY category,name`),
       getPopularIds()
     ]);
-    return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), popular: popularIds.includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
+    return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), image_url: i.image_url || null, popular: popularIds.includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
   }
   return csvMenu;
 }
