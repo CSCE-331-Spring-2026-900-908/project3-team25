@@ -130,6 +130,7 @@ const TRANSLATIONS = {
     regular: 'Medium (+$0.50)',
     large: 'Large (+$1.00)',
     small: 'Small',
+    medium: 'Medium',
     none: 'None',
     extraBoba: 'Extra Boba (+$0.75)',
     extraBobaName: 'Extra Boba',
@@ -640,9 +641,12 @@ function translateSelectionValue(value) {
     'Regular Ice': t('regularIce'),
     'Extra Ice': t('extraIce'),
     'Small': t('small'),
+    'Medium': t('medium'),
     'Regular': t('regular'),
     'Large': t('large'),
     'None': t('none'),
+    'Hot': t('hot'),
+    'Iced': t('iced'),
     'Extra Boba':        t('extraBobaName'),
     'Extra Boba Add-on': t('extraBobaName'),
     'Grass Jelly':   t('grassJelly'),
@@ -1405,10 +1409,10 @@ function renderOrder() {
       ? item.selections.toppings
       : (item.selections.topping && item.selections.topping !== 'None' ? [item.selections.topping] : []);
     const mods = [
-      item.selections.size !== 'Regular' ? translateSelectionValue(item.selections.size) : null,
+      item.selections.size && item.selections.size !== 'Small' ? translateSelectionValue(item.selections.size) : null,
       item.selections.sweetness !== 'Regular Sugar' ? translateSelectionValue(item.selections.sweetness) : null,
       item.selections.ice !== 'Regular Ice' ? translateSelectionValue(item.selections.ice) : null,
-      item.selections.temp && item.selections.temp !== 'Iced' ? item.selections.temp : null,
+      item.selections.temp && item.selections.temp !== 'Iced' ? translateSelectionValue(item.selections.temp) : null,
       ...toppingList.map(tp => translateSelectionValue(tp))
     ].filter(Boolean);
 
