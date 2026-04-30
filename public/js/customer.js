@@ -1103,7 +1103,7 @@ async function openRecentOrders() {
         </div>
         <button type="button" onclick="reorderFromHistory(${idx})"
           style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;font-size:0.9rem;cursor:pointer;">
-          🔄 Reorder — Add to Cart
+          Reorder - Add to Cart
         </button>
       </div>`;
     }).join("");
@@ -1199,7 +1199,7 @@ function renderMenu() {
       <div class="price-line" style="margin-top:auto;">
         <div>
           <span class="price">$${Number(item.price).toFixed(2)}</span>
-          ${currentUser ? `<div style="font-size:0.75rem;color:var(--accent);margin-top:2px;">🌟 +${Math.floor(Number(item.price) * 10)} pts</div>` : ''}
+          ${currentUser ? `<div style="font-size:0.75rem;color:var(--accent);margin-top:2px;">+${Math.floor(Number(item.price) * 10)} pts</div>` : ''}
         </div>
         <button class="btn add-btn" data-id="${item.id}" type="button" style="font-size:0.85rem;padding:8px 16px;">
           ${t('customize')}

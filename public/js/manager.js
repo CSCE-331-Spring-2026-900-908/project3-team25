@@ -60,7 +60,7 @@ async function loadOverview() {
         <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'Low stock':'OK'}</span></td>
       </tr>`).join('') || '<tr><td colspan="4" class="muted">No data.</td></tr>';
 
-    // Recent orders — show refresh time
+    // Recent orders - show refresh time
     const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
     const refreshBtn = document.getElementById('orders-refresh-btn');
     if (refreshBtn) refreshBtn.textContent = `Last updated ${now}`;
@@ -75,7 +75,7 @@ async function loadOverview() {
         <td><span class="badge-ok">${i.status}</span></td>
       </tr>`).join('') || '<tr><td colspan="6" class="muted">No orders yet.</td></tr>';
 
-    // Category donut — distinct colors per category
+    // Category donut - distinct colors per category
     const cats  = dash.categories || {};
     const cKeys = Object.keys(cats);
     const CAT_COLORS = { coffee:'#6f4e37', fruit_tea:'#e8503a', milk_tea:'#c9a84c', seasonal:'#3aaa6e', tea:'#5b9ec9', topping:'#9b59b6' };
@@ -92,7 +92,7 @@ async function loadOverview() {
       }}}}
     });
 
-    // Payment split donut — distinct colors
+    // Payment split donut - distinct colors
     const splits = pay.splits || [];
     if (payChartInst) payChartInst.destroy();
     const PAY_COLORS = { card:'#9e3b35', applepay:'#3aaa6e', cash:'#c9a84c' };
@@ -203,7 +203,7 @@ function openAddMenuModal() {
   document.getElementById('menu-name').value      = '';
   document.getElementById('menu-category').value  = 'milk_tea';
   document.getElementById('menu-price').value     = '';
-  // Hide inline ingredients — will show after item is saved
+  // Hide inline ingredients - will show after item is saved
   const ingSection = document.getElementById('menu-modal-ing-section');
   if (ingSection) ingSection.style.display = 'none';
   const saveBtn = document.getElementById('menu-modal-save-btn');
@@ -267,7 +267,7 @@ function addIngredientRow(inventoryId = '', amount = '') {
   row.style.cssText = 'display:flex;gap:8px;align-items:center;';
   row.innerHTML = `
     <select class="ing-inv-select" style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.88rem;">
-      <option value="">— Select ingredient —</option>
+      <option value="">- Select ingredient -</option>
       ${allInventory.map(i => `<option value="${i.id}" ${i.id === inventoryId ? 'selected' : ''}>${i.itemName} (${i.unit})</option>`).join('')}
     </select>
     <input type="number" class="ing-amount" step="1" min="0" placeholder="Amount"
@@ -310,7 +310,7 @@ async function saveMenuItem() {
   if (res.ok) {
     const data = await res.json();
     if (!id && data.id) {
-      // NEW item — show inline ingredients section without closing modal
+      // NEW item - show inline ingredients section without closing modal
       await loadMenuEditor();
       document.getElementById('menu-modal-id').value = data.id;
       document.getElementById('menu-modal-title').textContent = `Add Ingredients: ${name}`;
@@ -373,7 +373,7 @@ async function addIngredientRowInline(invId = '', amount = '') {
   row.style = 'display:flex;gap:8px;align-items:center;';
   row.innerHTML = `
     <select style="flex:2;padding:7px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:0.85rem;">
-      <option value="">— Select ingredient —</option>
+      <option value="">- Select ingredient -</option>
       ${allInventory.map(i => `<option value="${i.id}" ${Number(i.id)===Number(invId)?'selected':''}>${i.itemName} (${i.unit})</option>`).join('')}
     </select>
     <input type="number" placeholder="Amount" value="${amount}" min="0" step="0.01"
@@ -434,7 +434,7 @@ function renderInvTable() {
       <td style="${i.quantityOnHand < 0 ? 'color:#dc2626;font-weight:700;' : i.status==='low' ? 'color:#f97316;font-weight:600;' : ''}">${i.quantityOnHand}</td>
       <td>${i.reorderThreshold}</td>
       <td>$${Number(i.unitCost||0).toFixed(4)}</td>
-      <td>${i.vendor||'—'}</td>
+      <td>${i.vendor||'-'}</td>
       <td><span class="${i.status==='low'?'badge-low':'badge-ok'}">${i.status==='low'?'⚠ Low':'OK'}</span></td>
       <td><button class="action-btn" onclick="openEditInvModal(${i.id})">Edit</button></td>
     </tr>`).join('') || '<tr><td colspan="8" class="muted" style="padding:20px;">No items.</td></tr>';
@@ -703,10 +703,10 @@ async function loadBestOfWorst() {
   const data = res.ok ? await res.json() : { rows:[] };
   document.getElementById('bow-tbody').innerHTML = (data.rows||[]).map(r => `
     <tr>
-      <td>${r.week_start||'—'}</td>
-      <td>${r.worst_revenue_day||'—'}</td>
+      <td>${r.week_start||'-'}</td>
+      <td>${r.worst_revenue_day||'-'}</td>
       <td>${fmt(r.worst_day_revenue)}</td>
-      <td>${r.best_items_day||'—'}</td>
+      <td>${r.best_items_day||'-'}</td>
       <td>${fmtN(r.best_day_items_sold)}</td>
     </tr>`).join('') || '<tr><td colspan="5" class="muted" style="padding:20px;">No data yet.</td></tr>';
 }

@@ -146,7 +146,7 @@ const DESCRIPTIONS = {
   tea: 'Refreshing brewed tea with a lighter, clean flavor profile.',
   fruit_tea: 'Fruity green tea served cold with vibrant flavors and real fruit.',
   coffee: 'Coffee-forward milk tea blend for a stronger energy and flavor boost.',
-  seasonal: 'Crafted with seasonal ingredients — fresh, vibrant, and available now.'
+  seasonal: 'Crafted with seasonal ingredients - fresh, vibrant, and available now.'
 };
 
 const csvMenu = parseCsv(path.join(dataDir, 'product.csv'))
@@ -257,7 +257,7 @@ function ruleBasedAssistant(message) {
   const t = (message||'').toLowerCase();
   if (!t.trim()) return 'Ask me about drinks, toppings, sweetness, allergens, rewards, or how to use this kiosk.';
   if (t.includes('popular')||t.includes('best')) return 'Our top sellers: Brown Sugar Milk Tea, Matcha Milk Tea, Strawberry Green Tea, Mango Green Tea.';
-  if (t.includes('sweet')||t.includes('sugar')) return 'Choose 0%, 25%, 50%, 75%, or 100% sweetness. Fruit teas are great at 50–75%.';
+  if (t.includes('sweet')||t.includes('sugar')) return 'Choose 0%, 25%, 50%, 75%, or 100% sweetness. Fruit teas are great at 50-75%.';
   if (t.includes('topping')||t.includes('boba')) return 'We offer extra boba as a topping add-on.';
   if (t.includes('milk')||t.includes('dairy')) return 'Most milk teas contain dairy. Tea and fruit tea are dairy-friendlier.';
   if (t.includes('reward')||t.includes('point')) return 'Earn 10 points per dollar spent. Redeem for free drinks, discounts, and toppings!';
@@ -876,18 +876,18 @@ function getDrinkSuggestion(temp, code) {
   const t = Number(temp ?? 0);
 
   if ([61, 63, 65, 80, 81, 82, 95].includes(code)) {
-    return 'Rainy day — cozy milk teas and warm flavors are a great pick.';
+    return 'Rainy day - cozy milk teas and warm flavors are a great pick.';
   }
 
   if (t >= 85) {
-    return 'Hot day — suggest fruit teas, lighter drinks, and extra ice.';
+    return 'Hot day - suggest fruit teas, lighter drinks, and extra ice.';
   }
 
   if (t >= 72) {
-    return 'Nice weather — fruit teas and classic milk teas both fit well.';
+    return 'Nice weather - fruit teas and classic milk teas both fit well.';
   }
 
-  return 'Cooler weather — milk teas and richer flavors are a great pick.';
+  return 'Cooler weather - milk teas and richer flavors are a great pick.';
 }
 
 app.post('/api/translate', async (req, res) => {
