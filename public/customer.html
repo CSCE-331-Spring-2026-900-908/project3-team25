@@ -242,8 +242,22 @@
             <div class="pts-value" id="topbar-pts">0</div>
           </div>
           <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-rewards" id="open-recent-orders-btn" style="display:none;"> Recent Orders</button>
             <button type="button" class="btn-rewards" id="open-rewards-btn">Rewards</button>
             <button type="button" class="btn-rewards" id="open-spin-topbar-btn">Spin</button>
+          </div>
+        </div>
+
+        <!-- Recent Orders Modal -->
+        <div id="recent-orders-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:900;display:flex;align-items:center;justify-content:center;" class="hidden">
+          <div style="background:#fffaf7;border-radius:18px;max-width:560px;width:95%;max-height:80vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="margin:0;font-size:1.3rem;">Your Recent Orders</h3>
+              <button id="close-recent-orders-btn" type="button" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">✕</button>
+            </div>
+            <div id="recent-orders-list">
+              <p style="color:var(--muted);text-align:center;">Loading…</p>
+            </div>
           </div>
         </div>
 
@@ -288,13 +302,9 @@
 
         <!-- Rewards / promo redemption panel -->
         <div id="checkout-rewards-panel" style="display:none;margin:16px 0;">
-          <div id="checkout-rewards-title" style="font-weight:700;margin-bottom:8px;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Rewards &amp; Promos</div>
+          <div id="checkout-rewards-title" style="font-weight:700;margin-bottom:8px;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Rewards</div>
           <div id="applied-reward-display"></div>
           <div id="reward-select-wrap" style="margin-bottom:10px;"></div>
-          <div class="promo-input-row">
-            <input type="text" id="promo-code-input" placeholder="Promo code (e.g. RBT-ABC123)" maxlength="12" />
-            <button type="button" class="btn-apply" id="apply-promo-btn">Apply</button>
-          </div>
           <div id="promo-feedback" style="font-size:0.82rem;margin-top:4px;"></div>
         </div>
 
@@ -306,6 +316,10 @@
           </div>
           <div class="summary-row"><span id="tax-label">Tax (8.25%)</span><strong id="customer-tax">$0.00</strong></div>
           <div class="summary-row total"><span id="total-label">Total</span><strong id="customer-total">$0.00</strong></div>
+          <div class="summary-row" id="points-to-earn-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:none;">
+            <span style="color:var(--accent);font-size:0.85rem;">🌟 Points you'll earn</span>
+            <strong id="points-to-earn" style="color:var(--accent);font-size:0.85rem;">+0 pts</strong>
+          </div>
         </div>
 
         <div class="kiosk-footer-actions" style="margin-top:24px;">
