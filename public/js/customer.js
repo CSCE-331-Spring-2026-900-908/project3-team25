@@ -1076,7 +1076,6 @@ async function openRecentOrders() {
   const overlay = document.getElementById('recent-orders-overlay');
   const list    = document.getElementById('recent-orders-list');
   if (!overlay || !list) return;
-  overlay.classList.remove('hidden');
   overlay.style.display = 'flex';
   list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Loading your orders…</p>';
 
@@ -1124,7 +1123,7 @@ async function openRecentOrders() {
 
 function closeRecentOrders() {
   const overlay = document.getElementById('recent-orders-overlay');
-  if (overlay) { overlay.classList.add('hidden'); overlay.style.display = 'none'; }
+  if (overlay) overlay.style.display = 'none';
 }
 
 function reorderFromHistory(idx) {
