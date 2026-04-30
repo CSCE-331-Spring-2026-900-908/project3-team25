@@ -143,7 +143,47 @@
         </div>
         <div class="form-group"><label>Base Price ($)</label><input type="number" id="menu-price" step="0.01" min="0" placeholder="5.99" /></div>
       </div>
-      <!-- Ingredients section shown inline when editing, hidden for new items until saved -->
+
+      <!-- Image Upload -->
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Drink Image</label>
+          <div id="img-upload-area" style="border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color 0.2s;"
+               onclick="document.getElementById('img-file-input').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+               ondragleave="this.style.borderColor='var(--line)'"
+               ondrop="handleImgDrop(event)">
+            <input type="file" id="img-file-input" accept="image/*" style="display:none;" onchange="handleImgSelect(event)" />
+            <div id="img-upload-preview" style="display:none;margin-bottom:8px;">
+              <img id="img-preview-el" src="" alt="Preview" style="max-height:120px;max-width:100%;border-radius:8px;object-fit:cover;" />
+            </div>
+            <div id="img-upload-placeholder">
+              <div style="font-size:2rem;margin-bottom:6px;">+</div>
+              <div style="font-size:0.85rem;color:var(--muted);">Drag & drop or click to upload a drink photo</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">PNG, JPG up to 10MB</div>
+            </div>
+            <div id="img-upload-status" style="font-size:0.82rem;color:var(--accent);margin-top:6px;display:none;"></div>
+          </div>
+          <input type="hidden" id="menu-image-url" />
+        </div>
+      </div>
+
+      <!-- Ingredients section shown inline when editing -->
+      <div id="menu-modal-ing-section" style="display:none;margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <label style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Ingredients</label>
+          <button class="action-btn" type="button" onclick="addIngredientRowInline()">+ Add Ingredient</button>
+        </div>
+        <div id="menu-modal-ing-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;max-height:220px;overflow-y:auto;"></div>
+        <button class="action-btn primary" type="button" onclick="saveInlineIngredients()" style="width:100%;">Save Ingredients</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeMenuModal()">Cancel</button>
+        <button class="action-btn primary" id="menu-modal-save-btn" onclick="saveMenuItem()">Save & Add Ingredients</button>
+      </div>
+    </div>
+  </div>
       <div id="menu-modal-ing-section" style="display:none;margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <label style="font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">Ingredients</label>

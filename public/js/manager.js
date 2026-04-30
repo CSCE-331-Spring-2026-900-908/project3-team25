@@ -197,17 +197,98 @@ function renderMenuTable() {
 
 function filterMenuTable() { renderMenuTable(); }
 
+// ── Cloudinary Image Upload ───────────────────────────────────────────────────
+const CLOUDINARY_CLOUD = 'dnc7llpd6';
+const CLOUDINARY_PRESET = 'dse15r9u';
+
+function handleImgDrop(event) {
+  event.preventDefault();
+  document.getElementById('img-upload-area').style.borderColor = 'var(--line)';
+  const file = event.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) uploadToCloudinary(file);
+}
+
+function handleImgSelect(event) {
+  const file = event.target.files[0];
+  if (file) uploadToCloudinary(file);
+}
+
+async function uploadToCloudinary(file) {
+  const status      = document.getElementById('img-upload-status');
+  const placeholder = document.getElementById('img-upload-placeholder');
+  const preview     = document.getElementById('img-upload-preview');
+  const previewEl   = document.getElementById('img-preview-el');
+  const area        = document.getElementById('img-upload-area');
+
+  status.style.display = 'block';
+  status.textContent   = 'Uploading...';
+  area.style.borderColor = 'var(--accent)';
+
+  // Show local preview immediately
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewEl.src = e.target.result;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', 'reveille-boba');
+
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST', body: formData
+    });
+    const data = await res.json();
+
+    if (data.secure_url) {
+      document.getElementById('menu-image-url').value = data.secure_url;
+      status.textContent   = 'Image uploaded!';
+      status.style.color   = 'green';
+      area.style.borderColor = 'green';
+    } else {
+      throw new Error(data.error?.message || 'Upload failed');
+    }
+  } catch(e) {
+    status.textContent   = 'Upload failed: ' + e.message;
+    status.style.color   = 'red';
+    area.style.borderColor = 'red';
+  }
+}
+
+function resetImgUpload(existingUrl = '') {
+  document.getElementById('img-file-input').value     = '';
+  document.getElementById('menu-image-url').value     = existingUrl;
+  document.getElementById('img-upload-status').style.display  = 'none';
+  document.getElementById('img-upload-area').style.borderColor = 'var(--line)';
+  const placeholder = document.getElementById('img-upload-placeholder');
+  const preview     = document.getElementById('img-upload-preview');
+  const previewEl   = document.getElementById('img-preview-el');
+  if (existingUrl) {
+    previewEl.src = existingUrl;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+}
+
 function openAddMenuModal() {
   document.getElementById('menu-modal-title').textContent = 'Add Menu Item';
   document.getElementById('menu-modal-id').value  = '';
   document.getElementById('menu-name').value      = '';
   document.getElementById('menu-category').value  = 'milk_tea';
   document.getElementById('menu-price').value     = '';
+  resetImgUpload('');
   // Hide inline ingredients - will show after item is saved
   const ingSection = document.getElementById('menu-modal-ing-section');
   if (ingSection) ingSection.style.display = 'none';
   const saveBtn = document.getElementById('menu-modal-save-btn');
-  if (saveBtn) saveBtn.textContent = 'Save & Add Ingredients →';
+  if (saveBtn) saveBtn.textContent = 'Save & Add Ingredients';
   document.getElementById('menu-modal').classList.add('open');
 }
 
@@ -219,6 +300,7 @@ async function openEditMenuModal(id) {
   document.getElementById('menu-name').value      = item.name;
   document.getElementById('menu-category').value  = item.category;
   document.getElementById('menu-price').value     = item.price || item.baseprice;
+  resetImgUpload(item.image_url || '');
   // Show inline ingredients section for edit
   const ingSection = document.getElementById('menu-modal-ing-section');
   if (ingSection) {
@@ -298,15 +380,19 @@ async function saveIngredients() {
 }
 
 async function saveMenuItem() {
-  const id    = document.getElementById('menu-modal-id').value;
-  const name  = document.getElementById('menu-name').value.trim();
-  const cat   = document.getElementById('menu-category').value;
-  const price = parseFloat(document.getElementById('menu-price').value);
+  const id       = document.getElementById('menu-modal-id').value;
+  const name     = document.getElementById('menu-name').value.trim();
+  const cat      = document.getElementById('menu-category').value;
+  const price    = parseFloat(document.getElementById('menu-price').value);
+  const imageUrl = document.getElementById('menu-image-url').value.trim();
   if (!name || isNaN(price)) { alert('Please fill in all fields.'); return; }
 
   const method = id ? 'PUT' : 'POST';
   const url    = id ? `/api/menu-item/${id}` : '/api/menu-item';
-  const res    = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, category:cat, basePrice:price }) });
+  const body   = { name, category: cat, basePrice: price };
+  if (imageUrl) body.imageUrl = imageUrl;
+
+  const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (res.ok) {
     const data = await res.json();
     if (!id && data.id) {
@@ -409,6 +495,8 @@ async function saveInlineIngredients() {
 window.addIngredientRowInline  = addIngredientRowInline;
 window.saveInlineIngredients   = saveInlineIngredients;
 window.openAddMenuModal    = openAddMenuModal;
+window.handleImgDrop       = handleImgDrop;
+window.handleImgSelect     = handleImgSelect;
 window.openEditMenuModal   = openEditMenuModal;
 window.closeMenuModal      = closeMenuModal;
 window.saveMenuItem        = saveMenuItem;

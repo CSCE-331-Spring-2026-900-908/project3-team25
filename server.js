@@ -196,7 +196,7 @@ async function getPopularIds() {
 async function getMenuItems() {
   if (hasDbConfig()) {
     const [r, popularIds] = await Promise.all([
-      queryDb(`SELECT productid AS id, name, category, baseprice AS price FROM product WHERE is_active=true ORDER BY category,name`),
+      queryDb(`SELECT productid AS id, name, category, baseprice AS price, image_url FROM product WHERE is_active=true ORDER BY category,name`),
       getPopularIds()
     ]);
     return r.rows.map(i => ({ id: Number(i.id), name: i.name, category: i.category, price: Number(i.price), popular: popularIds.includes(Number(i.id)), description: DESCRIPTIONS[i.category] || 'Bubble tea menu item.' }));
@@ -1314,7 +1314,7 @@ app.get('/api/analytics/best-of-worst', requireMgrRoute, async (_req, res) => {
 app.get('/api/menu-all', requireMgrRoute, async (_req, res) => {
   try {
     if (hasDbConfig()) {
-      const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price, is_active FROM product ORDER BY category, name`);
+      const r = await queryDb(`SELECT productid AS id, name, category, baseprice AS price, is_active, image_url FROM product ORDER BY category, name`);
       return res.json({ items: r.rows.map(i => ({ ...i, id: Number(i.id), price: Number(i.price) })) });
     }
     const items = parseCsv(path.join(dataDir,'product.csv')).map(i => ({ id:Number(i.productid), name:i.name, category:i.category, price:Number(i.baseprice), is_active:i.is_active==='true' }));
@@ -1324,19 +1324,27 @@ app.get('/api/menu-all', requireMgrRoute, async (_req, res) => {
 
 app.post('/api/menu-item', requireMgrRoute, async (req, res) => {
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required for menu edits.' });
-  const { name, category, basePrice } = req.body || {};
+  const { name, category, basePrice, imageUrl } = req.body || {};
   if (!name || !category || isNaN(Number(basePrice))) return res.status(400).json({ error: 'name, category, basePrice required.' });
   try {
-    const r = await queryDb(`INSERT INTO product (name, category, baseprice, is_active) VALUES ($1,$2,$3,true) RETURNING productid AS id`, [name, category, Number(basePrice)]);
+    const r = await queryDb(
+      `INSERT INTO product (name, category, baseprice, is_active, image_url) VALUES ($1,$2,$3,true,$4) RETURNING productid AS id`,
+      [name, category, Number(basePrice), imageUrl || null]);
     res.status(201).json({ id: r.rows[0].id });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/menu-item/:id', requireMgrRoute, async (req, res) => {
   if (!hasDbConfig()) return res.status(503).json({ error: 'Database required.' });
-  const { name, category, basePrice } = req.body || {};
+  const { name, category, basePrice, imageUrl } = req.body || {};
   try {
-    await queryDb(`UPDATE product SET name=$1, category=$2, baseprice=$3 WHERE productid=$4`, [name, category, Number(basePrice), Number(req.params.id)]);
+    if (imageUrl !== undefined) {
+      await queryDb(`UPDATE product SET name=$1, category=$2, baseprice=$3, image_url=$4 WHERE productid=$5`,
+        [name, category, Number(basePrice), imageUrl || null, Number(req.params.id)]);
+    } else {
+      await queryDb(`UPDATE product SET name=$1, category=$2, baseprice=$3 WHERE productid=$4`,
+        [name, category, Number(basePrice), Number(req.params.id)]);
+    }
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1681,6 +1689,7 @@ async function seedRewards() {
     try {
       await queryDb('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id VARCHAR(255)');
       await queryDb('ALTER TABLE transactionitem ADD COLUMN IF NOT EXISTS selections JSONB');
+      await queryDb('ALTER TABLE product ADD COLUMN IF NOT EXISTS image_url TEXT');
     } catch(e) { console.warn('Migration warning:', e.message); }
   }
   app.listen(PORT, '0.0.0.0', () => console.log(`Project 3 Team 25 running on port ${PORT}`));
