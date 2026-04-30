@@ -18,6 +18,8 @@ const TOPPING_KEY_MAP = {
   'Grass Jelly':       'grassJelly',
   'Egg Pudding':       'eggPudding',
   'Coconut Jelly':     'coconutJelly',
+  'Coffee Jelly':      'coffeeJelly',
+  'Lychee Jelly':      'lycheeJelly',
 };
 
 let TOPPINGS = [
@@ -134,6 +136,15 @@ const TRANSLATIONS = {
     grassJelly: 'Grass Jelly',
     eggPudding: 'Egg Pudding',
     coconutJelly: 'Coconut Jelly',
+    coffeeJelly: 'Coffee Jelly',
+    lycheeJelly: 'Lychee Jelly',
+    pointsYoullEarn: "Points you'll earn",
+    recentOrders: 'Recent Orders',
+    yourRecentOrders: 'Your Recent Orders',
+    loadingOrders: 'Loading your orders…',
+    noOrdersFound: 'No previous orders found. Place your first order!',
+    reorderAddToCart: 'Reorder - Add to Cart',
+    couldNotLoadOrders: 'Could not load orders.',
     qty: 'qty',
     cancel: 'Cancel',
     saveChanges: 'Save Changes',
@@ -636,7 +647,9 @@ function translateSelectionValue(value) {
     'Extra Boba Add-on': t('extraBobaName'),
     'Grass Jelly':   t('grassJelly'),
     'Egg Pudding':   t('eggPudding'),
-    'Coconut Jelly': t('coconutJelly')
+    'Coconut Jelly': t('coconutJelly'),
+    'Coffee Jelly':  t('coffeeJelly'),
+    'Lychee Jelly':  t('lycheeJelly')
   };
 
   return valueMap[value] || value;
@@ -767,8 +780,10 @@ function applyStaticTranslations() {
   setText('start-new-order-btn', t('startNewOrder'));
   setText('topbar-points-label', t('yourRewardPoints'));
   setText('open-rewards-btn', t('rewards'));
-  setText('open-spin-topbar-btn', t('spin'));
   setText('open-recent-orders-btn', t('recentOrders'));
+  setText('open-spin-topbar-btn', t('spin'));
+  setText('points-earn-label', t('pointsYoullEarn'));
+  setText('recent-orders-title', t('yourRecentOrders'));
   setText('rewards-modal-title', t('rewards'));
   setText('rewards-history-title', t('redemptionHistory'));
   setText('open-spin-btn', t('spinWheel'));
@@ -1092,11 +1107,6 @@ async function openRecentOrders() {
   const list    = document.getElementById('recent-orders-list');
   if (!overlay || !list) return;
   overlay.style.display = 'flex';
-
-  // Translate modal title
-  const titleEl = document.getElementById('recent-orders-title');
-  if (titleEl) titleEl.textContent = t('recentOrders');
-
   list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:20px;">${t('recentOrdersLoading')}</p>`;
   try {
     const res   = await fetch('/api/customer/recent-orders');
@@ -1107,8 +1117,9 @@ async function openRecentOrders() {
       return;
     }
     window._recentOrders = orders;
+    const locale = LANGUAGE_CODES[currentLanguage] || 'en-US';
     list.innerHTML = orders.map((order, idx) => {
-      const date = new Date(order.transactiontime).toLocaleDateString(LANGUAGE_CODES[currentLanguage] || 'en-US', {month:'short',day:'numeric',year:'numeric'});
+      const date = new Date(order.transactiontime).toLocaleDateString(locale, {month:'short',day:'numeric',year:'numeric'});
       const items = order.items || [];
       const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
       return `<div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
