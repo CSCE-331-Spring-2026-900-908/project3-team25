@@ -1121,7 +1121,7 @@ async function openRecentOrders() {
     list.innerHTML = orders.map((order, idx) => {
       const date = new Date(order.transactiontime).toLocaleDateString(locale, {month:'short',day:'numeric',year:'numeric'});
       const items = order.items || [];
-      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
+      const itemSummary = items.map(i => `${translateDrinkName(i.name)}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
       return `<div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
@@ -1415,7 +1415,7 @@ function renderOrder() {
     return `
       <article class="order-item">
         <div class="line-top">
-          <strong>${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ''}</strong>
+          <strong>${translateDrinkName(item.name)}${item.quantity > 1 ? ` ×${item.quantity}` : ''}</strong>
           <strong>$${Number(item.linePrice).toFixed(2)}</strong>
         </div>
         <small class="muted">${mods.join(', ') || t('noModifications')}</small>
