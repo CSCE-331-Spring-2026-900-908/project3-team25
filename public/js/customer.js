@@ -185,6 +185,13 @@ const TRANSLATIONS = {
     earnPointsPrompt: 'Earn 10 pts per dollar, start ordering to earn rewards!',
     ptsNeeded: 'pts needed',
     needMore: 'need',
+    recentOrders: 'Your Recent Orders',
+    recentOrdersEmpty: 'No previous orders found. Place your first order!',
+    recentOrdersError: 'Could not load orders.',
+    recentOrdersLoading: 'Loading your orders...',
+    reorder: 'Reorder - Add to Cart',
+    recentOrdersAdded: 'drinks added to your cart!',
+    recentOrderAdded: 'drink added to your cart!',
     more: 'more',
     signInToSpin: 'Sign in with your TAMU Google account to spin!',
     alreadySpun: 'Already spun today. Come back tomorrow!',
@@ -342,6 +349,13 @@ const TRANSLATIONS = {
     selectReward: 'Selecciona una recompensa',
     keepOrdering: 'sigue ordenando para desbloquear recompensas.',
     earnPointsPrompt: 'Gana 10 pts por dólar, empieza a ordenar para ganar recompensas.',
+    recentOrders: 'Tus Pedidos Recientes',
+    recentOrdersEmpty: 'No se encontraron pedidos anteriores. Haz tu primer pedido.',
+    recentOrdersError: 'No se pudieron cargar los pedidos.',
+    recentOrdersLoading: 'Cargando tus pedidos...',
+    reorder: 'Repetir pedido - Agregar al carrito',
+    recentOrdersAdded: 'bebidas agregadas a tu carrito.',
+    recentOrderAdded: 'bebida agregada a tu carrito.',
     ptsNeeded: 'pts necesarios',
     needMore: 'faltan',
     more: 'más',
@@ -539,7 +553,8 @@ const IMAGE_MAP = {
   'Matcha Smoothie':          '/boba/Matcha-Milk-Tea.PNG',
 };
 
-function getDrinkImg(name) {
+function getDrinkImg(name, imageUrl) {
+  if (imageUrl) return imageUrl;
   return IMAGE_MAP[name] || '/boba/Sonny-Boba.png';
 }
 
@@ -753,6 +768,7 @@ function applyStaticTranslations() {
   setText('topbar-points-label', t('yourRewardPoints'));
   setText('open-rewards-btn', t('rewards'));
   setText('open-spin-topbar-btn', t('spin'));
+  setText('open-recent-orders-btn', t('recentOrders'));
   setText('rewards-modal-title', t('rewards'));
   setText('rewards-history-title', t('redemptionHistory'));
   setText('open-spin-btn', t('spinWheel'));
@@ -1076,20 +1092,25 @@ async function openRecentOrders() {
   const list    = document.getElementById('recent-orders-list');
   if (!overlay || !list) return;
   overlay.style.display = 'flex';
-  list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Loading your orders…</p>';
+
+  // Translate modal title
+  const titleEl = document.getElementById('recent-orders-title');
+  if (titleEl) titleEl.textContent = t('recentOrders');
+
+  list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:20px;">${t('recentOrdersLoading')}</p>`;
   try {
     const res   = await fetch('/api/customer/recent-orders');
     const data  = res.ok ? await res.json() : { orders: [] };
     const orders = data.orders || [];
     if (!orders.length) {
-      list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">No previous orders found. Place your first order!</p>';
+      list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:20px;">${t('recentOrdersEmpty')}</p>`;
       return;
     }
     window._recentOrders = orders;
     list.innerHTML = orders.map((order, idx) => {
-      const date = new Date(order.transactiontime).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+      const date = new Date(order.transactiontime).toLocaleDateString(LANGUAGE_CODES[currentLanguage] || 'en-US', {month:'short',day:'numeric',year:'numeric'});
       const items = order.items || [];
-      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? " ×"+i.quantity : ""}`).join(", ");
+      const itemSummary = items.map(i => `${i.name}${i.quantity > 1 ? ' x'+i.quantity : ''}`).join(', ');
       return `<div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
@@ -1098,23 +1119,23 @@ async function openRecentOrders() {
           </div>
           <div style="text-align:right;">
             <div style="font-weight:700;color:var(--accent);">$${Number(order.totalamount).toFixed(2)}</div>
-            <div style="font-size:0.78rem;color:var(--muted);">${order.paymentmethod||""}</div>
+            <div style="font-size:0.78rem;color:var(--muted);">${order.paymentmethod||''}</div>
           </div>
         </div>
         <button type="button" onclick="reorderFromHistory(${idx})"
           style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:8px;font:inherit;font-weight:700;font-size:0.9rem;cursor:pointer;">
-          Reorder - Add to Cart
+          ${t('reorder')}
         </button>
       </div>`;
-    }).join("");
+    }).join('');
   } catch(e) {
-    list.innerHTML = "<p style='color:var(--muted);text-align:center;padding:20px;'>Could not load orders.</p>";
+    list.innerHTML = `<p style='color:var(--muted);text-align:center;padding:20px;'>${t('recentOrdersError')}</p>`;
   }
 }
 
 function closeRecentOrders() {
-  const overlay = document.getElementById("recent-orders-overlay");
-  if (overlay) overlay.style.display = "none";
+  const overlay = document.getElementById('recent-orders-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function reorderFromHistory(idx) {
@@ -1126,17 +1147,17 @@ function reorderFromHistory(idx) {
     const menuItem = customerMenu.find(m => m.name === item.name);
     if (!menuItem) return;
     let sel = {};
-    try { sel = typeof item.selections === "string" ? JSON.parse(item.selections) : (item.selections || {}); } catch(_) {}
+    try { sel = typeof item.selections === 'string' ? JSON.parse(item.selections) : (item.selections || {}); } catch(_) {}
     const qty = item.quantity || 1;
     const extra = extraPrice(sel.size, sel.toppings);
     const unitPrice = Number(menuItem.price) + extra;
     customerOrder.push({
       ...menuItem,
       selections: {
-        sweetness: sel.sweetness || "Regular Sugar",
-        ice:       sel.ice       || "Regular Ice",
-        size:      sel.size      || "Small",
-        temp:      sel.temp      || "Iced",
+        sweetness: sel.sweetness || 'Regular Sugar',
+        ice:       sel.ice       || 'Regular Ice',
+        size:      sel.size      || 'Small',
+        temp:      sel.temp      || 'Iced',
         toppings:  sel.toppings  || []
       },
       quantity: qty, unitPrice, linePrice: unitPrice * qty
@@ -1145,8 +1166,8 @@ function reorderFromHistory(idx) {
   });
   closeRecentOrders();
   renderOrder();
-  showToast(`${added} drink${added !== 1 ? "s" : ""} added to your cart!`);
-  showScreen("review");
+  showToast(`${added} ${added !== 1 ? t('recentOrdersAdded') : t('recentOrderAdded')}`);
+  showScreen('review');
 }
 
 function updateTopbarPts(pts) {
@@ -1189,7 +1210,7 @@ function renderMenu() {
     <article class="menu-card" data-id="${item.id}" tabindex="0" role="button"
              aria-label="${displayName}, $${Number(item.price).toFixed(2)}">
       <div class="drink-image-wrap">
-        <div class="drink-image" style="background-image:url('${getDrinkImg(item.name)}');"></div>
+        <div class="drink-image" style="background-image:url('${getDrinkImg(item.name, item.image_url)}');"></div>
       </div>
       <div class="topline">
         <h3 style="margin:0;">${displayName}</h3>
@@ -1242,7 +1263,7 @@ async function openDrinkModal(item) {
 
   const modalImg = document.getElementById('modal-drink-img');
   if (modalImg) {
-    modalImg.src = getDrinkImg(item.name);
+    modalImg.src = getDrinkImg(item.name, item.image_url);
     modalImg.alt = `${item.name} drink image`;
   }
 
@@ -1550,14 +1571,19 @@ function applySelectedReward() {
   if (wrap) wrap.innerHTML = '';
 }
 
-function calcRewardDiscount(type, value) {
+function calcRewardDiscount(type, value, label) {
   const subtotal = calcSubtotal();
   if (!subtotal) { discountAmount = 0; return; }
 
   if (type === 'percent_off') {
-    // Apply % off to cheapest drink only, not full order
-    const cheapest = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
-    discountAmount = Number((cheapest * value / 100).toFixed(2));
+    // 50% off = cheapest drink only. All other percent rewards = whole order
+    const isCheapestDrinkOnly = value >= 50;
+    if (isCheapestDrinkOnly) {
+      const cheapest = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
+      discountAmount = Number((cheapest * value / 100).toFixed(2));
+    } else {
+      discountAmount = Number((subtotal * value / 100).toFixed(2));
+    }
   } else if (type === 'free_drink') {
     discountAmount = customerOrder.length ? Math.min(...customerOrder.map(i => i.unitPrice)) : 0;
     discountAmount = Number(discountAmount.toFixed(2));
